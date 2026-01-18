@@ -1,0 +1,251 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export interface ProductSize {
+  id: string;
+  size: string;
+  quantity: number;
+  barcode: string | null;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  category_id: string | null;
+  category_name?: string;
+  color_id: string | null;
+  color_name?: string;
+  supplier_id: string | null;
+  supplier_name?: string;
+  cost_price: number;
+  sale_price: number;
+  markup: number | null;
+  min_stock: number;
+  photo_url: string | null;
+  is_active: boolean | null;
+  created_at: string;
+  sizes: ProductSize[];
+}
+
+export interface ProductFormData {
+  name: string;
+  description?: string;
+  category_id?: string;
+  color_id?: string;
+  supplier_id?: string;
+  cost_price: number;
+  sale_price: number;
+  min_stock: number;
+  sizes: { size: string; quantity: number; barcode?: string }[];
+}
+
+export function useProducts() {
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          colors(name),
+          suppliers(name),
+          product_sizes(id, size, quantity, barcode)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return products.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        category_id: product.category_id,
+        category_name: product.categories?.name || '',
+        color_id: product.color_id,
+        color_name: product.colors?.name || '',
+        supplier_id: product.supplier_id,
+        supplier_name: product.suppliers?.name || '',
+        cost_price: Number(product.cost_price),
+        sale_price: Number(product.sale_price),
+        markup: product.markup ? Number(product.markup) : null,
+        min_stock: product.min_stock,
+        photo_url: product.photo_url,
+        is_active: product.is_active,
+        created_at: product.created_at,
+        sizes: product.product_sizes || [],
+      })) as Product[];
+    },
+  });
+}
+
+export function useCategories() {
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useColors() {
+  return useQuery({
+    queryKey: ['colors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('colors')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSuppliers() {
+  return useQuery({
+    queryKey: ['suppliers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: ProductFormData) => {
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert({
+          name: data.name,
+          description: data.description || null,
+          category_id: data.category_id || null,
+          color_id: data.color_id || null,
+          supplier_id: data.supplier_id || null,
+          cost_price: data.cost_price,
+          sale_price: data.sale_price,
+          min_stock: data.min_stock,
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      if (data.sizes.length > 0) {
+        const sizesData = data.sizes.map(s => ({
+          product_id: product.id,
+          size: s.size,
+          quantity: s.quantity,
+          barcode: s.barcode || null,
+        }));
+
+        const { error: sizesError } = await supabase
+          .from('product_sizes')
+          .insert(sizesData);
+
+        if (sizesError) throw sizesError;
+      }
+
+      return product;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produto cadastrado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error creating product:', error);
+      toast.error('Erro ao cadastrar produto');
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: ProductFormData }) => {
+      const { error: productError } = await supabase
+        .from('products')
+        .update({
+          name: data.name,
+          description: data.description || null,
+          category_id: data.category_id || null,
+          color_id: data.color_id || null,
+          supplier_id: data.supplier_id || null,
+          cost_price: data.cost_price,
+          sale_price: data.sale_price,
+          min_stock: data.min_stock,
+        })
+        .eq('id', id);
+
+      if (productError) throw productError;
+
+      // Delete existing sizes and insert new ones
+      await supabase.from('product_sizes').delete().eq('product_id', id);
+
+      if (data.sizes.length > 0) {
+        const sizesData = data.sizes.map(s => ({
+          product_id: id,
+          size: s.size,
+          quantity: s.quantity,
+          barcode: s.barcode || null,
+        }));
+
+        const { error: sizesError } = await supabase
+          .from('product_sizes')
+          .insert(sizesData);
+
+        if (sizesError) throw sizesError;
+      }
+
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produto atualizado');
+    },
+    onError: (error: any) => {
+      console.error('Error updating product:', error);
+      toast.error('Não foi possível atualizar o produto. Tente novamente.');
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Produto removido');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting product:', error);
+      toast.error('Não foi possível remover o produto. Tente novamente.');
+    },
+  });
+}
