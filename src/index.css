@@ -55,6 +55,11 @@
     --pink-medium: 340 82% 86%;
     --pink-dark: 340 60% 70%;
     --pink-glow: 340 100% 95%;
+    --pink-primary: 340 75% 55%;
+  }
+
+  .dark {
+    --pink-primary: 340 75% 65%;
   }
 
   .dark {

@@ -63,6 +63,7 @@ export default {
           medium: "hsl(var(--pink-medium))",
           dark: "hsl(var(--pink-dark))",
           glow: "hsl(var(--pink-glow))",
+          primary: "hsl(var(--pink-primary))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
