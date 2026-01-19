@@ -254,7 +254,7 @@ export default function Stock() {
 
             {selectedProduct && selectedSizeId && (
               <div className="p-4 rounded-lg bg-card border border-border animate-scale-in">
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
                       <Package className="w-8 h-8 text-muted-foreground" />
@@ -296,8 +296,7 @@ export default function Stock() {
                     </div>
                     <Button
                       onClick={handleAddStock}
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
+                      variant="success"
                       disabled={addStock.isPending}
                     >
                       {addStock.isPending ? (
@@ -403,7 +402,7 @@ export default function Stock() {
                   <p>Nenhuma movimentação registrada</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
                   {movements.map((movement) => (
                     <div
                       key={movement.id}
@@ -411,13 +410,13 @@ export default function Stock() {
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          movement.type === 'entrada' ? 'bg-green-500/20' :
-                          movement.type === 'saida' ? 'bg-red-500/20' : 'bg-yellow-500/20'
+                          movement.type === 'entrada' ? 'bg-success/20' :
+                          movement.type === 'saida' ? 'bg-destructive/20' : 'bg-warning/20'
                         }`}>
                           {movement.type === 'entrada' ? (
-                            <Plus className="w-4 h-4 text-green-600" />
+                            <Plus className="w-4 h-4 text-success" />
                           ) : (
-                            <Minus className="w-4 h-4 text-red-600" />
+                            <Minus className="w-4 h-4 text-destructive" />
                           )}
                         </div>
                         <div>
