@@ -198,3 +198,27 @@ export function useUseExchangeCredit() {
     },
   });
 }
+
+export function useMonthExchanges() {
+  return useQuery({
+    queryKey: ['month-exchanges'],
+    queryFn: async () => {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('exchanges')
+        .select('credit_amount, credit_used')
+        .gte('created_at', startOfMonth.toISOString());
+
+      if (error) throw error;
+
+      const total = data.length;
+      const totalValue = data.reduce((acc, e) => acc + Number(e.credit_amount), 0);
+      const totalCredit = data.reduce((acc, e) => acc + Number(e.credit_used || 0), 0);
+
+      return { total, totalValue, totalCredit };
+    },
+  });
+}
