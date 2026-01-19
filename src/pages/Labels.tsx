@@ -1,525 +1,848 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, Printer, Plus, Minus, Trash2, Tag, 
-  Settings2, Eye, Package
-} from 'lucide-react';
-import { useProducts } from '@/hooks/useProducts';
-import JsBarcode from 'jsbarcode';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useProducts, Product } from '@/hooks/useProducts';
+import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import JsBarcode from 'jsbarcode';
 
-interface LabelItem {
-  id: string;
+// Configurações para Elgin L42 Pro Full - 3 etiquetas por linha
+const LABEL_WIDTH_MM = 33;
+const LABEL_HEIGHT_MM = 22;
+const LABELS_PER_ROW = 3;
+const PAGE_WIDTH_MM = 108;
+const DPI = 203;
+const DOTS_PER_MM = DPI / 25.4;
+
+interface LabelSelection {
   productId: string;
-  productName: string;
-  size: string;
   sizeId: string;
-  barcode: string | null;
-  price: number;
+  size: string;
+  barcode: string;
+  productName: string;
   quantity: number;
+  stockQuantity: number;
 }
 
-interface LabelSettings {
-  showPrice: boolean;
-  showBarcode: boolean;
-  showName: boolean;
-  showSize: boolean;
-  labelWidth: number;
-  labelHeight: number;
-  fontSize: number;
-  columns: number;
+// Componente para renderizar código de barras
+function BarcodeDisplay({ value, width = 1.5, height = 30 }: { value: string; width?: number; height?: number }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (svgRef.current && value) {
+      try {
+        JsBarcode(svgRef.current, value, {
+          format: 'EAN13',
+          width,
+          height,
+          displayValue: true,
+          fontSize: 8,
+          margin: 0,
+          background: 'transparent',
+        });
+      } catch {
+        try {
+          JsBarcode(svgRef.current, value, {
+            format: 'CODE128',
+            width,
+            height,
+            displayValue: true,
+            fontSize: 8,
+            margin: 0,
+            background: 'transparent',
+          });
+        } catch {
+          // Fallback silencioso
+        }
+      }
+    }
+  }, [value, width, height]);
+
+  if (!value) {
+    return (
+      <div className="flex items-center justify-center h-full text-[8px] text-muted-foreground">
+        Sem código
+      </div>
+    );
+  }
+
+  return <svg ref={svgRef} />;
 }
 
-const DEFAULT_SETTINGS: LabelSettings = {
-  showPrice: true,
-  showBarcode: true,
-  showName: true,
-  showSize: true,
-  labelWidth: 50,
-  labelHeight: 25,
-  fontSize: 10,
-  columns: 3,
-};
+// Preview de linha de 3 etiquetas (simulando impressão real)
+function LabelRowPreview({ labels }: { labels: LabelSelection[] }) {
+  return (
+    <div className="flex gap-0.5 justify-center">
+      {[0, 1, 2].map((idx) => {
+        const label = labels[idx];
+        return (
+          <div
+            key={idx}
+            className="bg-white border border-gray-200 flex flex-col items-center justify-between overflow-hidden"
+            style={{
+              width: '90px',
+              height: '60px',
+              padding: '2px',
+            }}
+          >
+            {label ? (
+              <>
+                <p className="text-[7px] font-bold text-black text-center truncate w-full leading-tight">
+                  {label.productName}
+                </p>
+                <p className="text-[6px] text-gray-500">Tam: {label.size}</p>
+                <div className="flex-1 flex items-center">
+                  <BarcodeDisplay value={label.barcode} width={0.6} height={16} />
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <span className="text-[8px] text-gray-300">vazio</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Labels() {
-  const { data: products = [] } = useProducts();
+  const { data: products = [], isLoading } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
-  const [labelItems, setLabelItems] = useState<LabelItem[]>([]);
-  const [settings, setSettings] = useState<LabelSettings>(DEFAULT_SETTINGS);
-  const [showPreview, setShowPreview] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
+  const [selections, setSelections] = useState<LabelSelection[]>([]);
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  // Filtrar produtos que têm pelo menos 1 unidade em qualquer tamanho e código de barras
+  const productsWithStock = useMemo(() => {
+    return products
+      .map(product => ({
+        ...product,
+        // Mostrar tamanhos com quantidade >= 1 (pelo menos 1 unidade) e código de barras
+        sizes: product.sizes.filter(s => s.quantity >= 1 && s.barcode),
+      }))
+      // Mostrar produto se tiver pelo menos um tamanho disponível
+      .filter(product => product.sizes.length > 0);
+  }, [products]);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sizes?.some(s => s.barcode?.includes(searchTerm))
-  );
-
-  const handleAddProduct = (product: any, size: any) => {
-    const existingIndex = labelItems.findIndex(
-      item => item.productId === product.id && item.sizeId === size.id
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return productsWithStock;
+    const term = searchTerm.toLowerCase();
+    return productsWithStock.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.category_name?.toLowerCase().includes(term) ||
+      p.color_name?.toLowerCase().includes(term)
     );
+  }, [productsWithStock, searchTerm]);
 
-    if (existingIndex >= 0) {
-      const newItems = [...labelItems];
-      newItems[existingIndex].quantity += 1;
-      setLabelItems(newItems);
+  const totalStock = useMemo(() => {
+    return productsWithStock.reduce((acc, p) =>
+      acc + p.sizes.reduce((sAcc, s) => sAcc + s.quantity, 0), 0
+    );
+  }, [productsWithStock]);
+
+  const toggleSelection = (product: Product, sizeData: { id: string; size: string; barcode?: string | null; quantity: number }) => {
+    const exists = selections.find(s => s.sizeId === sizeData.id);
+    if (exists) {
+      setSelections(selections.filter(s => s.sizeId !== sizeData.id));
     } else {
-      setLabelItems([...labelItems, {
-        id: `${product.id}-${size.id}`,
+      const newSelection: LabelSelection = {
         productId: product.id,
+        sizeId: sizeData.id,
+        size: sizeData.size,
+        barcode: sizeData.barcode || '',
         productName: product.name,
-        size: size.size,
-        sizeId: size.id,
-        barcode: size.barcode || product.barcode,
-        price: product.sale_price,
         quantity: 1,
-      }]);
+        stockQuantity: sizeData.quantity,
+      };
+      setSelections([...selections, newSelection]);
     }
-    toast.success('Produto adicionado');
   };
 
-  const handleUpdateQuantity = (id: string, delta: number) => {
-    setLabelItems(items => 
-      items.map(item => 
-        item.id === id 
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+  const selectAllSizes = (product: Product) => {
+    const validSizes = product.sizes.filter(s => s.quantity > 0 && s.barcode);
+    const allSelected = validSizes.every(s => selections.some(sel => sel.sizeId === s.id));
+
+    if (allSelected) {
+      // Deselecionar todos
+      setSelections(selections.filter(s => s.productId !== product.id));
+    } else {
+      // Selecionar todos que ainda não estão selecionados
+      const newSelections = [...selections];
+      validSizes.forEach(sizeData => {
+        if (!selections.find(s => s.sizeId === sizeData.id)) {
+          newSelections.push({
+            productId: product.id,
+            sizeId: sizeData.id,
+            size: sizeData.size,
+            barcode: sizeData.barcode || '',
+            productName: product.name,
+            quantity: 1,
+            stockQuantity: sizeData.quantity,
+          });
+        }
+      });
+      setSelections(newSelections);
+    }
   };
 
-  const handleRemoveItem = (id: string) => {
-    setLabelItems(items => items.filter(item => item.id !== id));
+  const updateQuantity = (sizeId: string, delta: number) => {
+    setSelections(selections.map(s => {
+      if (s.sizeId === sizeId) {
+        const newQty = Math.max(1, Math.min(s.stockQuantity, s.quantity + delta));
+        return { ...s, quantity: newQty };
+      }
+      return s;
+    }));
   };
 
-  const totalLabels = labelItems.reduce((acc, item) => acc + item.quantity, 0);
+  const setQuantity = (sizeId: string, quantity: number) => {
+    setSelections(selections.map(s => {
+      if (s.sizeId === sizeId) {
+        const newQty = Math.max(1, Math.min(s.stockQuantity, quantity));
+        return { ...s, quantity: newQty };
+      }
+      return s;
+    }));
+  };
 
-  const handlePrint = () => {
-    if (labelItems.length === 0) {
-      toast.error('Adicione produtos para imprimir');
+  const setQuantityToStock = (sizeId: string) => {
+    setSelections(selections.map(s =>
+      s.sizeId === sizeId ? { ...s, quantity: s.stockQuantity } : s
+    ));
+  };
+
+  const removeSelection = (sizeId: string) => {
+    setSelections(selections.filter(s => s.sizeId !== sizeId));
+  };
+
+  const clearAll = () => {
+    setSelections([]);
+  };
+
+  const isSelected = (sizeId: string) => selections.some(s => s.sizeId === sizeId);
+
+  const totalLabels = selections.reduce((acc, s) => acc + s.quantity, 0);
+
+  // Expandir seleções para preview
+  const expandedLabels = useMemo(() => {
+    const labels: LabelSelection[] = [];
+    selections.forEach(sel => {
+      for (let i = 0; i < sel.quantity; i++) {
+        labels.push(sel);
+      }
+    });
+    return labels;
+  }, [selections]);
+
+  // Gerar PDF para impressora térmica Elgin L42 Pro Full
+  const handleGeneratePDF = () => {
+    if (selections.length === 0) {
+      toast.error('Selecione pelo menos um produto!');
       return;
     }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      toast.error('Popup bloqueado. Permita popups para imprimir.');
+      toast.error('Não foi possível abrir a janela de impressão');
       return;
     }
 
-    // Generate labels HTML
-    const labelsHtml = generateLabelsHtml();
-
-    printWindow.document.write(`
+    const printHtml = `
       <!DOCTYPE html>
       <html>
-        <head>
-          <title>Etiquetas</title>
-          <style>
+      <head>
+        <title>Etiquetas - Elgin L42 Pro</title>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+        <style>
+          @page {
+            size: ${PAGE_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
+            margin: 0;
+          }
+          @media print {
             @page {
-              size: auto;
-              margin: 5mm;
-            }
-            body {
+              size: ${PAGE_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
               margin: 0;
-              padding: 10px;
-              font-family: Arial, sans-serif;
             }
-            .labels-container {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 5px;
+            html, body {
+              width: ${PAGE_WIDTH_MM}mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
-            .label {
-              width: ${settings.labelWidth}mm;
-              height: ${settings.labelHeight}mm;
-              border: 1px dashed #ccc;
-              padding: 2mm;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              box-sizing: border-box;
-              overflow: hidden;
-              page-break-inside: avoid;
+            .row { page-break-inside: avoid; }
+            .label { border: none !important; }
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          html, body {
+            font-family: Arial, sans-serif;
+            width: ${PAGE_WIDTH_MM}mm;
+            margin: 0;
+            padding: 0;
+          }
+          .labels-container { width: ${PAGE_WIDTH_MM}mm; }
+          .row {
+            display: flex;
+            flex-direction: row;
+            width: ${PAGE_WIDTH_MM}mm;
+            height: ${LABEL_HEIGHT_MM}mm;
+          }
+          .label {
+            width: ${LABEL_WIDTH_MM}mm;
+            height: ${LABEL_HEIGHT_MM}mm;
+            min-width: ${LABEL_WIDTH_MM}mm;
+            max-width: ${LABEL_WIDTH_MM}mm;
+            min-height: ${LABEL_HEIGHT_MM}mm;
+            max-height: ${LABEL_HEIGHT_MM}mm;
+            border: 0.1px solid #eee;
+            padding: 0.5mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            overflow: hidden;
+            background: white;
+          }
+          .product-name {
+            font-size: 6pt;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.1;
+            max-height: 3mm;
+            overflow: hidden;
+            width: 100%;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+          }
+          .size { font-size: 5pt; color: #333; }
+          .barcode-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: hidden;
+          }
+          .barcode-container svg {
+            max-width: ${LABEL_WIDTH_MM - 2}mm;
+            max-height: 12mm;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="labels-container" id="labels"></div>
+        <script>
+          const labels = ${JSON.stringify(expandedLabels.map(l => ({ productName: l.productName, size: l.size, barcode: l.barcode })))};
+          const container = document.getElementById('labels');
+          const labelsPerRow = ${LABELS_PER_ROW};
+
+          for (let i = 0; i < labels.length; i += labelsPerRow) {
+            const row = document.createElement('div');
+            row.className = 'row';
+
+            for (let j = 0; j < labelsPerRow; j++) {
+              const labelData = labels[i + j];
+              const labelDiv = document.createElement('div');
+              labelDiv.className = 'label';
+
+              if (labelData) {
+                labelDiv.innerHTML = \`
+                  <div class="product-name">\${labelData.productName}</div>
+                  <div class="size">Tam: \${labelData.size}</div>
+                  <div class="barcode-container">
+                    <svg id="barcode-\${i + j}"></svg>
+                  </div>
+                \`;
+              }
+              row.appendChild(labelDiv);
             }
-            .label-name {
-              font-size: ${settings.fontSize}px;
-              font-weight: bold;
-              margin-bottom: 2px;
-              max-width: 100%;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-            .label-size {
-              font-size: ${settings.fontSize - 2}px;
-              color: #666;
-              margin-bottom: 2px;
-            }
-            .label-price {
-              font-size: ${settings.fontSize + 2}px;
-              font-weight: bold;
-              margin-top: 2px;
-            }
-            .label-barcode {
-              max-width: 100%;
-              height: auto;
-            }
-            @media print {
-              .label {
-                border: 1px dashed #ddd;
+            container.appendChild(row);
+          }
+
+          labels.forEach((label, idx) => {
+            const svg = document.getElementById('barcode-' + idx);
+            if (label.barcode && svg) {
+              try {
+                JsBarcode(svg, label.barcode, { format: 'EAN13', width: 0.9, height: 12, displayValue: true, fontSize: 5, margin: 0, textMargin: 0 });
+              } catch(e) {
+                try { JsBarcode(svg, label.barcode, { format: 'CODE128', width: 0.7, height: 12, displayValue: true, fontSize: 5, margin: 0, textMargin: 0 }); } catch(e2) {}
               }
             }
-          </style>
-        </head>
-        <body>
-          <div class="labels-container">
-            ${labelsHtml}
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
-          </script>
-        </body>
+          });
+
+          setTimeout(() => window.print(), 600);
+        <\/script>
+      </body>
       </html>
-    `);
+    `;
+
+    printWindow.document.write(printHtml);
     printWindow.document.close();
+    toast.success(`Gerando PDF com ${totalLabels} etiquetas...`);
   };
 
-  const generateLabelsHtml = () => {
-    let html = '';
+  // Gerar comandos ZPL
+  const generateZPLCommands = () => {
+    const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM);
+    const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM);
 
-    labelItems.forEach(item => {
-      for (let i = 0; i < item.quantity; i++) {
-        html += `
-          <div class="label">
-            ${settings.showName ? `<div class="label-name">${item.productName}</div>` : ''}
-            ${settings.showSize ? `<div class="label-size">${item.size}</div>` : ''}
-            ${settings.showBarcode && item.barcode ? `
-              <svg class="label-barcode" id="barcode-${item.id}-${i}"></svg>
-            ` : ''}
-            ${settings.showPrice ? `<div class="label-price">${formatCurrency(item.price)}</div>` : ''}
-          </div>
-        `;
-      }
+    let zplCommands = '';
+
+    expandedLabels.forEach((label) => {
+      const productName = label.productName.length > 18
+        ? label.productName.substring(0, 18) + '...'
+        : label.productName;
+
+      const sizeText = `Tam: ${label.size}`;
+
+      zplCommands += `
+^XA
+^PW${labelWidthDots}
+^LL${labelHeightDots}
+^FO5,5^A0N,20,20^FB${labelWidthDots - 10},1,0,C,0^FD${productName}^FS
+^FO5,28^A0N,16,16^FB${labelWidthDots - 10},1,0,C,0^FD${sizeText}^FS
+^FO15,48^BY1.2,2.0,40^BCN,40,Y,N,N^FD${label.barcode}^FS
+^XZ
+`;
     });
 
-    return html;
+    return zplCommands;
+  };
+
+  // Impressão Direta via USB (Web USB API)
+  const handleDirectPrintUSB = async () => {
+    if (selections.length === 0) {
+      toast.error('Selecione pelo menos um produto!');
+      return;
+    }
+
+    // Verificar suporte a Web USB
+    const nav = navigator as any;
+    if (!nav.usb) {
+      toast.error('Seu navegador não suporta impressão USB direta. Use o Chrome ou Edge.');
+      return;
+    }
+
+    try {
+      toast.info('Conectando à impressora...');
+
+      // Solicitar acesso ao dispositivo USB (impressora térmica)
+      const device = await nav.usb.requestDevice({
+        filters: [
+          { vendorId: 0x0DD4 }, // Elgin
+          { vendorId: 0x0A5F }, // Zebra
+          { vendorId: 0x04B8 }, // Epson
+          { vendorId: 0x0745 }, // Argox
+          { classCode: 7 }, // Classe de impressora
+        ]
+      });
+
+      await device.open();
+
+      // Selecionar configuração
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
+
+      // Encontrar interface de impressora
+      const printerInterface = device.configuration?.interfaces.find(
+        (iface: any) => iface.alternate.interfaceClass === 7
+      );
+
+      if (!printerInterface) {
+        throw new Error('Interface de impressora não encontrada');
+      }
+
+      await device.claimInterface(printerInterface.interfaceNumber);
+
+      // Encontrar endpoint de saída
+      const outEndpoint = printerInterface.alternate.endpoints.find(
+        (ep: any) => ep.direction === 'out'
+      );
+
+      if (!outEndpoint) {
+        throw new Error('Endpoint de saída não encontrado');
+      }
+
+      // Gerar e enviar comandos ZPL
+      const zplCommands = generateZPLCommands();
+      const encoder = new TextEncoder();
+      const data = encoder.encode(zplCommands);
+
+      await device.transferOut(outEndpoint.endpointNumber, data);
+
+      // Liberar recursos
+      await device.releaseInterface(printerInterface.interfaceNumber);
+      await device.close();
+
+      toast.success(`${totalLabels} etiquetas enviadas para a impressora!`);
+    } catch (error: any) {
+      console.error('Erro na impressão USB:', error);
+
+      if (error.name === 'NotFoundError') {
+        toast.error('Nenhuma impressora selecionada');
+      } else if (error.name === 'SecurityError') {
+        toast.error('Permissão negada para acessar a impressora');
+      } else {
+        toast.error(`Erro: ${error.message || 'Falha na conexão USB'}`);
+      }
+    }
+  };
+
+  // Download do arquivo ZPL
+  const handleDownloadZPL = () => {
+    if (selections.length === 0) {
+      toast.error('Selecione pelo menos um produto!');
+      return;
+    }
+
+    const zplCommands = generateZPLCommands();
+
+    const blob = new Blob([zplCommands], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `etiquetas_${new Date().toISOString().slice(0, 10)}.prn`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`Arquivo ZPL gerado com ${totalLabels} etiquetas!`);
   };
 
   return (
-    <MainLayout title="Etiquetas" subtitle="Geração e impressão de etiquetas de produtos">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Product Selection */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Search */}
-          <Card className="opacity-0 animate-fade-in-up stagger-1">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Selecionar Produtos
+    <MainLayout title="Etiquetas" subtitle="Impressora Elgin L42 Pro Full">
+      {/* Mobile: Layout em abas / Desktop: Grid */}
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 animate-fade-in h-[calc(100vh-140px)] lg:h-[calc(100vh-160px)]">
+
+        {/* Mobile: Resumo fixo no topo */}
+        <div className="lg:hidden flex items-center justify-between bg-card border rounded-lg p-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-4 h-4 text-pink-primary" />
+              <span className="text-sm font-medium">{selections.length} itens</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-1.5">
+              <Printer className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm">{totalLabels} etiquetas</span>
+            </div>
+          </div>
+          {selections.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-muted-foreground"
+              onClick={clearAll}
+            >
+              Limpar
+            </Button>
+          )}
+        </div>
+
+        {/* Coluna Esquerda: Produtos */}
+        <Card variant="elevated" className="lg:col-span-5 flex flex-col min-h-0 flex-1 lg:flex-none">
+          <CardHeader className="pb-2 shrink-0 px-3 lg:px-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-sm lg:text-base flex items-center gap-2">
+                <Package className="w-4 h-4 text-pink-primary" />
+                <span className="hidden sm:inline">Produtos com Estoque</span>
+                <span className="sm:hidden">Produtos</span>
               </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Buscar por nome ou código de barras..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="max-h-[300px] overflow-y-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Tamanho</TableHead>
-                      <TableHead className="text-right">Preço</TableHead>
-                      <TableHead className="w-20"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                          {searchTerm ? 'Nenhum produto encontrado' : 'Digite para buscar produtos'}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredProducts.flatMap(product => 
-                        product.sizes?.map(size => (
-                          <TableRow key={`${product.id}-${size.id}`}>
-                            <TableCell className="font-medium">{product.name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{size.size}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">{formatCurrency(product.sale_price)}</TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleAddProduct(product, size)}
-                              >
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        )) || []
-                      )
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Selected Items */}
-          <Card className="opacity-0 animate-fade-in-up stagger-2">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Tag className="w-5 h-5" />
-                  Etiquetas Selecionadas
+              <Badge variant="secondary" className="text-[10px] lg:text-xs">
+                {productsWithStock.length} • {totalStock} un.
+              </Badge>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 h-8 lg:h-9 text-sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
+            <ScrollArea className="h-full px-2 lg:px-3 pb-3">
+              {isLoading ? (
+                <div className="space-y-2 pt-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 lg:h-16 w-full" />
+                  ))}
                 </div>
-                <Badge variant="secondary">{totalLabels} etiquetas</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {labelItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Tag className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>Nenhum produto selecionado</p>
-                  <p className="text-sm">Busque e adicione produtos acima</p>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-6 lg:py-8 text-muted-foreground">
+                  <Package className="w-8 lg:w-10 h-8 lg:h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs lg:text-sm">Nenhum produto com estoque</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Tamanho</TableHead>
-                      <TableHead className="text-center">Quantidade</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {labelItems.map(item => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.productName}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{item.size}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-2">
+                <div className="space-y-1.5 pt-2">
+                  {filteredProducts.map((product) => {
+                    const validSizes = product.sizes.filter(s => s.quantity >= 1 && s.barcode);
+                    const selectedCount = validSizes.filter(s => isSelected(s.id)).length;
+                    const allSelected = selectedCount === validSizes.length && validSizes.length > 0;
+
+                    return (
+                      <div
+                        key={product.id}
+                        className={`p-2 lg:p-2.5 rounded-lg border transition-all ${
+                          selectedCount > 0
+                            ? 'border-pink-primary/50 bg-pink-light/10'
+                            : 'border-border hover:border-pink-light/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-xs lg:text-sm text-foreground truncate">{product.name}</h4>
+                            <div className="flex items-center gap-1 text-[9px] lg:text-[10px] text-muted-foreground">
+                              {product.category_name && <span>{product.category_name}</span>}
+                              {product.color_name && <span>• {product.color_name}</span>}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={allSelected ? "pink" : "outline"}
+                            className="h-6 text-[9px] lg:text-[10px] px-2 shrink-0"
+                            onClick={() => selectAllSizes(product)}
+                          >
+                            {allSelected ? <Check className="w-3 h-3" /> : 'Todos'}
+                          </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {validSizes.map((sizeData) => {
+                            const selected = isSelected(sizeData.id);
+                            return (
+                              <button
+                                key={sizeData.id}
+                                onClick={() => toggleSelection(product, sizeData)}
+                                className={`
+                                  px-2 py-0.5 rounded text-[9px] lg:text-[10px] font-medium transition-all flex items-center gap-0.5 lg:gap-1
+                                  ${selected
+                                    ? 'bg-pink-primary text-white'
+                                    : 'bg-muted hover:bg-pink-light/30 text-foreground'
+                                  }
+                                `}
+                                title={`Estoque: ${sizeData.quantity}`}
+                              >
+                                {sizeData.size}
+                                <span className={`${selected ? 'text-white/70' : 'text-muted-foreground'}`}>
+                                  ({sizeData.quantity})
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Mobile: Selecionados e Ações em row / Desktop: Duas colunas separadas */}
+        <div className="lg:col-span-7 flex flex-col md:flex-row lg:grid lg:grid-cols-7 gap-3 lg:gap-4 min-h-0 lg:h-full">
+
+          {/* Coluna Central: Selecionados */}
+          <Card variant="elevated" className="md:flex-1 lg:col-span-4 flex flex-col min-h-[200px] lg:min-h-0">
+            <CardHeader className="pb-2 shrink-0 px-3 lg:px-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm lg:text-base flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-pink-primary" />
+                  Selecionados
+                  {selections.length > 0 && (
+                    <Badge variant="pink" className="text-[10px] lg:text-xs">{selections.length}</Badge>
+                  )}
+                </CardTitle>
+                <span className="hidden lg:inline">
+                  {selections.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] text-muted-foreground hover:text-destructive"
+                      onClick={clearAll}
+                    >
+                      Limpar
+                    </Button>
+                  )}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden p-0 min-h-0">
+              <ScrollArea className="h-full px-2 lg:px-3 pb-3">
+                {selections.length === 0 ? (
+                  <div className="text-center py-6 lg:py-8 text-muted-foreground">
+                    <Tag className="w-6 lg:w-8 h-6 lg:h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs lg:text-sm">Clique nos tamanhos</p>
+                    <p className="text-[10px] lg:text-xs">para selecionar</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 pt-2">
+                    {selections.map((sel) => (
+                      <div
+                        key={sel.sizeId}
+                        className="p-2 rounded-lg border border-border bg-background"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] lg:text-xs font-medium truncate">{sel.productName}</p>
+                            <div className="flex items-center gap-1">
+                              <Badge variant="secondary" className="text-[8px] lg:text-[9px] h-3.5 lg:h-4">{sel.size}</Badge>
+                              <span className="text-[8px] lg:text-[9px] text-muted-foreground">
+                                Est: {sel.stockQuantity}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5 text-muted-foreground hover:text-destructive shrink-0"
+                            onClick={() => removeSelection(sel.sizeId)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between bg-muted/50 rounded px-1.5 lg:px-2 py-0.5 lg:py-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-5 text-[8px] lg:text-[9px] px-1 lg:px-1.5"
+                            onClick={() => setQuantityToStock(sel.sizeId)}
+                          >
+                            =Est
+                          </Button>
+                          <div className="flex items-center gap-0">
                             <Button
                               size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => handleUpdateQuantity(item.id, -1)}
+                              variant="ghost"
+                              className="h-5 w-5"
+                              onClick={() => updateQuantity(sel.sizeId, -1)}
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="w-8 text-center font-medium">{item.quantity}</span>
+                            <Input
+                              type="number"
+                              min="1"
+                              max={sel.stockQuantity}
+                              value={sel.quantity}
+                              onChange={(e) => setQuantity(sel.sizeId, parseInt(e.target.value) || 1)}
+                              className="h-5 w-8 lg:w-10 text-center text-[10px] lg:text-xs px-0 border-0 bg-background"
+                            />
                             <Button
                               size="icon"
-                              variant="outline"
-                              className="h-8 w-8"
-                              onClick={() => handleUpdateQuantity(item.id, 1)}
+                              variant="ghost"
+                              className="h-5 w-5"
+                              onClick={() => updateQuantity(sel.sizeId, 1)}
                             >
                               <Plus className="w-3 h-3" />
                             </Button>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleRemoveItem(item.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              )}
+                  </div>
+                )}
+              </ScrollArea>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Settings & Preview */}
-        <div className="space-y-6">
-          {/* Settings */}
-          <Card className="opacity-0 animate-fade-in-up stagger-3">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Settings2 className="w-5 h-5" />
-                Configurações
+          {/* Coluna Direita: Preview e Ações */}
+          <Card variant="elevated" className="md:w-64 lg:w-auto lg:col-span-3 flex flex-col shrink-0">
+            <CardHeader className="pb-2 shrink-0 px-3 lg:px-6">
+              <CardTitle className="text-sm lg:text-base flex items-center gap-2">
+                <Printer className="w-4 h-4 text-pink-primary" />
+                <span className="hidden sm:inline">Prévia</span>
+                <span className="sm:hidden">Imprimir</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Exibir na Etiqueta</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="showName"
-                      checked={settings.showName}
-                      onCheckedChange={(checked) => 
-                        setSettings(s => ({ ...s, showName: !!checked }))
-                      }
-                    />
-                    <label htmlFor="showName" className="text-sm">Nome do produto</label>
+            <CardContent className="flex-1 flex flex-col gap-2 lg:gap-3 px-3 lg:px-6">
+              {/* Preview de linha - esconde em mobile pequeno */}
+              <div className="hidden sm:flex flex-1 flex-col items-center justify-center bg-muted/30 rounded-lg p-2 lg:p-3 min-h-[80px] lg:min-h-[100px]">
+                {expandedLabels.length > 0 ? (
+                  <div className="space-y-1 lg:space-y-2">
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground text-center">
+                      Primeira linha
+                    </p>
+                    <LabelRowPreview labels={expandedLabels.slice(0, 3)} />
+                    {expandedLabels.length > 3 && (
+                      <p className="text-[8px] lg:text-[9px] text-muted-foreground text-center">
+                        + {Math.ceil((expandedLabels.length - 3) / 3)} linha(s)
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="showSize"
-                      checked={settings.showSize}
-                      onCheckedChange={(checked) => 
-                        setSettings(s => ({ ...s, showSize: !!checked }))
-                      }
-                    />
-                    <label htmlFor="showSize" className="text-sm">Tamanho</label>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <Printer className="w-5 lg:w-6 h-5 lg:h-6 mx-auto mb-1 opacity-50" />
+                    <p className="text-[9px] lg:text-[10px]">Selecione itens</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="showBarcode"
-                      checked={settings.showBarcode}
-                      onCheckedChange={(checked) => 
-                        setSettings(s => ({ ...s, showBarcode: !!checked }))
-                      }
-                    />
-                    <label htmlFor="showBarcode" className="text-sm">Código de barras</label>
+                )}
+              </div>
+
+              {/* Informações */}
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-1 lg:gap-1.5">
+                  <div className="p-1 lg:p-1.5 rounded bg-muted/50 text-center">
+                    <p className="text-[8px] lg:text-[9px] text-muted-foreground uppercase">Etiqueta</p>
+                    <p className="font-medium text-[9px] lg:text-[10px]">{LABEL_WIDTH_MM}×{LABEL_HEIGHT_MM}mm</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="showPrice"
-                      checked={settings.showPrice}
-                      onCheckedChange={(checked) => 
-                        setSettings(s => ({ ...s, showPrice: !!checked }))
-                      }
-                    />
-                    <label htmlFor="showPrice" className="text-sm">Preço</label>
+                  <div className="p-1 lg:p-1.5 rounded bg-muted/50 text-center">
+                    <p className="text-[8px] lg:text-[9px] text-muted-foreground uppercase">Por linha</p>
+                    <p className="font-medium text-[9px] lg:text-[10px]">{LABELS_PER_ROW} etiq.</p>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-pink-light/20 border border-pink-light/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] lg:text-xs text-muted-foreground">Total</span>
+                    <Badge variant="pink" className="text-xs lg:text-sm font-bold">{totalLabels}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between mt-0.5 lg:mt-1">
+                    <span className="text-[9px] lg:text-[10px] text-muted-foreground">Linhas</span>
+                    <span className="text-[9px] lg:text-[10px] font-medium">{Math.ceil(totalLabels / 3)}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-sm">Largura (mm)</Label>
-                  <Input
-                    type="number"
-                    value={settings.labelWidth}
-                    onChange={(e) => setSettings(s => ({ ...s, labelWidth: parseInt(e.target.value) || 50 }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Altura (mm)</Label>
-                  <Input
-                    type="number"
-                    value={settings.labelHeight}
-                    onChange={(e) => setSettings(s => ({ ...s, labelHeight: parseInt(e.target.value) || 25 }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm">Tamanho da Fonte</Label>
-                <Select 
-                  value={settings.fontSize.toString()} 
-                  onValueChange={(v) => setSettings(s => ({ ...s, fontSize: parseInt(v) }))}
+              {/* Botões */}
+              <div className="space-y-1 lg:space-y-1.5">
+                <Button
+                  variant="pink"
+                  className="w-full h-8 lg:h-9 text-xs lg:text-sm"
+                  onClick={handleGeneratePDF}
+                  disabled={selections.length === 0}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="8">8px - Pequeno</SelectItem>
-                    <SelectItem value="10">10px - Normal</SelectItem>
-                    <SelectItem value="12">12px - Grande</SelectItem>
-                    <SelectItem value="14">14px - Extra Grande</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <FileDown className="w-3.5 lg:w-4 h-3.5 lg:h-4 mr-1.5 lg:mr-2" />
+                  PDF ({totalLabels})
+                </Button>
+
+                <Button
+                  variant="default"
+                  className="w-full h-8 lg:h-9 text-xs lg:text-sm"
+                  onClick={handleDirectPrintUSB}
+                  disabled={selections.length === 0}
+                >
+                  <Usb className="w-3.5 lg:w-4 h-3.5 lg:h-4 mr-1.5 lg:mr-2" />
+                  Impressora USB
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full h-7 lg:h-8 text-[10px] lg:text-xs"
+                  onClick={handleDownloadZPL}
+                  disabled={selections.length === 0}
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Arquivo ZPL
+                </Button>
               </div>
             </CardContent>
           </Card>
-
-          {/* Preview */}
-          <Card className="opacity-0 animate-fade-in-up stagger-4">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                Prévia da Etiqueta
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <div 
-                  className="border-2 border-dashed rounded-lg p-3 flex flex-col items-center justify-center text-center"
-                  style={{ 
-                    width: `${settings.labelWidth * 2}px`, 
-                    minHeight: `${settings.labelHeight * 2}px` 
-                  }}
-                >
-                  {settings.showName && (
-                    <p className="font-bold truncate w-full" style={{ fontSize: `${settings.fontSize}px` }}>
-                      Nome do Produto
-                    </p>
-                  )}
-                  {settings.showSize && (
-                    <p className="text-muted-foreground" style={{ fontSize: `${settings.fontSize - 2}px` }}>
-                      M
-                    </p>
-                  )}
-                  {settings.showBarcode && (
-                    <div className="my-1">
-                      <svg className="w-full h-8">
-                        <rect width="100%" height="100%" fill="#f0f0f0" />
-                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fontSize="8">
-                          |||||||||||
-                        </text>
-                      </svg>
-                    </div>
-                  )}
-                  {settings.showPrice && (
-                    <p className="font-bold" style={{ fontSize: `${settings.fontSize + 2}px` }}>
-                      R$ 99,90
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Print Button */}
-          <Button
-            onClick={handlePrint}
-            disabled={labelItems.length === 0}
-            className="w-full gap-2"
-            size="lg"
-          >
-            <Printer className="w-5 h-5" />
-            Imprimir {totalLabels} Etiquetas
-          </Button>
         </div>
       </div>
     </MainLayout>
