@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { StatsCard } from '@/components/dashboard/StatsCard';
+import { ImportFinancialDialog } from '@/components/financial/ImportFinancialDialog';
 import { formatCurrency } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload
 } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -43,6 +44,7 @@ export default function Financial() {
   const [endDate, setEndDate] = useState<string>(defaultEnd.toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
