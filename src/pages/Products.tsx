@@ -91,14 +91,14 @@ export default function Products() {
     if (!file) return;
 
     try {
-      const productsData = await parseExcel(file);
+      const products = await parseExcel(file);
 
-      if (productsData.length === 0) {
+      if (products.length === 0) {
         toast.error('Nenhum produto válido encontrado na planilha');
         return;
       }
 
-      importProducts.mutate(productsData, {
+      importProducts.mutate(products, {
         onSuccess: () => {
           setIsImportDialogOpen(false);
           if (fileInputRef.current) {
