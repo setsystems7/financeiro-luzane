@@ -26,13 +26,13 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const menuItems = [
   { icon: ShoppingCart, label: 'PDV', path: '/' },
+  { icon: Wallet, label: 'Financeiro', path: '/financeiro' },
   { icon: FileText, label: 'Fiado', path: '/fiado' },
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Package, label: 'Produtos', path: '/produtos' },
   { icon: ArrowLeftRight, label: 'Estoque', path: '/estoque' },
   { icon: RefreshCcw, label: 'Reposição', path: '/reposicao' },
   { icon: RefreshCcw, label: 'Trocas', path: '/trocas' },
-  { icon: Wallet, label: 'Financeiro', path: '/financeiro' },
   { icon: Tag, label: 'Etiquetas', path: '/etiquetas' },
   { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
