@@ -175,9 +175,13 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
     if (selectedSize && !sizeVariants.find(s => s.size === selectedSize)) {
       setSizeVariants([
         ...sizeVariants,
-        { size: selectedSize, quantity: 0, barcode: generateBarcode() }
+        { size: selectedSize, quantity: 0, barcode: '' }
       ]);
       setSelectedSize('');
+      // Foca no campo de barcode do novo tamanho após renderizar
+      setTimeout(() => {
+        barcodeInputRefs.current[selectedSize]?.focus();
+      }, 100);
     }
   };
 
