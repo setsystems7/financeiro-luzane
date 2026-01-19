@@ -526,31 +526,78 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
                         />
                       </div>
 
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground font-medium flex items-center gap-1">
                           <Barcode className="w-3 h-3" />
                           Código de Barras
                         </Label>
-                        <div className="flex gap-2">
+                        
+                        {/* Botões de ação para código de barras */}
+                        <div className="flex gap-1.5 flex-wrap">
+                          <Button
+                            type="button"
+                            variant={!variant.barcode ? 'pink' : 'outline'}
+                            size="sm"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => {
+                              handleBarcodeChange(variant.size, '');
+                              setTimeout(() => {
+                                barcodeInputRefs.current[variant.size]?.focus();
+                              }, 50);
+                            }}
+                            title="Limpar e focar para bipar ou digitar"
+                          >
+                            <Barcode className="w-3 h-3" />
+                            Bipar/Digitar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => handleGenerateBarcode(variant.size)}
+                            title="Gerar código EAN-13 automático"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Gerar Auto
+                          </Button>
+                          {variant.barcode && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                              onClick={() => handleBarcodeChange(variant.size, '')}
+                              title="Limpar código"
+                            >
+                              <X className="w-3 h-3" />
+                              Limpar
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Input do código de barras */}
+                        <div className="relative">
                           <Input
                             ref={(el) => { barcodeInputRefs.current[variant.size] = el; }}
                             type="text"
                             value={variant.barcode || ''}
                             onChange={(e) => handleBarcodeChange(variant.size, e.target.value)}
-                            className="h-10 font-mono text-sm tracking-wider"
-                            placeholder="Bipar ou digitar"
+                            className="h-10 font-mono text-sm tracking-wider pr-8"
+                            placeholder="Clique em Bipar/Digitar ou Gerar Auto"
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 shrink-0"
-                            onClick={() => handleGenerateBarcode(variant.size)}
-                            title="Gerar novo código"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
+                          {variant.barcode && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-50 text-green-600 border-green-300 dark:bg-green-950 dark:text-green-400 dark:border-green-700">
+                                ✓
+                              </Badge>
+                            </div>
+                          )}
                         </div>
+                        
+                        <p className="text-[10px] text-muted-foreground">
+                          Use o leitor de código de barras, digite manualmente ou gere automaticamente
+                        </p>
                       </div>
                     </div>
 
