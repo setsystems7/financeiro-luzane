@@ -25,7 +25,7 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
-const availableSizes = ['PP', 'P', 'M', 'G', 'GG', 'XGG', 'U'];
+const availableSizes = ['PP', 'P', 'M', 'G', 'GG', 'XGG'];
 
 // Calcula o dígito verificador EAN-13
 function calculateEAN13CheckDigit(digits: string): number {
