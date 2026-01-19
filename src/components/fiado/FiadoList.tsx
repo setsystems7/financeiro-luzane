@@ -69,57 +69,57 @@ export function FiadoList() {
     <>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-yellow-500/10">
-                  <Clock className="w-5 h-5 text-yellow-500" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-full bg-yellow-500/10">
+                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Pendentes</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-500/10">
-                  <CheckCircle className="w-5 h-5 text-blue-500" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-full bg-blue-500/10">
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.approved}</p>
-                  <p className="text-sm text-muted-foreground">Aprovados</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.approved}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Aprovados</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-500/10">
-                  <DollarSign className="w-5 h-5 text-green-500" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-full bg-green-500/10">
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.paid}</p>
-                  <p className="text-sm text-muted-foreground">Quitados</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.paid}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Quitados</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <DollarSign className="w-5 h-5 text-primary" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-full bg-primary/10">
+                  <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">
+                <div className="min-w-0">
+                  <p className="text-lg md:text-2xl font-bold truncate">
                     R$ {stats.totalPending.toFixed(2)}
                   </p>
-                  <p className="text-sm text-muted-foreground">A Receber</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">A Receber</p>
                 </div>
               </div>
             </CardContent>
@@ -144,13 +144,15 @@ export function FiadoList() {
           </CardHeader>
           <CardContent>
             <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-              <TabsList className="grid w-full grid-cols-5 mb-4">
-                <TabsTrigger value="all">Todos</TabsTrigger>
-                <TabsTrigger value="pendente">Pendentes</TabsTrigger>
-                <TabsTrigger value="aprovado">Aprovados</TabsTrigger>
-                <TabsTrigger value="pago">Pagos</TabsTrigger>
-                <TabsTrigger value="cancelado">Cancelados</TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto -mx-2 px-2 pb-2">
+                <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-2xl md:grid-cols-5 mb-4">
+                  <TabsTrigger value="all" className="text-xs md:text-sm">Todos</TabsTrigger>
+                  <TabsTrigger value="pendente" className="text-xs md:text-sm">Pendentes</TabsTrigger>
+                  <TabsTrigger value="aprovado" className="text-xs md:text-sm">Aprovados</TabsTrigger>
+                  <TabsTrigger value="pago" className="text-xs md:text-sm">Pagos</TabsTrigger>
+                  <TabsTrigger value="cancelado" className="text-xs md:text-sm">Cancelados</TabsTrigger>
+                </TabsList>
+              </div>
 
               <ScrollArea className="h-[500px]">
                 {isLoading ? (
@@ -216,14 +218,15 @@ export function FiadoList() {
                               )}
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setSelectedSaleId(sale.id)}
+                                className="text-xs md:text-sm"
                               >
-                                <Eye className="w-4 h-4 mr-1" />
-                                Detalhes
+                                <Eye className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                <span className="hidden sm:inline">Detalhes</span>
                               </Button>
 
                               {sale.status === 'pendente' && (
@@ -233,18 +236,20 @@ export function FiadoList() {
                                     size="sm"
                                     onClick={() => handleApprove(sale.id)}
                                     disabled={approveFiadoSale.isPending}
+                                    className="text-xs md:text-sm"
                                   >
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Aprovar
+                                    <Check className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                    <span className="hidden sm:inline">Aprovar</span>
                                   </Button>
                                   <Button
                                     variant="destructive"
                                     size="sm"
                                     onClick={() => handleCancel(sale.id)}
                                     disabled={cancelFiadoSale.isPending}
+                                    className="text-xs md:text-sm"
                                   >
-                                    <X className="w-4 h-4 mr-1" />
-                                    Cancelar
+                                    <X className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                    <span className="hidden sm:inline">Cancelar</span>
                                   </Button>
                                 </>
                               )}
