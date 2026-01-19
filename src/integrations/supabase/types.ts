@@ -330,7 +330,7 @@ export type Database = {
             foreignKeyName: "fiado_payments_fiado_sale_id_fkey"
             columns: ["fiado_sale_id"]
             isOneToOne: false
-            referencedRelation: "fiado_payments"
+            referencedRelation: "fiado_sales"
             referencedColumns: ["id"]
           },
         ]
