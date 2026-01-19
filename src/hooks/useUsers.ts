@@ -31,31 +31,39 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (data: { email: string; password: string; fullName: string }) => {
-      // Sign up the user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: data.fullName,
-          },
+      // Get current session for authorization
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error('Você precisa estar logado para criar usuários');
+      }
+
+      // Call edge function to create user (admin only)
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          email: data.email,
+          password: data.password,
+          fullName: data.fullName,
         },
       });
 
-      if (signUpError) throw signUpError;
-      return authData;
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao criar usuário');
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       toast.success('Usuário cadastrado com sucesso!');
     },
     onError: (error: any) => {
-      if (error.message?.includes('already registered')) {
-        toast.error('Este e-mail já está cadastrado');
-      } else {
-        toast.error(error.message || 'Erro ao cadastrar usuário');
-      }
+      toast.error(error.message || 'Erro ao cadastrar usuário');
     },
   });
 }
