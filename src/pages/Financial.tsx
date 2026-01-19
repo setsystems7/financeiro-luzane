@@ -57,7 +57,6 @@ export default function Financial() {
       return newSet;
     });
   };
-  
   // Enable realtime updates
   useFinancialRealtime();
 
@@ -78,12 +77,16 @@ export default function Financial() {
     endDate: endDate ? new Date(endDate) : undefined,
   });
   const { data: suppliers = [] } = useSuppliersList();
+  const { data: cardSalesData, isLoading: cardSalesLoading } = useCardSales(
+    startDate ? new Date(startDate) : undefined,
+    endDate ? new Date(endDate) : undefined
+  );
 
   const markExpenseAsPaid = useMarkExpenseAsPaid();
   const markReceivableAsReceived = useMarkReceivableAsReceived();
   const createExpense = useCreateExpense();
 
-  const { register, handleSubmit, reset, setValue } = useForm({
+  const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
       description: '',
       amount: '',
@@ -139,30 +142,30 @@ export default function Financial() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatsCard
             title="Entrada Total"
-            value={summaryLoading ? 'Carregando...' : formatCurrency(summary?.totalGrossReceivable || 0)}
+            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
             icon={<ArrowUpRight className="w-6 h-6 text-blue-500" />}
             description="Valor bruto com taxas"
           />
           <StatsCard
             title="Taxas Recebidas"
-            value={summaryLoading ? 'Carregando...' : formatCurrency(summary?.totalFees || 0)}
+            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
             icon={<CreditCard className="w-6 h-6 text-amber-500" />}
             description="Taxas pagas pelos clientes"
           />
           <StatsCard
             title="Valor Líquido"
-            value={summaryLoading ? 'Carregando...' : formatCurrency(summary?.totalReceivable || 0)}
+            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
             icon={<TrendingUp className="w-6 h-6 text-green-500" />}
             description="Valor que entra no caixa"
           />
           <StatsCard
             title="Contas a Pagar"
-            value={summaryLoading ? 'Carregando...' : formatCurrency(summary?.totalPayable || 0)}
+            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
             icon={<TrendingDown className="w-6 h-6 text-red-500" />}
           />
           <StatsCard
             title="Saldo Previsto"
-            value={summaryLoading ? 'Carregando...' : formatCurrency(summary?.balance || 0)}
+            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
             icon={<Wallet className="w-6 h-6 text-pink-500" />}
             variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
           />
@@ -212,6 +215,11 @@ export default function Financial() {
 
               <Button variant="outline" size="sm" onClick={clearFilters}>
                 Limpar
+              </Button>
+
+              <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar Histórico
               </Button>
             </div>
           </CardContent>
@@ -265,6 +273,7 @@ export default function Financial() {
                         <TableHead>Pagamento</TableHead>
                         <TableHead>Bandeira</TableHead>
                         <TableHead className="text-center">Parcelas</TableHead>
+                        <TableHead className="text-center">Desconto</TableHead>
                         <TableHead className="text-right">Valor Total</TableHead>
                         <TableHead className="text-right">Taxa</TableHead>
                         <TableHead className="text-right">Valor Líquido</TableHead>
@@ -281,6 +290,9 @@ export default function Financial() {
                         const total = Number(item.amount) || 0;
                         const fee = Number(item.fee || 0);
                         const net = Number(item.net_amount || 0);
+                        const discount = Number(sale?.discount || 0);
+                        const subtotal = Number(sale?.total || 0);
+                        const discountPercent = subtotal > 0 ? (discount / subtotal) * 100 : 0;
                         const saleItems = sale?.sale_items || [];
                         const isExpanded = expandedRows.has(item.id);
 
@@ -297,7 +309,7 @@ export default function Financial() {
                             <TableRow
                               key={item.id}
                               className={`cursor-pointer hover:bg-muted/50 transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
-                              onClick={() => saleItems.length > 0 && toggleRow(item.id)}
+                              onClick={() => sale?.sale_items && sale.sale_items.length > 0 && toggleRow(item.id)}
                             >
                               <TableCell className="w-10">
                                 {saleItems.length > 0 && (
@@ -341,22 +353,32 @@ export default function Financial() {
                                   '-'
                                 )}
                               </TableCell>
+                              <TableCell className="text-center">
+                                {discount > 0 ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                    <Percent className="w-3 h-3 mr-1" />
+                                    {discountPercent.toFixed(0)}% (-R$ {formatCurrency(discount)})
+                                  </Badge>
+                                ) : (
+                                  '-'
+                                )}
+                              </TableCell>
                               <TableCell className="text-right font-semibold">
-                                {formatCurrency(total)}
+                                R$ {formatCurrency(total)}
                               </TableCell>
                               <TableCell className="text-right">
                                 {isCardSale && sale?.card_fee_percent != null && Number(sale.card_fee_percent) > 0 ? (
                                   <span>
-                                    {Number(sale.card_fee_percent).toFixed(2)}% (+{formatCurrency(fee)})
+                                    {Number(sale.card_fee_percent).toFixed(2)}% (+R$ {formatCurrency(fee)})
                                   </span>
                                 ) : fee > 0 ? (
-                                  <span>+{formatCurrency(fee)}</span>
+                                  <span>+R$ {formatCurrency(fee)}</span>
                                 ) : (
                                   '-'
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-semibold text-green-600 dark:text-green-400">
-                                {formatCurrency(net)}
+                                R$ {formatCurrency(net)}
                               </TableCell>
                               <TableCell className="text-center">
                                 <Badge variant={item.is_received ? 'success' : 'warning'}>
@@ -382,8 +404,8 @@ export default function Financial() {
                             </TableRow>
                             {/* Linha expandida com itens da venda */}
                             {isExpanded && saleItems.length > 0 && (
-                              <TableRow key={`${item.id}-expanded`} className="bg-muted/20 hover:bg-muted/30">
-                                <TableCell colSpan={11} className="p-0">
+                              <TableRow className="bg-muted/20 hover:bg-muted/30">
+                                <TableCell colSpan={12} className="p-0">
                                   <div className="px-6 py-3 border-l-4 border-pink-500 ml-4">
                                     <p className="text-sm font-medium mb-2 text-muted-foreground">Itens da venda:</p>
                                     <div className="grid gap-2">
@@ -401,9 +423,9 @@ export default function Financial() {
                                             )}
                                           </div>
                                           <div className="flex items-center gap-4 text-muted-foreground">
-                                            <span>{saleItem.quantity}x {formatCurrency(saleItem.unit_price)}</span>
+                                            <span>{saleItem.quantity}x R$ {formatCurrency(saleItem.unit_price)}</span>
                                             <span className="font-semibold text-foreground">
-                                              {formatCurrency(saleItem.total)}
+                                              R$ {formatCurrency(saleItem.total)}
                                             </span>
                                           </div>
                                         </div>
@@ -546,7 +568,7 @@ export default function Financial() {
                             {format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-right font-semibold">
-                            {formatCurrency(item.amount)}
+                            R$ {formatCurrency(item.amount)}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge
@@ -582,7 +604,14 @@ export default function Financial() {
               </CardContent>
             </Card>
           </TabsContent>
+
         </Tabs>
+
+        {/* Import Financial Dialog */}
+        <ImportFinancialDialog
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+        />
       </main>
     </MainLayout>
   );
