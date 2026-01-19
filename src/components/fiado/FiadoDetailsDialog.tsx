@@ -77,7 +77,7 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[90vh] w-[95vw] sm:w-full overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Venda Fiado
@@ -91,11 +91,11 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
           <div className="space-y-6">
             {/* Customer Info */}
             <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <User className="w-4 h-4" />
+              <h3 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+                <User className="w-4 h-4 flex-shrink-0" />
                 Cliente
               </h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Nome:</span>
                   <p className="font-medium">{sale.customer_name}</p>
@@ -227,11 +227,11 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
                       Registrar Pagamento
                     </Button>
                   ) : (
-                    <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold">Novo Pagamento</h4>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4 p-3 md:p-4 border rounded-lg bg-muted/30">
+                      <h4 className="font-semibold text-sm md:text-base">Novo Pagamento</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                         <div>
-                          <Label>Valor</Label>
+                          <Label className="text-xs md:text-sm">Valor</Label>
                           <Input
                             type="number"
                             placeholder={`Máx: R$ ${Number(sale.amount_pending).toFixed(2)}`}
@@ -239,12 +239,13 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
                             onChange={(e) => setPaymentAmount(e.target.value)}
                             max={Number(sale.amount_pending)}
                             step="0.01"
+                            className="text-sm"
                           />
                         </div>
                         <div>
-                          <Label>Forma de Pagamento</Label>
+                          <Label className="text-xs md:text-sm">Forma de Pagamento</Label>
                           <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger>
+                            <SelectTrigger className="text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -256,11 +257,11 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
                           </Select>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           onClick={handlePayment}
                           disabled={registerPayment.isPending}
-                          className="flex-1"
+                          className="flex-1 text-sm"
                         >
                           {registerPayment.isPending ? 'Registrando...' : 'Confirmar Pagamento'}
                         </Button>
@@ -270,6 +271,7 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
                             setShowPaymentForm(false);
                             setPaymentAmount('');
                           }}
+                          className="text-sm"
                         >
                           Cancelar
                         </Button>

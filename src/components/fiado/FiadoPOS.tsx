@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ interface FiadoPOSProps {
   onSaleComplete: () => void;
 }
 
-export function FiadoPOS({ onSaleComplete }: FiadoPOSProps) {
+export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function FiadoPOS({ onSaleComplete }, ref) {
   const { data: products, isLoading: loadingProducts } = useProducts();
   const createFiadoSale = useCreateFiadoSale();
 
@@ -185,7 +185,7 @@ export function FiadoPOS({ onSaleComplete }: FiadoPOSProps) {
   const isFormValid = cart.length > 0 && customerName.trim().length > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div ref={ref} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
       {/* Left: Cart and Customer Info */}
       <div className="space-y-6">
         {/* Customer Info Card */}
@@ -474,4 +474,6 @@ export function FiadoPOS({ onSaleComplete }: FiadoPOSProps) {
       </Card>
     </div>
   );
-}
+});
+
+FiadoPOS.displayName = 'FiadoPOS';
