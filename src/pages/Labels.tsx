@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProducts, Product } from '@/hooks/useProducts';
-import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, AlertTriangle, HelpCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import JsBarcode from 'jsbarcode';
 import {
@@ -136,6 +136,9 @@ export default function Labels() {
   const [showPrintHelp, setShowPrintHelp] = useState(false);
   const [showPrintFallback, setShowPrintFallback] = useState(false);
   const [printError, setPrintError] = useState<string>('');
+  
+  // Detectar se está em iframe (preview do editor)
+  const isInIframe = window.self !== window.top;
 
   // Filtrar produtos que têm pelo menos 1 unidade em qualquer tamanho e código de barras
   const productsWithStock = useMemo(() => {
@@ -518,10 +521,24 @@ export default function Labels() {
   };
 
 
+  // Abrir app em nova aba (para permitir USB)
+  const handleOpenInNewTab = () => {
+    window.open(window.location.href, '_blank');
+    toast.info('Abra a página em nova aba e tente USB novamente');
+    setShowPrintFallback(false);
+  };
+
   // Impressão Direta via USB (Web USB API) com tratamento melhorado
   const handleDirectPrintUSB = async () => {
     if (selections.length === 0) {
       toast.error('Selecione pelo menos um produto!');
+      return;
+    }
+
+    // Verificar se está em iframe (bloqueio de segurança)
+    if (isInIframe) {
+      setPrintError('A impressão USB não está disponível dentro do editor da Lovable.\n\nPara usar USB direto:\n1. Clique em "Abrir em Nova Aba" abaixo\n2. Na nova aba, clique novamente em "USB Direto"\n\nAlternativa: Use "Imprimir PDF" que funciona em qualquer lugar.');
+      setShowPrintFallback(true);
       return;
     }
 
@@ -950,12 +967,14 @@ export default function Labels() {
                 <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
-                    className="flex-1 h-7 lg:h-8 text-[10px] lg:text-xs"
+                    className={`flex-1 h-7 lg:h-8 text-[10px] lg:text-xs ${isInIframe ? 'opacity-60' : ''}`}
                     onClick={handleDirectPrintUSB}
                     disabled={selections.length === 0}
+                    title={isInIframe ? 'USB indisponível no editor - abra em nova aba' : 'Impressão direta via USB'}
                   >
                     <Usb className="w-3 h-3 mr-1" />
                     USB Direto
+                    {isInIframe && <AlertTriangle className="w-3 h-3 ml-1 text-yellow-500" />}
                   </Button>
                   <Button
                     variant="ghost"
@@ -1004,8 +1023,19 @@ export default function Labels() {
                 USB Direto (Avançado)
               </h4>
               <p className="text-muted-foreground pl-2">
-                Envia comandos direto para a impressora via USB. Requer Chrome ou Edge e pode ser bloqueado pelo sistema.
+                Envia comandos direto para a impressora via USB. Requer Chrome ou Edge.
               </p>
+              {isInIframe && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 p-2 rounded-lg text-xs">
+                  <p className="font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Indisponível no editor
+                  </p>
+                  <p className="text-muted-foreground mt-1">
+                    USB só funciona quando a página está aberta em uma nova aba (fora do editor).
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
@@ -1028,7 +1058,7 @@ export default function Labels() {
 
       {/* Modal de Fallback quando USB falha */}
       <AlertDialog open={showPrintFallback} onOpenChange={setShowPrintFallback}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
@@ -1037,12 +1067,35 @@ export default function Labels() {
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p className="whitespace-pre-line text-sm">{printError}</p>
+                
+                {isInIframe && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg">
+                    <p className="font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5 mb-2">
+                      <ExternalLink className="w-4 h-4" />
+                      Abrir em Nova Aba
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      USB funciona quando a página está fora do editor. Clique abaixo para abrir em nova aba.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-8 text-xs"
+                      onClick={handleOpenInNewTab}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1.5" />
+                      Abrir em Nova Aba
+                    </Button>
+                  </div>
+                )}
+                
                 <div className="bg-muted/50 p-3 rounded-lg">
-                  <p className="font-medium text-foreground mb-1">
-                    Use a impressão via PDF:
+                  <p className="font-medium text-foreground mb-1 flex items-center gap-1.5">
+                    <Printer className="w-4 h-4 text-pink-primary" />
+                    Alternativa: Imprimir PDF
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Clique em "Imprimir PDF" e selecione a <strong>Elgin L42 Pro</strong> na lista de impressoras do Windows.
+                  <p className="text-xs text-muted-foreground">
+                    Funciona em qualquer lugar. Selecione a <strong>Elgin L42 Pro</strong> na lista de impressoras.
                   </p>
                 </div>
               </div>
@@ -1052,7 +1105,7 @@ export default function Labels() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleBrowserPrint} className="bg-pink-primary hover:bg-pink-primary/90">
               <Printer className="w-4 h-4 mr-2" />
-              Imprimir PDF ({totalLabels} etiquetas)
+              Imprimir PDF ({totalLabels})
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
