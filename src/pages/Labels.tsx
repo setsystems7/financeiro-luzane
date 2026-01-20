@@ -7,9 +7,26 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProducts, Product } from '@/hooks/useProducts';
-import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, Download } from 'lucide-react';
+import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, Download, AlertTriangle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import JsBarcode from 'jsbarcode';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // Configurações para Elgin L42 Pro Full - 3 etiquetas por linha
 const LABEL_WIDTH_MM = 33;
@@ -116,6 +133,9 @@ export default function Labels() {
   const { data: products = [], isLoading } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [selections, setSelections] = useState<LabelSelection[]>([]);
+  const [showPrintHelp, setShowPrintHelp] = useState(false);
+  const [showPrintFallback, setShowPrintFallback] = useState(false);
+  const [printError, setPrintError] = useState<string>('');
 
   // Filtrar produtos que têm pelo menos 1 unidade em qualquer tamanho e código de barras
   const productsWithStock = useMemo(() => {
@@ -412,7 +432,7 @@ export default function Labels() {
     return zplCommands;
   };
 
-  // Impressão Direta via USB (Web USB API)
+  // Impressão Direta via USB (Web USB API) com tratamento melhorado
   const handleDirectPrintUSB = async () => {
     if (selections.length === 0) {
       toast.error('Selecione pelo menos um produto!');
@@ -422,12 +442,14 @@ export default function Labels() {
     // Verificar suporte a Web USB
     const nav = navigator as any;
     if (!nav.usb) {
-      toast.error('Seu navegador não suporta impressão USB direta. Use o Chrome ou Edge.');
+      setPrintError('Seu navegador não suporta impressão USB direta. Use o Chrome ou Edge.');
+      setShowPrintFallback(true);
       return;
     }
 
     try {
-      toast.info('Conectando à impressora...');
+      toast.info('Conectando à impressora... Selecione-a na janela que abrir.');
+      console.log('[Impressão USB] Iniciando conexão...');
 
       // Solicitar acesso ao dispositivo USB (impressora térmica)
       const device = await nav.usb.requestDevice({
@@ -440,11 +462,14 @@ export default function Labels() {
         ]
       });
 
+      console.log('[Impressão USB] Dispositivo selecionado:', device.productName);
       await device.open();
+      console.log('[Impressão USB] Dispositivo aberto');
 
       // Selecionar configuração
       if (device.configuration === null) {
         await device.selectConfiguration(1);
+        console.log('[Impressão USB] Configuração selecionada');
       }
 
       // Encontrar interface de impressora
@@ -453,10 +478,12 @@ export default function Labels() {
       );
 
       if (!printerInterface) {
-        throw new Error('Interface de impressora não encontrada');
+        throw new Error('Interface de impressora não encontrada. A impressora pode estar sendo usada por outro programa.');
       }
 
+      console.log('[Impressão USB] Interface encontrada:', printerInterface.interfaceNumber);
       await device.claimInterface(printerInterface.interfaceNumber);
+      console.log('[Impressão USB] Interface reivindicada');
 
       // Encontrar endpoint de saída
       const outEndpoint = printerInterface.alternate.endpoints.find(
@@ -464,7 +491,7 @@ export default function Labels() {
       );
 
       if (!outEndpoint) {
-        throw new Error('Endpoint de saída não encontrado');
+        throw new Error('Endpoint de saída não encontrado na impressora.');
       }
 
       // Gerar e enviar comandos ZPL
@@ -472,24 +499,58 @@ export default function Labels() {
       const encoder = new TextEncoder();
       const data = encoder.encode(zplCommands);
 
+      console.log('[Impressão USB] Enviando', data.byteLength, 'bytes para endpoint', outEndpoint.endpointNumber);
       await device.transferOut(outEndpoint.endpointNumber, data);
 
       // Liberar recursos
       await device.releaseInterface(printerInterface.interfaceNumber);
       await device.close();
+      console.log('[Impressão USB] Impressão concluída com sucesso');
 
       toast.success(`${totalLabels} etiquetas enviadas para a impressora!`);
     } catch (error: any) {
-      console.error('Erro na impressão USB:', error);
+      console.error('[Impressão USB] Erro detalhado:', error);
+      console.error('[Impressão USB] Nome do erro:', error.name);
+      console.error('[Impressão USB] Mensagem:', error.message);
+
+      let errorMessage = '';
+      let showFallback = true;
 
       if (error.name === 'NotFoundError') {
-        toast.error('Nenhuma impressora selecionada');
+        errorMessage = 'Nenhuma impressora foi selecionada. Clique em "Imprimir USB" novamente e selecione a impressora na janela que aparecer.';
+        showFallback = false;
+        toast.warning('Nenhuma impressora selecionada');
       } else if (error.name === 'SecurityError') {
-        toast.error('Permissão negada para acessar a impressora');
+        errorMessage = 'Permissão negada para acessar a impressora USB.\n\nIsso pode acontecer porque:\n• A impressora está sendo usada por outro programa (feche o software da Elgin ou drivers)\n• O navegador bloqueou o acesso (verifique as permissões do site)\n• O sistema operacional restringiu o acesso USB';
+      } else if (error.message?.includes('Interface')) {
+        errorMessage = 'A interface da impressora não foi encontrada ou está ocupada.\n\nFeche outros programas que possam estar usando a impressora e tente novamente.';
+      } else if (error.message?.includes('claimed')) {
+        errorMessage = 'A impressora já está em uso por outro programa.\n\nFeche o software da Elgin, drivers ou outros aplicativos de impressão e tente novamente.';
       } else {
-        toast.error(`Erro: ${error.message || 'Falha na conexão USB'}`);
+        errorMessage = `Erro ao conectar com a impressora: ${error.message || 'Falha na conexão USB'}`;
+      }
+
+      if (showFallback) {
+        setPrintError(errorMessage);
+        setShowPrintFallback(true);
       }
     }
+  };
+
+  // Impressão via janela do navegador (alternativa mais compatível)
+  const handleBrowserPrint = () => {
+    if (selections.length === 0) {
+      toast.error('Selecione pelo menos um produto!');
+      return;
+    }
+    handleGeneratePDF();
+    setShowPrintFallback(false);
+  };
+
+  // Download ZPL como alternativa
+  const handleFallbackDownloadZPL = () => {
+    handleDownloadZPL();
+    setShowPrintFallback(false);
   };
 
   // Download do arquivo ZPL
@@ -831,20 +892,122 @@ export default function Labels() {
                   Impressora USB
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="w-full h-7 lg:h-8 text-[10px] lg:text-xs"
-                  onClick={handleDownloadZPL}
-                  disabled={selections.length === 0}
-                >
-                  <Download className="w-3 h-3 mr-1" />
-                  Arquivo ZPL
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-7 lg:h-8 text-[10px] lg:text-xs"
+                    onClick={handleDownloadZPL}
+                    disabled={selections.length === 0}
+                  >
+                    <Download className="w-3 h-3 mr-1" />
+                    Arquivo ZPL
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 lg:h-8 w-7 lg:w-8"
+                    onClick={() => setShowPrintHelp(true)}
+                    title="Ajuda com impressão"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Modal de Ajuda para Impressão */}
+      <Dialog open={showPrintHelp} onOpenChange={setShowPrintHelp}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Dicas para Impressão
+            </DialogTitle>
+            <DialogDescription>
+              Opções e soluções para imprimir suas etiquetas
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="space-y-2">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Printer className="w-4 h-4" />
+                Opções de Impressão
+              </h4>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                <li><strong>PDF:</strong> Abre janela de impressão do navegador (mais compatível)</li>
+                <li><strong>USB:</strong> Envia direto para impressora térmica (requer Chrome/Edge)</li>
+                <li><strong>ZPL:</strong> Baixa arquivo .prn para imprimir manualmente</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                Se a impressão USB não funcionar
+              </h4>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                <li>Feche o software da Elgin ou outros programas de impressão</li>
+                <li>Use Chrome ou Microsoft Edge (Firefox não suporta)</li>
+                <li>Desconecte e reconecte a impressora USB</li>
+                <li>Como alternativa, baixe o arquivo ZPL e imprima pelo software da impressora</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold">Configuração da Elgin L42 Pro</h4>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+                <li>Etiquetas: 33mm x 22mm (3 por linha)</li>
+                <li>Gap: 3mm entre etiquetas</li>
+                <li>Rolo de 108mm de largura</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => setShowPrintHelp(false)}>
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Fallback quando USB falha */}
+      <AlertDialog open={showPrintFallback} onOpenChange={setShowPrintFallback}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Erro na Impressão USB
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p className="whitespace-pre-line text-sm">{printError}</p>
+                <p className="font-medium text-foreground">
+                  Escolha uma alternativa para imprimir suas {totalLabels} etiquetas:
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleFallbackDownloadZPL}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Baixar ZPL
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleBrowserPrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir PDF
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
