@@ -892,26 +892,15 @@ export default function Labels() {
                   Impressora USB
                 </Button>
 
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-7 lg:h-8 text-[10px] lg:text-xs"
-                    onClick={handleDownloadZPL}
-                    disabled={selections.length === 0}
-                  >
-                    <Download className="w-3 h-3 mr-1" />
-                    Arquivo ZPL
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 lg:h-8 w-7 lg:w-8"
-                    onClick={() => setShowPrintHelp(true)}
-                    title="Ajuda com impressão"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 lg:h-8 w-7 lg:w-8"
+                  onClick={() => setShowPrintHelp(true)}
+                  title="Ajuda com impressão"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                </Button>
               </div>
             </CardContent>
           </Card>
