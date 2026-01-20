@@ -275,9 +275,12 @@ export default function Labels() {
       return;
     }
 
-    // Cada linha (3 etiquetas) vira uma “página” para a impressora térmica
-    // Isso tende a manter a formatação perfeita (108mm x 22mm) em drivers do Windows.
-    const pageHeightMM = LABEL_HEIGHT_MM;
+    // Dimensões exatas para Elgin L42 Pro Full
+    const paperWidthMM = 108;
+    const labelWidthMM = 33;
+    const labelHeightMM = 22;
+    const gapMM = 3;
+    const labelsPerRowLocal = 3;
 
     const printHtml = `
       <!DOCTYPE html>
@@ -286,15 +289,20 @@ export default function Labels() {
         <title>Etiquetas - Elgin L42 Pro</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
         <style>
-          /* Configuração para impressora térmica: 1 linha (3 etiquetas) por página */
+          *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+
           @page {
-            size: ${PAGE_WIDTH_MM}mm ${pageHeightMM}mm;
-            margin: 0 !important;
+            size: ${paperWidthMM}mm ${labelHeightMM}mm;
+            margin: 0;
           }
 
           @media print {
             html, body {
-              width: ${PAGE_WIDTH_MM}mm !important;
+              width: ${paperWidthMM}mm !important;
               margin: 0 !important;
               padding: 0 !important;
               -webkit-print-color-adjust: exact !important;
@@ -305,80 +313,71 @@ export default function Labels() {
               page-break-after: always !important;
               break-after: page !important;
             }
+            .page:last-child {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+            }
             .label {
               border: none !important;
-              box-shadow: none !important;
             }
           }
 
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-
           html, body {
             font-family: Arial, Helvetica, sans-serif;
-            width: ${PAGE_WIDTH_MM}mm;
-            margin: 0;
-            padding: 0;
+            width: ${paperWidthMM}mm;
             background: white;
           }
 
           .labels-container {
-            width: ${PAGE_WIDTH_MM}mm;
-            margin: 0;
-            padding: 0;
+            width: ${paperWidthMM}mm;
           }
 
           .page {
-            width: ${PAGE_WIDTH_MM}mm;
-            height: ${pageHeightMM}mm;
-            display: block;
-          }
-
-          .row {
+            width: ${paperWidthMM}mm;
+            height: ${labelHeightMM}mm;
             display: flex;
             flex-direction: row;
-            flex-wrap: nowrap;
-            width: ${PAGE_WIDTH_MM}mm;
-            height: ${LABEL_HEIGHT_MM}mm;
-            margin: 0;
-            padding: 0;
+            justify-content: flex-start;
+            align-items: stretch;
           }
 
           .label {
-            width: ${LABEL_WIDTH_MM}mm;
-            height: ${LABEL_HEIGHT_MM}mm;
-            min-width: ${LABEL_WIDTH_MM}mm;
-            max-width: ${LABEL_WIDTH_MM}mm;
-            min-height: ${LABEL_HEIGHT_MM}mm;
-            max-height: ${LABEL_HEIGHT_MM}mm;
-            border: 0.2px dashed #ddd;
-            padding: 1mm 0.5mm;
+            width: ${labelWidthMM}mm;
+            height: ${labelHeightMM}mm;
+            margin-right: ${gapMM}mm;
+            padding: 1mm;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
             overflow: hidden;
             background: white;
+            border: 0.1mm dashed #ccc;
           }
-          
+
+          .label:last-child {
+            margin-right: 0;
+          }
+
           .product-name {
-            font-size: 7pt;
+            font-size: 6pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
-            max-height: 4mm;
+            max-height: 3.5mm;
             overflow: hidden;
             width: 100%;
             white-space: nowrap;
             text-overflow: ellipsis;
             color: #000;
           }
-          
-          .size { 
-            font-size: 6pt; 
-            color: #333; 
-            margin-top: 0.5mm;
+
+          .size {
+            font-size: 5pt;
+            color: #333;
+            margin-top: 0.3mm;
           }
-          
+
           .barcode-container {
             flex: 1;
             display: flex;
@@ -386,42 +385,48 @@ export default function Labels() {
             justify-content: center;
             width: 100%;
             overflow: hidden;
-            margin-top: 1mm;
+            margin-top: 0.5mm;
           }
-          
+
           .barcode-container svg {
-            max-width: ${LABEL_WIDTH_MM - 2}mm !important;
+            max-width: ${labelWidthMM - 2}mm !important;
             height: auto !important;
+            max-height: 14mm !important;
           }
-          
+
           .instructions {
-            padding: 10px;
-            margin: 10px;
-            background: #f0f9ff;
-            border: 1px solid #0ea5e9;
+            padding: 15px;
+            margin: 15px;
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
             border-radius: 8px;
-            font-size: 12px;
-            color: #0369a1;
+            font-size: 13px;
+            color: #92400e;
           }
-          
+
           .instructions h3 {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: bold;
+            font-size: 15px;
           }
-          
+
           .instructions ol {
             margin-left: 20px;
           }
-          
+
           .instructions li {
-            margin-bottom: 4px;
+            margin-bottom: 6px;
           }
-          
+
+          .instructions strong {
+            color: #78350f;
+          }
+
           .print-btn {
             display: block;
-            margin: 15px auto;
-            padding: 12px 24px;
-            background: #10b981;
+            margin: 20px auto;
+            padding: 14px 28px;
+            background: #ec4899;
             color: white;
             border: none;
             border-radius: 8px;
@@ -429,86 +434,79 @@ export default function Labels() {
             font-weight: bold;
             cursor: pointer;
           }
-          
+
           .print-btn:hover {
-            background: #059669;
+            background: #db2777;
           }
         </style>
       </head>
       <body>
         <div class="no-print instructions">
-          <h3>📋 Instruções para Impressão na Elgin L42 Pro:</h3>
+          <h3>⚠️ CONFIGURAÇÃO OBRIGATÓRIA - Leia antes de imprimir!</h3>
           <ol>
-            <li>Clique no botão <strong>"Imprimir Etiquetas"</strong> abaixo</li>
-            <li>Na janela de impressão, selecione <strong>"Elgin L42 Pro"</strong> como impressora</li>
-            <li>Em "Mais configurações" → <strong>Tamanho do papel: 108mm x 22mm</strong> (ou personalizado)</li>
-            <li>Margens: <strong>Nenhuma</strong></li>
-            <li>Escala: <strong>100%</strong> (não usar "ajustar ao papel")</li>
+            <li>Clique em <strong>"🖨️ Imprimir Etiquetas"</strong></li>
+            <li>Selecione a impressora <strong>"Elgin L42 Pro"</strong></li>
+            <li><strong>Tamanho do papel:</strong> Personalizado → 108mm × 22mm</li>
+            <li><strong>Margens:</strong> Nenhuma (ou 0mm)</li>
+            <li><strong>Escala:</strong> 100% (NÃO usar "Ajustar ao papel")</li>
+            <li><strong>Cabeçalhos/Rodapés:</strong> Desativado</li>
           </ol>
         </div>
         <button class="no-print print-btn" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
-        
-        <div class="labels-container" id="labels"></div>
-        
-        <script>
-          const labels = ${JSON.stringify(expandedLabels.map(l => ({ productName: l.productName, size: l.size, barcode: l.barcode })))};
-          const container = document.getElementById('labels');
-          const labelsPerRow = ${LABELS_PER_ROW};
 
-          for (let i = 0; i < labels.length; i += labelsPerRow) {
-            const page = document.createElement('div');
+        <div class="labels-container" id="labels"></div>
+
+        <script>
+          var labels = ${JSON.stringify(expandedLabels.map(l => ({ productName: l.productName, size: l.size, barcode: l.barcode })))};
+          var container = document.getElementById('labels');
+          var labelsPerRow = ${labelsPerRowLocal};
+
+          for (var i = 0; i < labels.length; i += labelsPerRow) {
+            var page = document.createElement('div');
             page.className = 'page';
 
-            const row = document.createElement('div');
-            row.className = 'row';
-
-            for (let j = 0; j < labelsPerRow; j++) {
-              const labelData = labels[i + j];
-              const labelDiv = document.createElement('div');
+            for (var j = 0; j < labelsPerRow; j++) {
+              var labelData = labels[i + j];
+              var labelDiv = document.createElement('div');
               labelDiv.className = 'label';
 
               if (labelData) {
-                labelDiv.innerHTML = \`
-                  <div class="product-name">\${labelData.productName}</div>
-                  <div class="size">Tam: \${labelData.size}</div>
-                  <div class="barcode-container">
-                    <svg id="barcode-\${i + j}"></svg>
-                  </div>
-                \`;
+                labelDiv.innerHTML = '<div class="product-name">' + labelData.productName + '</div>' +
+                  '<div class="size">Tam: ' + labelData.size + '</div>' +
+                  '<div class="barcode-container"><svg id="barcode-' + (i + j) + '"></svg></div>';
               }
-              row.appendChild(labelDiv);
+              page.appendChild(labelDiv);
             }
 
-            page.appendChild(row);
             container.appendChild(page);
           }
 
-          labels.forEach((label, idx) => {
-            const svg = document.getElementById('barcode-' + idx);
+          labels.forEach(function(label, idx) {
+            var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
-                JsBarcode(svg, label.barcode, { 
-                  format: 'EAN13', 
-                  width: 1.0, 
-                  height: 18, 
-                  displayValue: true, 
-                  fontSize: 7, 
-                  margin: 0, 
+                JsBarcode(svg, label.barcode, {
+                  format: 'EAN13',
+                  width: 1.2,
+                  height: 22,
+                  displayValue: true,
+                  fontSize: 8,
+                  margin: 0,
                   textMargin: 1,
                   background: 'transparent'
                 });
               } catch(e) {
-                try { 
-                  JsBarcode(svg, label.barcode, { 
-                    format: 'CODE128', 
-                    width: 0.8, 
-                    height: 18, 
-                    displayValue: true, 
-                    fontSize: 7, 
-                    margin: 0, 
+                try {
+                  JsBarcode(svg, label.barcode, {
+                    format: 'CODE128',
+                    width: 1.0,
+                    height: 22,
+                    displayValue: true,
+                    fontSize: 8,
+                    margin: 0,
                     textMargin: 1,
                     background: 'transparent'
-                  }); 
+                  });
                 } catch(e2) {
                   console.warn('Código de barras inválido:', label.barcode);
                 }
@@ -522,7 +520,7 @@ export default function Labels() {
 
     printWindow.document.write(printHtml);
     printWindow.document.close();
-    toast.success(`Preparando ${totalLabels} etiquetas para impressão...`);
+    toast.success('Preparando ' + totalLabels + ' etiquetas para impressão...');
   };
 
 
@@ -602,14 +600,33 @@ export default function Labels() {
         throw new Error('Endpoint de saída não encontrado na impressora.');
       }
 
-      // Gerar comandos ZPL inline
-      const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM);
-      const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM);
+      // Gerar comandos ZPL para Elgin L42 Pro (compatível com ZPL II)
+      // Etiqueta: 33mm x 22mm = 264 x 176 dots (203 DPI)
+      const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM); // ~264
+      const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM); // ~176
+      
       let zplCommands = '';
       expandedLabels.forEach((label) => {
-        const productName = label.productName.length > 18 ? label.productName.substring(0, 18) + '...' : label.productName;
-        const sizeText = `Tam: ${label.size}`;
-        zplCommands += `^XA^PW${labelWidthDots}^LL${labelHeightDots}^FO5,5^A0N,20,20^FB${labelWidthDots - 10},1,0,C,0^FD${productName}^FS^FO5,28^A0N,16,16^FB${labelWidthDots - 10},1,0,C,0^FD${sizeText}^FS^FO15,48^BY1.2,2.0,40^BCN,40,Y,N,N^FD${label.barcode}^FS^XZ`;
+        const productName = label.productName.length > 16 ? label.productName.substring(0, 16) + '..' : label.productName;
+        const sizeText = 'Tam: ' + label.size;
+        
+        // ZPL otimizado para 33x22mm
+        zplCommands += '^XA'; // Início da etiqueta
+        zplCommands += '^PW' + labelWidthDots; // Largura do papel
+        zplCommands += '^LL' + labelHeightDots; // Comprimento da etiqueta
+        zplCommands += '^LH0,0'; // Home position
+        
+        // Nome do produto (centralizado, fonte A, altura 18, largura 18)
+        zplCommands += '^FO5,5^A0N,18,18^FB' + (labelWidthDots - 10) + ',1,0,C,0^FD' + productName + '^FS';
+        
+        // Tamanho (centralizado, fonte menor)
+        zplCommands += '^FO5,26^A0N,14,14^FB' + (labelWidthDots - 10) + ',1,0,C,0^FD' + sizeText + '^FS';
+        
+        // Código de barras EAN13 (centralizado)
+        const barcodeX = Math.round((labelWidthDots - 200) / 2);
+        zplCommands += '^FO' + barcodeX + ',44^BY1.3,2.5,45^BCN,45,Y,N,N^FD' + label.barcode + '^FS';
+        
+        zplCommands += '^XZ'; // Fim da etiqueta
       });
       const encoder = new TextEncoder();
       const data = encoder.encode(zplCommands);
