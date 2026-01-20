@@ -268,9 +268,13 @@ export default function Labels() {
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      toast.error('Não foi possível abrir a janela de impressão');
+      toast.error('Não foi possível abrir a janela de impressão. Verifique se pop-ups estão permitidos.');
       return;
     }
+
+    // Calcular altura total baseada no número de linhas
+    const totalRows = Math.ceil(expandedLabels.length / LABELS_PER_ROW);
+    const totalHeightMM = totalRows * LABEL_HEIGHT_MM;
 
     const printHtml = `
       <!DOCTYPE html>
@@ -279,37 +283,63 @@ export default function Labels() {
         <title>Etiquetas - Elgin L42 Pro</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
         <style>
+          /* Configuração para impressora térmica contínua */
           @page {
-            size: ${PAGE_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
-            margin: 0;
+            size: ${PAGE_WIDTH_MM}mm ${totalHeightMM}mm;
+            margin: 0 !important;
+            padding: 0 !important;
           }
+          
           @media print {
-            @page {
-              size: ${PAGE_WIDTH_MM}mm ${LABEL_HEIGHT_MM}mm;
-              margin: 0;
-            }
             html, body {
               width: ${PAGE_WIDTH_MM}mm !important;
+              height: auto !important;
               margin: 0 !important;
               padding: 0 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
-            .row { page-break-inside: avoid; }
-            .label { border: none !important; }
+            .no-print { display: none !important; }
+            .row { 
+              page-break-inside: avoid !important; 
+              break-inside: avoid !important;
+            }
+            .label { 
+              border: none !important; 
+              box-shadow: none !important;
+            }
           }
-          * { box-sizing: border-box; margin: 0; padding: 0; }
+          
+          * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+          }
+          
           html, body {
-            font-family: Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             width: ${PAGE_WIDTH_MM}mm;
             margin: 0;
             padding: 0;
+            background: white;
           }
-          .labels-container { width: ${PAGE_WIDTH_MM}mm; }
+          
+          .labels-container { 
+            width: ${PAGE_WIDTH_MM}mm; 
+            margin: 0;
+            padding: 0;
+          }
+          
           .row {
             display: flex;
             flex-direction: row;
+            flex-wrap: nowrap;
             width: ${PAGE_WIDTH_MM}mm;
             height: ${LABEL_HEIGHT_MM}mm;
+            margin: 0;
+            padding: 0;
           }
+          
           .label {
             width: ${LABEL_WIDTH_MM}mm;
             height: ${LABEL_HEIGHT_MM}mm;
@@ -317,8 +347,8 @@ export default function Labels() {
             max-width: ${LABEL_WIDTH_MM}mm;
             min-height: ${LABEL_HEIGHT_MM}mm;
             max-height: ${LABEL_HEIGHT_MM}mm;
-            border: 0.1px solid #eee;
-            padding: 0.5mm;
+            border: 0.2px dashed #ddd;
+            padding: 1mm 0.5mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -326,18 +356,26 @@ export default function Labels() {
             overflow: hidden;
             background: white;
           }
+          
           .product-name {
-            font-size: 6pt;
+            font-size: 7pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
-            max-height: 3mm;
+            max-height: 4mm;
             overflow: hidden;
             width: 100%;
             white-space: nowrap;
             text-overflow: ellipsis;
+            color: #000;
           }
-          .size { font-size: 5pt; color: #333; }
+          
+          .size { 
+            font-size: 6pt; 
+            color: #333; 
+            margin-top: 0.5mm;
+          }
+          
           .barcode-container {
             flex: 1;
             display: flex;
@@ -345,15 +383,70 @@ export default function Labels() {
             justify-content: center;
             width: 100%;
             overflow: hidden;
+            margin-top: 1mm;
           }
+          
           .barcode-container svg {
-            max-width: ${LABEL_WIDTH_MM - 2}mm;
-            max-height: 12mm;
+            max-width: ${LABEL_WIDTH_MM - 2}mm !important;
+            height: auto !important;
+          }
+          
+          .instructions {
+            padding: 10px;
+            margin: 10px;
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #0369a1;
+          }
+          
+          .instructions h3 {
+            margin-bottom: 8px;
+            font-weight: bold;
+          }
+          
+          .instructions ol {
+            margin-left: 20px;
+          }
+          
+          .instructions li {
+            margin-bottom: 4px;
+          }
+          
+          .print-btn {
+            display: block;
+            margin: 15px auto;
+            padding: 12px 24px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+          }
+          
+          .print-btn:hover {
+            background: #059669;
           }
         </style>
       </head>
       <body>
+        <div class="no-print instructions">
+          <h3>📋 Instruções para Impressão na Elgin L42 Pro:</h3>
+          <ol>
+            <li>Clique no botão <strong>"Imprimir Etiquetas"</strong> abaixo</li>
+            <li>Na janela de impressão, selecione <strong>"Elgin L42 Pro"</strong> como impressora</li>
+            <li>Em "Mais configurações" → <strong>Tamanho do papel: 108mm x 22mm</strong> (ou personalizado)</li>
+            <li>Margens: <strong>Nenhuma</strong></li>
+            <li>Escala: <strong>100%</strong> (não usar "ajustar ao papel")</li>
+          </ol>
+        </div>
+        <button class="no-print print-btn" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
+        
         <div class="labels-container" id="labels"></div>
+        
         <script>
           const labels = ${JSON.stringify(expandedLabels.map(l => ({ productName: l.productName, size: l.size, barcode: l.barcode })))};
           const container = document.getElementById('labels');
@@ -386,14 +479,34 @@ export default function Labels() {
             const svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
-                JsBarcode(svg, label.barcode, { format: 'EAN13', width: 0.9, height: 12, displayValue: true, fontSize: 5, margin: 0, textMargin: 0 });
+                JsBarcode(svg, label.barcode, { 
+                  format: 'EAN13', 
+                  width: 1.0, 
+                  height: 18, 
+                  displayValue: true, 
+                  fontSize: 7, 
+                  margin: 0, 
+                  textMargin: 1,
+                  background: 'transparent'
+                });
               } catch(e) {
-                try { JsBarcode(svg, label.barcode, { format: 'CODE128', width: 0.7, height: 12, displayValue: true, fontSize: 5, margin: 0, textMargin: 0 }); } catch(e2) {}
+                try { 
+                  JsBarcode(svg, label.barcode, { 
+                    format: 'CODE128', 
+                    width: 0.8, 
+                    height: 18, 
+                    displayValue: true, 
+                    fontSize: 7, 
+                    margin: 0, 
+                    textMargin: 1,
+                    background: 'transparent'
+                  }); 
+                } catch(e2) {
+                  console.warn('Código de barras inválido:', label.barcode);
+                }
               }
             }
           });
-
-          setTimeout(() => window.print(), 600);
         <\/script>
       </body>
       </html>
@@ -401,7 +514,7 @@ export default function Labels() {
 
     printWindow.document.write(printHtml);
     printWindow.document.close();
-    toast.success(`Gerando PDF com ${totalLabels} etiquetas...`);
+    toast.success(`Preparando ${totalLabels} etiquetas para impressão...`);
   };
 
 
