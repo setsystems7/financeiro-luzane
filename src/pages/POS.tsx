@@ -49,26 +49,35 @@ export default function POS() {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Função para arredondar com precisão de centavos (evita erros de ponto flutuante)
-  const roundToCents = (value: number): number => {
-    return Math.round(value * 100) / 100;
-  };
+  // Precisão máxima: fazemos os cálculos em centavos (inteiros) e arredondamos "para cima"
+  // no valor que o cliente paga, igual à maquininha (evita diferença de R$ 0,01).
+  const toCents = (value: number): number => Math.round(value * 100);
+  const fromCents = (cents: number): number => cents / 100;
 
   // Calcular totais
-  const cartSubtotal = roundToCents(cartItems.reduce((acc, item) => acc + item.original_price * item.quantity, 0));
-  const discountAmount = roundToCents((cartSubtotal * discount) / 100);
-  const cartTotal = roundToCents(cartSubtotal - discountAmount); // Valor da peça (fixo)
+  const cartSubtotalCents = toCents(
+    cartItems.reduce((acc, item) => acc + item.original_price * item.quantity, 0)
+  );
+  const discountAmountCents = toCents((fromCents(cartSubtotalCents) * discount) / 100);
+  const cartTotalCents = cartSubtotalCents - discountAmountCents; // Valor da peça (fixo)
+
+  const cartSubtotal = fromCents(cartSubtotalCents);
+  const discountAmount = fromCents(discountAmountCents);
+  const cartTotal = fromCents(cartTotalCents);
 
   // Calcular taxa do cartão (A MAIS - cliente paga)
-  // Fórmula correta: valor / (1 - taxa%) - igual à maquininha
+  // Fórmula da maquininha: para a loja receber "cartTotal", o cliente paga um valor maior
+  // tal que: recebido = pago * (1 - taxa%).
   const cardFeePercent = getCardFee(paymentMethod, cardBrand, installments);
-  // Quando a máquina desconta X% do valor recebido, para a loja receber cartTotal,
-  // o cliente precisa pagar: cartTotal / (1 - taxa/100)
-  // Usamos arredondamento bancário (round half to even) para máxima precisão
-  const totalWithFee = cardFeePercent > 0 
-    ? roundToCents(cartTotal / (1 - cardFeePercent / 100))
-    : cartTotal;
-  const cardFeeAmount = roundToCents(totalWithFee - cartTotal);
+
+  // Converte a taxa (ex.: 5.39%) em basis points (ex.: 539) para evitar floats
+  const feeBps = Math.round(cardFeePercent * 100);
+  const grossCents = feeBps > 0
+    ? Math.ceil((cartTotalCents * 10000) / (10000 - feeBps))
+    : cartTotalCents;
+
+  const totalWithFee = fromCents(grossCents);
+  const cardFeeAmount = fromCents(grossCents - cartTotalCents);
   const netAmount = cartTotal; // Loja recebe: valor da peça (sem a taxa)
 
   // Atualizar preços com desconto
