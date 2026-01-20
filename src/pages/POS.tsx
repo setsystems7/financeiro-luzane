@@ -55,9 +55,14 @@ export default function POS() {
   const cartTotal = cartSubtotal - discountAmount; // Valor da peça (fixo)
 
   // Calcular taxa do cartão (A MAIS - cliente paga)
+  // Fórmula correta: valor / (1 - taxa%) - igual à maquininha
   const cardFeePercent = getCardFee(paymentMethod, cardBrand, installments);
-  const cardFeeAmount = (cartTotal * cardFeePercent) / 100;
-  const totalWithFee = cartTotal + cardFeeAmount; // Cliente paga: valor + taxa
+  // Quando a máquina desconta X% do valor recebido, para a loja receber cartTotal,
+  // o cliente precisa pagar: cartTotal / (1 - taxa/100)
+  const totalWithFee = cardFeePercent > 0 
+    ? cartTotal / (1 - cardFeePercent / 100)
+    : cartTotal;
+  const cardFeeAmount = totalWithFee - cartTotal;
   const netAmount = cartTotal; // Loja recebe: valor da peça (sem a taxa)
 
   // Atualizar preços com desconto
