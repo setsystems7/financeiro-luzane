@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProducts, Product } from '@/hooks/useProducts';
-import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, Download, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, AlertTriangle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import JsBarcode from 'jsbarcode';
 import {
@@ -404,33 +404,6 @@ export default function Labels() {
     toast.success(`Gerando PDF com ${totalLabels} etiquetas...`);
   };
 
-  // Gerar comandos ZPL
-  const generateZPLCommands = () => {
-    const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM);
-    const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM);
-
-    let zplCommands = '';
-
-    expandedLabels.forEach((label) => {
-      const productName = label.productName.length > 18
-        ? label.productName.substring(0, 18) + '...'
-        : label.productName;
-
-      const sizeText = `Tam: ${label.size}`;
-
-      zplCommands += `
-^XA
-^PW${labelWidthDots}
-^LL${labelHeightDots}
-^FO5,5^A0N,20,20^FB${labelWidthDots - 10},1,0,C,0^FD${productName}^FS
-^FO5,28^A0N,16,16^FB${labelWidthDots - 10},1,0,C,0^FD${sizeText}^FS
-^FO15,48^BY1.2,2.0,40^BCN,40,Y,N,N^FD${label.barcode}^FS
-^XZ
-`;
-    });
-
-    return zplCommands;
-  };
 
   // Impressão Direta via USB (Web USB API) com tratamento melhorado
   const handleDirectPrintUSB = async () => {
@@ -494,8 +467,15 @@ export default function Labels() {
         throw new Error('Endpoint de saída não encontrado na impressora.');
       }
 
-      // Gerar e enviar comandos ZPL
-      const zplCommands = generateZPLCommands();
+      // Gerar comandos ZPL inline
+      const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM);
+      const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM);
+      let zplCommands = '';
+      expandedLabels.forEach((label) => {
+        const productName = label.productName.length > 18 ? label.productName.substring(0, 18) + '...' : label.productName;
+        const sizeText = `Tam: ${label.size}`;
+        zplCommands += `^XA^PW${labelWidthDots}^LL${labelHeightDots}^FO5,5^A0N,20,20^FB${labelWidthDots - 10},1,0,C,0^FD${productName}^FS^FO5,28^A0N,16,16^FB${labelWidthDots - 10},1,0,C,0^FD${sizeText}^FS^FO15,48^BY1.2,2.0,40^BCN,40,Y,N,N^FD${label.barcode}^FS^XZ`;
+      });
       const encoder = new TextEncoder();
       const data = encoder.encode(zplCommands);
 
@@ -545,34 +525,6 @@ export default function Labels() {
     }
     handleGeneratePDF();
     setShowPrintFallback(false);
-  };
-
-  // Download ZPL como alternativa
-  const handleFallbackDownloadZPL = () => {
-    handleDownloadZPL();
-    setShowPrintFallback(false);
-  };
-
-  // Download do arquivo ZPL
-  const handleDownloadZPL = () => {
-    if (selections.length === 0) {
-      toast.error('Selecione pelo menos um produto!');
-      return;
-    }
-
-    const zplCommands = generateZPLCommands();
-
-    const blob = new Blob([zplCommands], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `etiquetas_${new Date().toISOString().slice(0, 10)}.prn`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`Arquivo ZPL gerado com ${totalLabels} etiquetas!`);
   };
 
   return (
@@ -874,33 +826,34 @@ export default function Labels() {
               <div className="space-y-1 lg:space-y-1.5">
                 <Button
                   variant="pink"
-                  className="w-full h-8 lg:h-9 text-xs lg:text-sm"
+                  className="w-full h-9 lg:h-10 text-xs lg:text-sm font-semibold"
                   onClick={handleGeneratePDF}
                   disabled={selections.length === 0}
                 >
-                  <FileDown className="w-3.5 lg:w-4 h-3.5 lg:h-4 mr-1.5 lg:mr-2" />
-                  PDF ({totalLabels})
+                  <Printer className="w-4 lg:w-4.5 h-4 lg:h-4.5 mr-1.5 lg:mr-2" />
+                  Imprimir PDF ({totalLabels})
                 </Button>
 
-                <Button
-                  variant="default"
-                  className="w-full h-8 lg:h-9 text-xs lg:text-sm"
-                  onClick={handleDirectPrintUSB}
-                  disabled={selections.length === 0}
-                >
-                  <Usb className="w-3.5 lg:w-4 h-3.5 lg:h-4 mr-1.5 lg:mr-2" />
-                  Impressora USB
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 lg:h-8 w-7 lg:w-8"
-                  onClick={() => setShowPrintHelp(true)}
-                  title="Ajuda com impressão"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-7 lg:h-8 text-[10px] lg:text-xs"
+                    onClick={handleDirectPrintUSB}
+                    disabled={selections.length === 0}
+                  >
+                    <Usb className="w-3 h-3 mr-1" />
+                    USB Direto
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 lg:h-8 w-7 lg:w-8"
+                    onClick={() => setShowPrintHelp(true)}
+                    title="Ajuda com impressão"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -913,42 +866,38 @@ export default function Labels() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <HelpCircle className="w-5 h-5 text-primary" />
-              Dicas para Impressão
+              Como Imprimir
             </DialogTitle>
             <DialogDescription>
-              Opções e soluções para imprimir suas etiquetas
+              Escolha o método mais adequado para seu ambiente
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 text-sm">
             <div className="space-y-2">
               <h4 className="font-semibold flex items-center gap-2">
-                <Printer className="w-4 h-4" />
-                Opções de Impressão
+                <Printer className="w-4 h-4 text-pink-primary" />
+                Imprimir PDF (Recomendado)
               </h4>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                <li><strong>PDF:</strong> Abre janela de impressão do navegador (mais compatível)</li>
-                <li><strong>USB:</strong> Envia direto para impressora térmica (requer Chrome/Edge)</li>
-                <li><strong>ZPL:</strong> Baixa arquivo .prn para imprimir manualmente</li>
-              </ul>
+              <p className="text-muted-foreground pl-2">
+                Abre a janela de impressão do Windows/navegador. Funciona com qualquer impressora configurada no sistema. 
+                <strong> Selecione a Elgin L42 Pro</strong> na lista de impressoras.
+              </p>
             </div>
 
             <div className="space-y-2">
               <h4 className="font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                Se a impressão USB não funcionar
+                <Usb className="w-4 h-4" />
+                USB Direto (Avançado)
               </h4>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
-                <li>Feche o software da Elgin ou outros programas de impressão</li>
-                <li>Use Chrome ou Microsoft Edge (Firefox não suporta)</li>
-                <li>Desconecte e reconecte a impressora USB</li>
-                <li>Como alternativa, baixe o arquivo ZPL e imprima pelo software da impressora</li>
-              </ul>
+              <p className="text-muted-foreground pl-2">
+                Envia comandos direto para a impressora via USB. Requer Chrome ou Edge e pode ser bloqueado pelo sistema.
+              </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
               <h4 className="font-semibold">Configuração da Elgin L42 Pro</h4>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-2">
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                 <li>Etiquetas: 33mm x 22mm (3 por linha)</li>
                 <li>Gap: 3mm entre etiquetas</li>
                 <li>Rolo de 108mm de largura</li>
@@ -970,29 +919,27 @@ export default function Labels() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="w-5 h-5" />
-              Erro na Impressão USB
+              USB Bloqueado
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p className="whitespace-pre-line text-sm">{printError}</p>
-                <p className="font-medium text-foreground">
-                  Escolha uma alternativa para imprimir suas {totalLabels} etiquetas:
-                </p>
+                <div className="bg-muted/50 p-3 rounded-lg">
+                  <p className="font-medium text-foreground mb-1">
+                    Use a impressão via PDF:
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique em "Imprimir PDF" e selecione a <strong>Elgin L42 Pro</strong> na lista de impressoras do Windows.
+                  </p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleFallbackDownloadZPL}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Baixar ZPL
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleBrowserPrint}>
+            <AlertDialogAction onClick={handleBrowserPrint} className="bg-pink-primary hover:bg-pink-primary/90">
               <Printer className="w-4 h-4 mr-2" />
-              Imprimir PDF
+              Imprimir PDF ({totalLabels} etiquetas)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
