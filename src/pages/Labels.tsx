@@ -275,9 +275,9 @@ export default function Labels() {
       return;
     }
 
-    // Calcular altura total baseada no número de linhas
-    const totalRows = Math.ceil(expandedLabels.length / LABELS_PER_ROW);
-    const totalHeightMM = totalRows * LABEL_HEIGHT_MM;
+    // Cada linha (3 etiquetas) vira uma “página” para a impressora térmica
+    // Isso tende a manter a formatação perfeita (108mm x 22mm) em drivers do Windows.
+    const pageHeightMM = LABEL_HEIGHT_MM;
 
     const printHtml = `
       <!DOCTYPE html>
@@ -286,39 +286,33 @@ export default function Labels() {
         <title>Etiquetas - Elgin L42 Pro</title>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
         <style>
-          /* Configuração para impressora térmica contínua */
+          /* Configuração para impressora térmica: 1 linha (3 etiquetas) por página */
           @page {
-            size: ${PAGE_WIDTH_MM}mm ${totalHeightMM}mm;
+            size: ${PAGE_WIDTH_MM}mm ${pageHeightMM}mm;
             margin: 0 !important;
-            padding: 0 !important;
           }
-          
+
           @media print {
             html, body {
               width: ${PAGE_WIDTH_MM}mm !important;
-              height: auto !important;
               margin: 0 !important;
               padding: 0 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
             .no-print { display: none !important; }
-            .row { 
-              page-break-inside: avoid !important; 
-              break-inside: avoid !important;
+            .page {
+              page-break-after: always !important;
+              break-after: page !important;
             }
-            .label { 
-              border: none !important; 
+            .label {
+              border: none !important;
               box-shadow: none !important;
             }
           }
-          
-          * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-          }
-          
+
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+
           html, body {
             font-family: Arial, Helvetica, sans-serif;
             width: ${PAGE_WIDTH_MM}mm;
@@ -326,13 +320,19 @@ export default function Labels() {
             padding: 0;
             background: white;
           }
-          
-          .labels-container { 
-            width: ${PAGE_WIDTH_MM}mm; 
+
+          .labels-container {
+            width: ${PAGE_WIDTH_MM}mm;
             margin: 0;
             padding: 0;
           }
-          
+
+          .page {
+            width: ${PAGE_WIDTH_MM}mm;
+            height: ${pageHeightMM}mm;
+            display: block;
+          }
+
           .row {
             display: flex;
             flex-direction: row;
@@ -342,7 +342,7 @@ export default function Labels() {
             margin: 0;
             padding: 0;
           }
-          
+
           .label {
             width: ${LABEL_WIDTH_MM}mm;
             height: ${LABEL_HEIGHT_MM}mm;
@@ -456,6 +456,9 @@ export default function Labels() {
           const labelsPerRow = ${LABELS_PER_ROW};
 
           for (let i = 0; i < labels.length; i += labelsPerRow) {
+            const page = document.createElement('div');
+            page.className = 'page';
+
             const row = document.createElement('div');
             row.className = 'row';
 
@@ -475,7 +478,9 @@ export default function Labels() {
               }
               row.appendChild(labelDiv);
             }
-            container.appendChild(row);
+
+            page.appendChild(row);
+            container.appendChild(page);
           }
 
           labels.forEach((label, idx) => {
