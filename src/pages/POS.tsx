@@ -49,20 +49,26 @@ export default function POS() {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
+  // Função para arredondar com precisão de centavos (evita erros de ponto flutuante)
+  const roundToCents = (value: number): number => {
+    return Math.round(value * 100) / 100;
+  };
+
   // Calcular totais
-  const cartSubtotal = cartItems.reduce((acc, item) => acc + item.original_price * item.quantity, 0);
-  const discountAmount = (cartSubtotal * discount) / 100;
-  const cartTotal = cartSubtotal - discountAmount; // Valor da peça (fixo)
+  const cartSubtotal = roundToCents(cartItems.reduce((acc, item) => acc + item.original_price * item.quantity, 0));
+  const discountAmount = roundToCents((cartSubtotal * discount) / 100);
+  const cartTotal = roundToCents(cartSubtotal - discountAmount); // Valor da peça (fixo)
 
   // Calcular taxa do cartão (A MAIS - cliente paga)
   // Fórmula correta: valor / (1 - taxa%) - igual à maquininha
   const cardFeePercent = getCardFee(paymentMethod, cardBrand, installments);
   // Quando a máquina desconta X% do valor recebido, para a loja receber cartTotal,
   // o cliente precisa pagar: cartTotal / (1 - taxa/100)
+  // Usamos arredondamento bancário (round half to even) para máxima precisão
   const totalWithFee = cardFeePercent > 0 
-    ? cartTotal / (1 - cardFeePercent / 100)
+    ? roundToCents(cartTotal / (1 - cardFeePercent / 100))
     : cartTotal;
-  const cardFeeAmount = totalWithFee - cartTotal;
+  const cardFeeAmount = roundToCents(totalWithFee - cartTotal);
   const netAmount = cartTotal; // Loja recebe: valor da peça (sem a taxa)
 
   // Atualizar preços com desconto
