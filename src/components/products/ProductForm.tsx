@@ -166,7 +166,8 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
   const costPrice = parseFloat(formData.cost_price) || 0;
   const salePrice = parseFloat(formData.sale_price) || 0;
   const MACHINE_FEE_PERCENTAGE = 1.5;
-  const finalPrice = salePrice > 0 ? salePrice * (1 + MACHINE_FEE_PERCENTAGE / 100) : 0;
+  // O preço digitado JÁ É o preço final (com taxa embutida), não adicionamos mais nada
+  const finalPrice = salePrice;
   const markup = costPrice > 0
     ? ((salePrice - costPrice) / costPrice * 100).toFixed(2)
     : '0.00';
@@ -225,9 +226,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const salePriceVal = parseFloat(formData.sale_price) || 0;
-    const finalSalePrice = salePriceVal > 0 ? salePriceVal * (1 + MACHINE_FEE_PERCENTAGE / 100) : 0;
-
+    // O preço de venda digitado já é o valor final, salvamos diretamente
     onSave({
       name: formData.name,
       description: formData.description || undefined,
@@ -235,7 +234,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
       color_id: formData.color_id || undefined,
       supplier_id: formData.supplier_id || undefined,
       cost_price: parseFloat(formData.cost_price) || 0,
-      sale_price: Math.round(finalSalePrice * 100) / 100,
+      sale_price: parseFloat(formData.sale_price) || 0,
       min_stock: parseInt(formData.min_stock) || 0,
       sizes: sizeVariants,
     });
@@ -423,16 +422,13 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
                 </div>
               </div>
 
-              {/* Preço Final com Taxa de Maquininha */}
+              {/* Preço Final */}
               {salePrice > 0 && (
                 <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/30">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-muted-foreground">
-                        Taxa de maquininha (+{MACHINE_FEE_PERCENTAGE}%)
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        R$ {salePrice.toFixed(2)} + R$ {(finalPrice - salePrice).toFixed(2)}
+                        Preço de Venda (já com taxa embutida)
                       </p>
                     </div>
                     <div className="text-right">
