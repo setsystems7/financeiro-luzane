@@ -58,11 +58,6 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
   const { data: colors = [], refetch: refetchColors } = useColors();
   const { data: suppliers = [], refetch: refetchSuppliers } = useSuppliers();
 
-  // Ao editar, calcula o preço base removendo a taxa de 1.5% do preço salvo
-  const getBasePriceFromFinal = (finalPrice: number) => {
-    return finalPrice / 1.015;
-  };
-
   const [formData, setFormData] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -70,10 +65,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
     color_id: product?.color_id || '',
     supplier_id: product?.supplier_id || '',
     cost_price: product?.cost_price?.toString() || '',
-    // Se editando, remove a taxa para mostrar o preço base
-    sale_price: product?.sale_price 
-      ? getBasePriceFromFinal(product.sale_price).toFixed(2)
-      : '',
+    sale_price: product?.sale_price?.toString() || '',
     min_stock: product?.min_stock?.toString() || '5',
   });
 
@@ -173,12 +165,8 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
 
   const costPrice = parseFloat(formData.cost_price) || 0;
   const salePrice = parseFloat(formData.sale_price) || 0;
-  const MACHINE_FEE_PERCENTAGE = 1.5;
-  // Calcula o preço final adicionando a taxa de 1.5% ao preço digitado
-  const feeAmount = salePrice * (MACHINE_FEE_PERCENTAGE / 100);
-  const finalPrice = salePrice + feeAmount;
   const markup = costPrice > 0
-    ? ((finalPrice - costPrice) / costPrice * 100).toFixed(2)
+    ? ((salePrice - costPrice) / costPrice * 100).toFixed(2)
     : '0.00';
 
   const handleAddSize = () => {
@@ -235,9 +223,6 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const baseSalePrice = parseFloat(formData.sale_price) || 0;
-    // Adiciona a taxa de 1.5% uma única vez e salva como preço final
-    const calculatedFinalPrice = baseSalePrice * (1 + MACHINE_FEE_PERCENTAGE / 100);
     
     onSave({
       name: formData.name,
@@ -246,7 +231,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
       color_id: formData.color_id || undefined,
       supplier_id: formData.supplier_id || undefined,
       cost_price: parseFloat(formData.cost_price) || 0,
-      sale_price: Math.round(calculatedFinalPrice * 100) / 100,
+      sale_price: parseFloat(formData.sale_price) || 0,
       min_stock: parseInt(formData.min_stock) || 0,
       sizes: sizeVariants,
     });
@@ -434,27 +419,6 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
                 </div>
               </div>
 
-              {/* Preço Final com Taxa */}
-              {salePrice > 0 && (
-                <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Taxa de maquininha (+{MACHINE_FEE_PERCENTAGE}%)
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        R$ {salePrice.toFixed(2)} + R$ {feeAmount.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium text-muted-foreground">Valor Final do Produto</p>
-                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                        R$ {finalPrice.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="p-3 rounded-lg bg-pink-glow border border-pink-light w-fit">
                 <div className="flex items-center gap-3">
