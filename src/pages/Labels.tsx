@@ -317,170 +317,236 @@ export default function Labels() {
         <meta charset="UTF-8">
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
         <style>
+          /* Reset completo */
           *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
           }
 
+          /* Configuração de página para impressão - EXATA */
           @page {
             size: ${pageWidth}mm ${pageHeight}mm;
-            margin: 0;
+            margin: 0mm;
           }
 
+          /* Estilos de impressão */
           @media print {
             html, body {
               width: ${pageWidth}mm !important;
-              height: ${pageHeight}mm !important;
               margin: 0 !important;
               padding: 0 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
             .no-print { display: none !important; }
-            .page {
+            .row {
+              page-break-inside: avoid !important;
               page-break-after: always !important;
-              break-after: page !important;
             }
-            .page:last-child {
+            .row:last-child {
               page-break-after: avoid !important;
-              break-after: avoid !important;
             }
             .label {
               border: none !important;
+              box-shadow: none !important;
             }
           }
 
+          /* Estilos de visualização em tela */
           html, body {
             font-family: Arial, Helvetica, sans-serif;
-            width: ${pageWidth}mm;
-            background: white;
-            font-size: 0;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 0;
+          }
+
+          .preview-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
           }
 
           .labels-container {
-            width: ${pageWidth}mm;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px auto;
           }
 
-          .page {
+          /* Cada linha de etiquetas = 1 página de impressão */
+          .row {
             width: ${pageWidth}mm;
             height: ${pageHeight}mm;
-            padding-top: ${marginTop}mm;
-            padding-left: ${marginLeft}mm;
+            padding: ${marginTop}mm 0 0 ${marginLeft}mm;
             display: flex;
             flex-direction: row;
             align-items: flex-start;
+            background: white;
+            border-bottom: 1px dashed #ccc;
           }
 
+          .row:last-child {
+            border-bottom: none;
+          }
+
+          /* Cada etiqueta individual */
           .label {
             width: ${labelWidth}mm;
             height: ${labelHeight}mm;
             margin-right: ${gapHorizontal}mm;
-            padding: 1mm 1.5mm;
+            padding: 1.5mm 2mm 1mm 2mm;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
             overflow: hidden;
             background: white;
-            border: 0.1mm dashed #ddd;
+            border: 0.2mm solid #e0e0e0;
+            border-radius: 0.5mm;
           }
 
-          .label:last-child {
+          .label:nth-child(3) {
             margin-right: 0;
           }
 
+          .label.empty {
+            border: 0.2mm dashed #ddd;
+            background: #fafafa;
+          }
+
+          /* Nome do produto + tamanho */
           .product-name {
             font-size: 7pt;
             font-weight: bold;
             text-align: center;
-            line-height: 1.2;
-            max-height: 4mm;
-            overflow: hidden;
+            line-height: 1.15;
             width: 100%;
             white-space: nowrap;
+            overflow: hidden;
             text-overflow: ellipsis;
             color: #000;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
           }
 
+          /* Container do código de barras */
           .barcode-container {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
-            overflow: hidden;
           }
 
           .barcode-container svg {
-            max-width: ${labelWidth - 3}mm !important;
-            height: auto !important;
-            max-height: 18mm !important;
+            max-width: 30mm;
+            height: auto;
+            max-height: 17mm;
           }
 
+          /* Instruções (só na tela) */
           .instructions {
-            padding: 15px;
-            margin: 15px;
-            background: #fef3c7;
+            padding: 16px 20px;
+            margin: 0 auto 20px auto;
+            max-width: 500px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border: 2px solid #f59e0b;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 13px;
             color: #92400e;
           }
 
           .instructions h3 {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
           }
 
           .instructions ol {
             margin-left: 20px;
+            line-height: 1.6;
           }
 
           .instructions li {
-            margin-bottom: 6px;
+            margin-bottom: 4px;
           }
 
           .instructions strong {
             color: #78350f;
           }
 
+          .instructions .info {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(245, 158, 11, 0.3);
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+          }
+
           .print-btn {
             display: block;
-            margin: 20px auto;
-            padding: 14px 28px;
-            background: #ec4899;
+            margin: 0 auto 20px auto;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
           }
 
           .print-btn:hover {
-            background: #db2777;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+          }
+
+          .print-btn:active {
+            transform: translateY(0);
+          }
+
+          .summary {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+          }
+
+          .summary strong {
+            color: #ec4899;
+            font-size: 18px;
           }
         </style>
       </head>
       <body>
-        <div class="no-print instructions">
-          <h3>⚠️ CONFIGURAÇÃO PARA ELGIN L42 PRO</h3>
-          <ol>
-            <li>Clique em <strong>"🖨️ Imprimir Etiquetas"</strong></li>
-            <li>Selecione a impressora <strong>"Elgin L42 Pro"</strong></li>
-            <li><strong>Tamanho do papel:</strong> Personalizado → ${pageWidth}mm × ${pageHeight}mm</li>
-            <li><strong>Margens:</strong> Nenhuma (0mm)</li>
-            <li><strong>Escala:</strong> 100% (NÃO usar "Ajustar ao papel")</li>
-            <li><strong>Cabeçalhos/Rodapés:</strong> Desativado</li>
-          </ol>
-          <p style="margin-top: 10px; font-size: 12px;">
-            Etiquetas: ${labelWidth}mm × ${labelHeight}mm | 3 por linha
-          </p>
+        <div class="preview-container no-print">
+          <div class="instructions">
+            <h3>⚙️ Configuração para Elgin L42 Pro</h3>
+            <ol>
+              <li>Clique em <strong>"Imprimir Etiquetas"</strong></li>
+              <li>Selecione a impressora <strong>Elgin L42 Pro</strong></li>
+              <li>Papel: <strong>${pageWidth}mm × ${pageHeight}mm</strong></li>
+              <li>Margens: <strong>Nenhuma (0mm)</strong></li>
+              <li>Escala: <strong>100%</strong></li>
+              <li>Cabeçalhos/Rodapés: <strong>Desativado</strong></li>
+            </ol>
+            <div class="info">
+              <span>Etiqueta: ${labelWidth}×${labelHeight}mm</span>
+              <span>3 colunas por linha</span>
+            </div>
+          </div>
+          
+          <div class="summary">
+            <strong id="total-count">0</strong> etiquetas em <strong id="row-count">0</strong> linhas
+          </div>
+          
+          <button class="print-btn" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
         </div>
-        <button class="no-print print-btn" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
 
         <div class="labels-container" id="labels"></div>
 
@@ -492,58 +558,69 @@ export default function Labels() {
           })))};
           var container = document.getElementById('labels');
           var columnsPerRow = ${columns};
+          var totalLabels = labels.length;
+          var totalRows = Math.ceil(totalLabels / columnsPerRow);
 
-          for (var i = 0; i < labels.length; i += columnsPerRow) {
-            var page = document.createElement('div');
-            page.className = 'page';
+          // Atualizar contadores
+          document.getElementById('total-count').textContent = totalLabels;
+          document.getElementById('row-count').textContent = totalRows;
+
+          // Gerar linhas de etiquetas
+          for (var i = 0; i < totalLabels; i += columnsPerRow) {
+            var row = document.createElement('div');
+            row.className = 'row';
 
             for (var j = 0; j < columnsPerRow; j++) {
               var labelData = labels[i + j];
               var labelDiv = document.createElement('div');
-              labelDiv.className = 'label';
-
+              
               if (labelData) {
-                // Formato: "NOME DO PRODUTO - TAMANHO"
+                labelDiv.className = 'label';
                 var displayText = labelData.productName + ' - ' + labelData.size;
                 labelDiv.innerHTML = 
                   '<div class="product-name">' + displayText + '</div>' +
                   '<div class="barcode-container"><svg id="barcode-' + (i + j) + '"></svg></div>';
+              } else {
+                labelDiv.className = 'label empty';
               }
-              page.appendChild(labelDiv);
+              
+              row.appendChild(labelDiv);
             }
 
-            container.appendChild(page);
+            container.appendChild(row);
           }
 
-          // Renderizar códigos de barras
+          // Renderizar códigos de barras com JsBarcode
           labels.forEach(function(label, idx) {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.5,
-                  height: 40,
+                  width: 1.4,
+                  height: 45,
                   displayValue: true,
-                  fontSize: 10,
+                  fontSize: 11,
                   margin: 0,
                   textMargin: 2,
-                  background: 'transparent'
+                  background: 'transparent',
+                  lineColor: '#000000'
                 });
               } catch(e) {
                 try {
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.3,
-                    height: 40,
+                    width: 1.2,
+                    height: 45,
                     displayValue: true,
-                    fontSize: 10,
+                    fontSize: 11,
                     margin: 0,
                     textMargin: 2,
-                    background: 'transparent'
+                    background: 'transparent',
+                    lineColor: '#000000'
                   });
                 } catch(e2) {
-                  console.warn('Código de barras inválido:', label.barcode);
+                  svg.parentElement.innerHTML = '<span style="font-size:8pt;color:#999;">Código inválido</span>';
                 }
               }
             }
