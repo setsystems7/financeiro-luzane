@@ -154,7 +154,7 @@ export default function Financial() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatsCard
-            title="Entrada Total"
+            title="Entrada de Vendas"
             value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
             icon={<ArrowUpRight className="w-6 h-6 text-blue-500" />}
             description="Valor bruto com taxas"
@@ -166,7 +166,7 @@ export default function Financial() {
             description="Taxas pagas pelos clientes"
           />
           <StatsCard
-            title="Valor Líquido"
+            title="Valor do Caixa"
             value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
             icon={<TrendingUp className="w-6 h-6 text-green-500" />}
             description="Valor que entra no caixa"
