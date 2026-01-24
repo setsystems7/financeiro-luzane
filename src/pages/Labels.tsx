@@ -28,13 +28,44 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-// Configurações para Elgin L42 Pro Full - 3 etiquetas por linha
-const LABEL_WIDTH_MM = 33;
-const LABEL_HEIGHT_MM = 22;
-const LABELS_PER_ROW = 3;
-const PAGE_WIDTH_MM = 108;
-const DPI = 203;
-const DOTS_PER_MM = DPI / 25.4;
+// ============================================
+// CONFIGURAÇÕES PARA ELGIN L42 PRO
+// Baseado nas medidas que funcionam:
+// - Página: 110mm x 30mm
+// - Etiqueta: 34.1mm x 24mm
+// - 3 colunas, 1 linha
+// - Margens: Superior 4mm, Inferior 2mm, Esq/Dir 3.5mm
+// - Gap horizontal: 0.3mm
+// ============================================
+const LABEL_CONFIG = {
+  // Página
+  pageWidth: 110,    // mm
+  pageHeight: 30,    // mm
+  
+  // Etiqueta individual
+  labelWidth: 34.1,  // mm
+  labelHeight: 24,   // mm
+  
+  // Layout
+  columns: 3,
+  rows: 1,
+  
+  // Margens da página
+  marginTop: 4,      // mm
+  marginBottom: 2,   // mm
+  marginLeft: 3.5,   // mm
+  marginRight: 3.5,  // mm
+  
+  // Espaçamento entre etiquetas
+  gapHorizontal: 0.3, // mm
+  gapVertical: 0,     // mm
+  
+  // DPI da impressora
+  dpi: 203,
+};
+
+// Calcular dots por mm
+const DOTS_PER_MM = LABEL_CONFIG.dpi / 25.4;
 
 interface LabelSelection {
   productId: string;
@@ -47,7 +78,7 @@ interface LabelSelection {
 }
 
 // Componente para renderizar código de barras
-function BarcodeDisplay({ value, width = 1.5, height = 30 }: { value: string; width?: number; height?: number }) {
+function BarcodeDisplay({ value, width = 1.2, height = 35 }: { value: string; width?: number; height?: number }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -58,8 +89,9 @@ function BarcodeDisplay({ value, width = 1.5, height = 30 }: { value: string; wi
           width,
           height,
           displayValue: true,
-          fontSize: 8,
+          fontSize: 10,
           margin: 0,
+          textMargin: 1,
           background: 'transparent',
         });
       } catch {
@@ -69,8 +101,9 @@ function BarcodeDisplay({ value, width = 1.5, height = 30 }: { value: string; wi
             width,
             height,
             displayValue: true,
-            fontSize: 8,
+            fontSize: 10,
             margin: 0,
+            textMargin: 1,
             background: 'transparent',
           });
         } catch {
@@ -91,30 +124,29 @@ function BarcodeDisplay({ value, width = 1.5, height = 30 }: { value: string; wi
   return <svg ref={svgRef} />;
 }
 
-// Preview de linha de 3 etiquetas (simulando impressão real)
+// Preview de linha de etiquetas (simulando impressão real)
 function LabelRowPreview({ labels }: { labels: LabelSelection[] }) {
   return (
-    <div className="flex gap-0.5 justify-center">
+    <div className="flex gap-[1px] justify-center">
       {[0, 1, 2].map((idx) => {
         const label = labels[idx];
         return (
           <div
             key={idx}
-            className="bg-white border border-gray-200 flex flex-col items-center justify-between overflow-hidden"
+            className="bg-white border border-gray-300 flex flex-col items-center justify-between overflow-hidden"
             style={{
-              width: '90px',
-              height: '60px',
-              padding: '2px',
+              width: '95px',
+              height: '65px',
+              padding: '3px 2px',
             }}
           >
             {label ? (
               <>
-                <p className="text-[7px] font-bold text-black text-center truncate w-full leading-tight">
-                  {label.productName}
+                <p className="text-[8px] font-bold text-black text-center truncate w-full leading-tight">
+                  {label.productName} - {label.size}
                 </p>
-                <p className="text-[6px] text-gray-500">Tam: {label.size}</p>
-                <div className="flex-1 flex items-center">
-                  <BarcodeDisplay value={label.barcode} width={0.6} height={16} />
+                <div className="flex-1 flex items-center justify-center w-full">
+                  <BarcodeDisplay value={label.barcode} width={0.8} height={25} />
                 </div>
               </>
             ) : (
@@ -145,10 +177,8 @@ export default function Labels() {
     return products
       .map(product => ({
         ...product,
-        // Mostrar tamanhos com quantidade >= 1 (pelo menos 1 unidade) e código de barras
         sizes: product.sizes.filter(s => s.quantity >= 1 && s.barcode),
       }))
-      // Mostrar produto se tiver pelo menos um tamanho disponível
       .filter(product => product.sizes.length > 0);
   }, [products]);
 
@@ -191,10 +221,8 @@ export default function Labels() {
     const allSelected = validSizes.every(s => selections.some(sel => sel.sizeId === s.id));
 
     if (allSelected) {
-      // Deselecionar todos
       setSelections(selections.filter(s => s.productId !== product.id));
     } else {
-      // Selecionar todos que ainda não estão selecionados
       const newSelections = [...selections];
       validSizes.forEach(sizeData => {
         if (!selections.find(s => s.sizeId === sizeData.id)) {
@@ -251,7 +279,7 @@ export default function Labels() {
 
   const totalLabels = selections.reduce((acc, s) => acc + s.quantity, 0);
 
-  // Expandir seleções para preview
+  // Expandir seleções para impressão
   const expandedLabels = useMemo(() => {
     const labels: LabelSelection[] = [];
     selections.forEach(sel => {
@@ -262,7 +290,11 @@ export default function Labels() {
     return labels;
   }, [selections]);
 
-  // Gerar PDF para impressora térmica Elgin L42 Pro Full
+  // ============================================
+  // IMPRESSÃO PDF - Formato exato para Elgin L42 Pro
+  // Página: 110mm x 30mm
+  // Etiqueta: 34.1mm x 24mm (3 por linha)
+  // ============================================
   const handleGeneratePDF = () => {
     if (selections.length === 0) {
       toast.error('Selecione pelo menos um produto!');
@@ -275,18 +307,14 @@ export default function Labels() {
       return;
     }
 
-    // Dimensões exatas para Elgin L42 Pro Full
-    const paperWidthMM = 108;
-    const labelWidthMM = 33;
-    const labelHeightMM = 22;
-    const gapMM = 3;
-    const labelsPerRowLocal = 3;
+    const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginLeft, gapHorizontal } = LABEL_CONFIG;
 
     const printHtml = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>Etiquetas - Elgin L42 Pro</title>
+        <meta charset="UTF-8">
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
         <style>
           *, *::before, *::after {
@@ -296,13 +324,14 @@ export default function Labels() {
           }
 
           @page {
-            size: ${paperWidthMM}mm ${labelHeightMM}mm;
+            size: ${pageWidth}mm ${pageHeight}mm;
             margin: 0;
           }
 
           @media print {
             html, body {
-              width: ${paperWidthMM}mm !important;
+              width: ${pageWidth}mm !important;
+              height: ${pageHeight}mm !important;
               margin: 0 !important;
               padding: 0 !important;
               -webkit-print-color-adjust: exact !important;
@@ -324,35 +353,37 @@ export default function Labels() {
 
           html, body {
             font-family: Arial, Helvetica, sans-serif;
-            width: ${paperWidthMM}mm;
+            width: ${pageWidth}mm;
             background: white;
+            font-size: 0;
           }
 
           .labels-container {
-            width: ${paperWidthMM}mm;
+            width: ${pageWidth}mm;
           }
 
           .page {
-            width: ${paperWidthMM}mm;
-            height: ${labelHeightMM}mm;
+            width: ${pageWidth}mm;
+            height: ${pageHeight}mm;
+            padding-top: ${marginTop}mm;
+            padding-left: ${marginLeft}mm;
             display: flex;
             flex-direction: row;
-            justify-content: flex-start;
-            align-items: stretch;
+            align-items: flex-start;
           }
 
           .label {
-            width: ${labelWidthMM}mm;
-            height: ${labelHeightMM}mm;
-            margin-right: ${gapMM}mm;
-            padding: 1mm;
+            width: ${labelWidth}mm;
+            height: ${labelHeight}mm;
+            margin-right: ${gapHorizontal}mm;
+            padding: 1mm 1.5mm;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             overflow: hidden;
             background: white;
-            border: 0.1mm dashed #ccc;
+            border: 0.1mm dashed #ddd;
           }
 
           .label:last-child {
@@ -360,22 +391,17 @@ export default function Labels() {
           }
 
           .product-name {
-            font-size: 6pt;
+            font-size: 7pt;
             font-weight: bold;
             text-align: center;
-            line-height: 1.1;
-            max-height: 3.5mm;
+            line-height: 1.2;
+            max-height: 4mm;
             overflow: hidden;
             width: 100%;
             white-space: nowrap;
             text-overflow: ellipsis;
             color: #000;
-          }
-
-          .size {
-            font-size: 5pt;
-            color: #333;
-            margin-top: 0.3mm;
+            margin-bottom: 0.5mm;
           }
 
           .barcode-container {
@@ -385,13 +411,12 @@ export default function Labels() {
             justify-content: center;
             width: 100%;
             overflow: hidden;
-            margin-top: 0.5mm;
           }
 
           .barcode-container svg {
-            max-width: ${labelWidthMM - 2}mm !important;
+            max-width: ${labelWidth - 3}mm !important;
             height: auto !important;
-            max-height: 14mm !important;
+            max-height: 18mm !important;
           }
 
           .instructions {
@@ -442,37 +467,46 @@ export default function Labels() {
       </head>
       <body>
         <div class="no-print instructions">
-          <h3>⚠️ CONFIGURAÇÃO OBRIGATÓRIA - Leia antes de imprimir!</h3>
+          <h3>⚠️ CONFIGURAÇÃO PARA ELGIN L42 PRO</h3>
           <ol>
             <li>Clique em <strong>"🖨️ Imprimir Etiquetas"</strong></li>
             <li>Selecione a impressora <strong>"Elgin L42 Pro"</strong></li>
-            <li><strong>Tamanho do papel:</strong> Personalizado → 108mm × 22mm</li>
-            <li><strong>Margens:</strong> Nenhuma (ou 0mm)</li>
+            <li><strong>Tamanho do papel:</strong> Personalizado → ${pageWidth}mm × ${pageHeight}mm</li>
+            <li><strong>Margens:</strong> Nenhuma (0mm)</li>
             <li><strong>Escala:</strong> 100% (NÃO usar "Ajustar ao papel")</li>
             <li><strong>Cabeçalhos/Rodapés:</strong> Desativado</li>
           </ol>
+          <p style="margin-top: 10px; font-size: 12px;">
+            Etiquetas: ${labelWidth}mm × ${labelHeight}mm | 3 por linha
+          </p>
         </div>
         <button class="no-print print-btn" onclick="window.print()">🖨️ Imprimir Etiquetas</button>
 
         <div class="labels-container" id="labels"></div>
 
         <script>
-          var labels = ${JSON.stringify(expandedLabels.map(l => ({ productName: l.productName, size: l.size, barcode: l.barcode })))};
+          var labels = ${JSON.stringify(expandedLabels.map(l => ({ 
+            productName: l.productName, 
+            size: l.size, 
+            barcode: l.barcode 
+          })))};
           var container = document.getElementById('labels');
-          var labelsPerRow = ${labelsPerRowLocal};
+          var columnsPerRow = ${columns};
 
-          for (var i = 0; i < labels.length; i += labelsPerRow) {
+          for (var i = 0; i < labels.length; i += columnsPerRow) {
             var page = document.createElement('div');
             page.className = 'page';
 
-            for (var j = 0; j < labelsPerRow; j++) {
+            for (var j = 0; j < columnsPerRow; j++) {
               var labelData = labels[i + j];
               var labelDiv = document.createElement('div');
               labelDiv.className = 'label';
 
               if (labelData) {
-                labelDiv.innerHTML = '<div class="product-name">' + labelData.productName + '</div>' +
-                  '<div class="size">Tam: ' + labelData.size + '</div>' +
+                // Formato: "NOME DO PRODUTO - TAMANHO"
+                var displayText = labelData.productName + ' - ' + labelData.size;
+                labelDiv.innerHTML = 
+                  '<div class="product-name">' + displayText + '</div>' +
                   '<div class="barcode-container"><svg id="barcode-' + (i + j) + '"></svg></div>';
               }
               page.appendChild(labelDiv);
@@ -481,30 +515,31 @@ export default function Labels() {
             container.appendChild(page);
           }
 
+          // Renderizar códigos de barras
           labels.forEach(function(label, idx) {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.2,
-                  height: 22,
+                  width: 1.5,
+                  height: 40,
                   displayValue: true,
-                  fontSize: 8,
+                  fontSize: 10,
                   margin: 0,
-                  textMargin: 1,
+                  textMargin: 2,
                   background: 'transparent'
                 });
               } catch(e) {
                 try {
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.0,
-                    height: 22,
+                    width: 1.3,
+                    height: 40,
                     displayValue: true,
-                    fontSize: 8,
+                    fontSize: 10,
                     margin: 0,
-                    textMargin: 1,
+                    textMargin: 2,
                     background: 'transparent'
                   });
                 } catch(e2) {
@@ -523,7 +558,6 @@ export default function Labels() {
     toast.success('Preparando ' + totalLabels + ' etiquetas para impressão...');
   };
 
-
   // Abrir app em nova aba (para permitir USB)
   const handleOpenInNewTab = () => {
     window.open(window.location.href, '_blank');
@@ -531,7 +565,10 @@ export default function Labels() {
     setShowPrintFallback(false);
   };
 
-  // Impressão Direta via USB (Web USB API) com tratamento melhorado
+  // ============================================
+  // IMPRESSÃO USB DIRETA - ZPL para Elgin L42 Pro
+  // Etiqueta: 34.1mm x 24mm
+  // ============================================
   const handleDirectPrintUSB = async () => {
     if (selections.length === 0) {
       toast.error('Selecione pelo menos um produto!');
@@ -557,14 +594,14 @@ export default function Labels() {
       toast.info('Conectando à impressora... Selecione-a na janela que abrir.');
       console.log('[Impressão USB] Iniciando conexão...');
 
-      // Solicitar acesso ao dispositivo USB (impressora térmica)
+      // Solicitar acesso ao dispositivo USB
       const device = await nav.usb.requestDevice({
         filters: [
           { vendorId: 0x0DD4 }, // Elgin
           { vendorId: 0x0A5F }, // Zebra
           { vendorId: 0x04B8 }, // Epson
           { vendorId: 0x0745 }, // Argox
-          { classCode: 7 }, // Classe de impressora
+          { classCode: 7 },     // Classe de impressora
         ]
       });
 
@@ -572,7 +609,6 @@ export default function Labels() {
       await device.open();
       console.log('[Impressão USB] Dispositivo aberto');
 
-      // Selecionar configuração
       if (device.configuration === null) {
         await device.selectConfiguration(1);
         console.log('[Impressão USB] Configuração selecionada');
@@ -584,12 +620,11 @@ export default function Labels() {
       );
 
       if (!printerInterface) {
-        throw new Error('Interface de impressora não encontrada. A impressora pode estar sendo usada por outro programa.');
+        throw new Error('Interface de impressora não encontrada.');
       }
 
       console.log('[Impressão USB] Interface encontrada:', printerInterface.interfaceNumber);
       await device.claimInterface(printerInterface.interfaceNumber);
-      console.log('[Impressão USB] Interface reivindicada');
 
       // Encontrar endpoint de saída
       const outEndpoint = printerInterface.alternate.endpoints.find(
@@ -597,69 +632,64 @@ export default function Labels() {
       );
 
       if (!outEndpoint) {
-        throw new Error('Endpoint de saída não encontrado na impressora.');
+        throw new Error('Endpoint de saída não encontrado.');
       }
 
-      // Gerar comandos ZPL para Elgin L42 Pro (compatível com ZPL II)
-      // Etiqueta: 33mm x 22mm = 264 x 176 dots (203 DPI)
-      const labelWidthDots = Math.round(LABEL_WIDTH_MM * DOTS_PER_MM); // ~264
-      const labelHeightDots = Math.round(LABEL_HEIGHT_MM * DOTS_PER_MM); // ~176
+      // Calcular dimensões em dots (203 DPI)
+      const labelWidthDots = Math.round(LABEL_CONFIG.labelWidth * DOTS_PER_MM);   // ~273 dots
+      const labelHeightDots = Math.round(LABEL_CONFIG.labelHeight * DOTS_PER_MM); // ~192 dots
       
+      // Gerar comandos ZPL
       let zplCommands = '';
+      
       expandedLabels.forEach((label) => {
-        const productName = label.productName.length > 16 ? label.productName.substring(0, 16) + '..' : label.productName;
-        const sizeText = 'Tam: ' + label.size;
+        // Truncar nome se muito longo
+        const displayText = `${label.productName} - ${label.size}`;
+        const truncatedText = displayText.length > 20 ? displayText.substring(0, 20) + '..' : displayText;
         
-        // ZPL otimizado para 33x22mm
-        zplCommands += '^XA'; // Início da etiqueta
-        zplCommands += '^PW' + labelWidthDots; // Largura do papel
-        zplCommands += '^LL' + labelHeightDots; // Comprimento da etiqueta
-        zplCommands += '^LH0,0'; // Home position
+        zplCommands += '^XA';                                    // Início
+        zplCommands += `^PW${labelWidthDots}`;                   // Largura
+        zplCommands += `^LL${labelHeightDots}`;                  // Altura
+        zplCommands += '^LH0,0';                                 // Origem
         
-        // Nome do produto (centralizado, fonte A, altura 18, largura 18)
-        zplCommands += '^FO5,5^A0N,18,18^FB' + (labelWidthDots - 10) + ',1,0,C,0^FD' + productName + '^FS';
-        
-        // Tamanho (centralizado, fonte menor)
-        zplCommands += '^FO5,26^A0N,14,14^FB' + (labelWidthDots - 10) + ',1,0,C,0^FD' + sizeText + '^FS';
+        // Nome do produto + tamanho (centralizado no topo)
+        zplCommands += `^FO5,8^A0N,22,22^FB${labelWidthDots - 10},1,0,C,0^FD${truncatedText}^FS`;
         
         // Código de barras EAN13 (centralizado)
-        const barcodeX = Math.round((labelWidthDots - 200) / 2);
-        zplCommands += '^FO' + barcodeX + ',44^BY1.3,2.5,45^BCN,45,Y,N,N^FD' + label.barcode + '^FS';
+        const barcodeWidth = 180;
+        const barcodeX = Math.round((labelWidthDots - barcodeWidth) / 2);
+        zplCommands += `^FO${barcodeX},35^BY2,2.5,70^BCN,70,Y,N,N^FD${label.barcode}^FS`;
         
-        zplCommands += '^XZ'; // Fim da etiqueta
+        zplCommands += '^XZ';                                    // Fim
       });
+
       const encoder = new TextEncoder();
       const data = encoder.encode(zplCommands);
 
-      console.log('[Impressão USB] Enviando', data.byteLength, 'bytes para endpoint', outEndpoint.endpointNumber);
+      console.log('[Impressão USB] Enviando', data.byteLength, 'bytes');
       await device.transferOut(outEndpoint.endpointNumber, data);
 
-      // Liberar recursos
       await device.releaseInterface(printerInterface.interfaceNumber);
       await device.close();
-      console.log('[Impressão USB] Impressão concluída com sucesso');
+      console.log('[Impressão USB] Impressão concluída');
 
       toast.success(`${totalLabels} etiquetas enviadas para a impressora!`);
     } catch (error: any) {
-      console.error('[Impressão USB] Erro detalhado:', error);
-      console.error('[Impressão USB] Nome do erro:', error.name);
-      console.error('[Impressão USB] Mensagem:', error.message);
+      console.error('[Impressão USB] Erro:', error);
 
       let errorMessage = '';
       let showFallback = true;
 
       if (error.name === 'NotFoundError') {
-        errorMessage = 'Nenhuma impressora foi selecionada. Clique em "Imprimir USB" novamente e selecione a impressora na janela que aparecer.';
+        errorMessage = 'Nenhuma impressora foi selecionada.';
         showFallback = false;
         toast.warning('Nenhuma impressora selecionada');
       } else if (error.name === 'SecurityError') {
-        errorMessage = 'Permissão negada para acessar a impressora USB.\n\nIsso pode acontecer porque:\n• A impressora está sendo usada por outro programa (feche o software da Elgin ou drivers)\n• O navegador bloqueou o acesso (verifique as permissões do site)\n• O sistema operacional restringiu o acesso USB';
-      } else if (error.message?.includes('Interface')) {
-        errorMessage = 'A interface da impressora não foi encontrada ou está ocupada.\n\nFeche outros programas que possam estar usando a impressora e tente novamente.';
+        errorMessage = 'Permissão negada para acessar a impressora USB.';
       } else if (error.message?.includes('claimed')) {
-        errorMessage = 'A impressora já está em uso por outro programa.\n\nFeche o software da Elgin, drivers ou outros aplicativos de impressão e tente novamente.';
+        errorMessage = 'A impressora está em uso por outro programa. Feche outros aplicativos e tente novamente.';
       } else {
-        errorMessage = `Erro ao conectar com a impressora: ${error.message || 'Falha na conexão USB'}`;
+        errorMessage = `Erro: ${error.message || 'Falha na conexão USB'}`;
       }
 
       if (showFallback) {
@@ -669,7 +699,7 @@ export default function Labels() {
     }
   };
 
-  // Impressão via janela do navegador (alternativa mais compatível)
+  // Impressão via navegador (fallback)
   const handleBrowserPrint = () => {
     if (selections.length === 0) {
       toast.error('Selecione pelo menos um produto!');
@@ -680,8 +710,7 @@ export default function Labels() {
   };
 
   return (
-    <MainLayout title="Etiquetas" subtitle="Impressora Elgin L42 Pro Full">
-      {/* Mobile: Layout em abas / Desktop: Grid */}
+    <MainLayout title="Etiquetas" subtitle="Elgin L42 Pro - 110x30mm">
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 animate-fade-in h-[calc(100vh-140px)] lg:h-[calc(100vh-160px)]">
 
         {/* Mobile: Resumo fixo no topo */}
@@ -811,10 +840,10 @@ export default function Labels() {
           </CardContent>
         </Card>
 
-        {/* Mobile: Selecionados e Ações em row / Desktop: Duas colunas separadas */}
+        {/* Coluna Central/Direita: Selecionados e Ações */}
         <div className="lg:col-span-7 flex flex-col md:flex-row lg:grid lg:grid-cols-7 gap-3 lg:gap-4 min-h-0 lg:h-full">
 
-          {/* Coluna Central: Selecionados */}
+          {/* Selecionados */}
           <Card variant="elevated" className="md:flex-1 lg:col-span-4 flex flex-col min-h-[200px] lg:min-h-0">
             <CardHeader className="pb-2 shrink-0 px-3 lg:px-6">
               <div className="flex items-center justify-between">
@@ -882,30 +911,32 @@ export default function Labels() {
                           >
                             =Est
                           </Button>
-                          <div className="flex items-center gap-0">
+                          <div className="flex items-center gap-0.5 lg:gap-1">
                             <Button
                               size="icon"
-                              variant="ghost"
-                              className="h-5 w-5"
+                              variant="outline"
+                              className="h-5 w-5 lg:h-6 lg:w-6"
                               onClick={() => updateQuantity(sel.sizeId, -1)}
+                              disabled={sel.quantity <= 1}
                             >
-                              <Minus className="w-3 h-3" />
+                              <Minus className="w-2.5 lg:w-3 h-2.5 lg:h-3" />
                             </Button>
                             <Input
                               type="number"
-                              min="1"
+                              min={1}
                               max={sel.stockQuantity}
                               value={sel.quantity}
                               onChange={(e) => setQuantity(sel.sizeId, parseInt(e.target.value) || 1)}
-                              className="h-5 w-8 lg:w-10 text-center text-[10px] lg:text-xs px-0 border-0 bg-background"
+                              className="h-5 lg:h-6 w-8 lg:w-10 text-center text-[10px] lg:text-xs px-0.5 lg:px-1"
                             />
                             <Button
                               size="icon"
-                              variant="ghost"
-                              className="h-5 w-5"
+                              variant="outline"
+                              className="h-5 w-5 lg:h-6 lg:w-6"
                               onClick={() => updateQuantity(sel.sizeId, 1)}
+                              disabled={sel.quantity >= sel.stockQuantity}
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-2.5 lg:w-3 h-2.5 lg:h-3" />
                             </Button>
                           </div>
                         </div>
@@ -917,218 +948,146 @@ export default function Labels() {
             </CardContent>
           </Card>
 
-          {/* Coluna Direita: Preview e Ações */}
-          <Card variant="elevated" className="md:w-64 lg:w-auto lg:col-span-3 flex flex-col shrink-0">
-            <CardHeader className="pb-2 shrink-0 px-3 lg:px-6">
-              <CardTitle className="text-sm lg:text-base flex items-center gap-2">
-                <Printer className="w-4 h-4 text-pink-primary" />
-                <span className="hidden sm:inline">Prévia</span>
-                <span className="sm:hidden">Imprimir</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col gap-2 lg:gap-3 px-3 lg:px-6">
-              {/* Preview de linha - esconde em mobile pequeno */}
-              <div className="hidden sm:flex flex-1 flex-col items-center justify-center bg-muted/30 rounded-lg p-2 lg:p-3 min-h-[80px] lg:min-h-[100px]">
-                {expandedLabels.length > 0 ? (
-                  <div className="space-y-1 lg:space-y-2">
-                    <p className="text-[9px] lg:text-[10px] text-muted-foreground text-center">
-                      Primeira linha
-                    </p>
-                    <LabelRowPreview labels={expandedLabels.slice(0, 3)} />
-                    {expandedLabels.length > 3 && (
-                      <p className="text-[8px] lg:text-[9px] text-muted-foreground text-center">
-                        + {Math.ceil((expandedLabels.length - 3) / 3)} linha(s)
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <Printer className="w-5 lg:w-6 h-5 lg:h-6 mx-auto mb-1 opacity-50" />
-                    <p className="text-[9px] lg:text-[10px]">Selecione itens</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Informações */}
-              <div className="space-y-1.5">
-                <div className="grid grid-cols-2 gap-1 lg:gap-1.5">
-                  <div className="p-1 lg:p-1.5 rounded bg-muted/50 text-center">
-                    <p className="text-[8px] lg:text-[9px] text-muted-foreground uppercase">Etiqueta</p>
-                    <p className="font-medium text-[9px] lg:text-[10px]">{LABEL_WIDTH_MM}×{LABEL_HEIGHT_MM}mm</p>
-                  </div>
-                  <div className="p-1 lg:p-1.5 rounded bg-muted/50 text-center">
-                    <p className="text-[8px] lg:text-[9px] text-muted-foreground uppercase">Por linha</p>
-                    <p className="font-medium text-[9px] lg:text-[10px]">{LABELS_PER_ROW} etiq.</p>
-                  </div>
-                </div>
-
-                <div className="p-2 rounded-lg bg-pink-light/20 border border-pink-light/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] lg:text-xs text-muted-foreground">Total</span>
-                    <Badge variant="pink" className="text-xs lg:text-sm font-bold">{totalLabels}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5 lg:mt-1">
-                    <span className="text-[9px] lg:text-[10px] text-muted-foreground">Linhas</span>
-                    <span className="text-[9px] lg:text-[10px] font-medium">{Math.ceil(totalLabels / 3)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botões */}
-              <div className="space-y-1 lg:space-y-1.5">
+          {/* Preview e Ações */}
+          <Card variant="elevated" className="md:w-[280px] lg:w-auto lg:col-span-3 flex flex-col shrink-0">
+            <CardHeader className="pb-2 shrink-0 px-3 lg:px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm lg:text-base flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-pink-primary" />
+                  Impressão
+                </CardTitle>
                 <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setShowPrintHelp(true)}
+                >
+                  <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col px-3 lg:px-4 pt-0 pb-3 lg:pb-4">
+              {/* Info do formato */}
+              <div className="bg-muted/50 rounded-lg p-2 mb-3 text-center">
+                <p className="text-[10px] lg:text-xs text-muted-foreground">
+                  Página: {LABEL_CONFIG.pageWidth}×{LABEL_CONFIG.pageHeight}mm
+                </p>
+                <p className="text-[10px] lg:text-xs text-muted-foreground">
+                  Etiqueta: {LABEL_CONFIG.labelWidth}×{LABEL_CONFIG.labelHeight}mm • 3/linha
+                </p>
+              </div>
+
+              {/* Preview */}
+              <div className="bg-muted/30 rounded-lg p-2 lg:p-3 mb-3 lg:mb-4">
+                <p className="text-[9px] lg:text-[10px] text-muted-foreground text-center mb-2">
+                  Preview (1 linha = 3 etiquetas)
+                </p>
+                <LabelRowPreview labels={expandedLabels.slice(0, 3)} />
+              </div>
+
+              {/* Total */}
+              <div className="text-center mb-3 lg:mb-4">
+                <p className="text-lg lg:text-xl font-bold text-pink-primary">{totalLabels}</p>
+                <p className="text-[10px] lg:text-xs text-muted-foreground">
+                  etiquetas • {Math.ceil(totalLabels / 3)} linhas
+                </p>
+              </div>
+
+              {/* Botões de impressão */}
+              <div className="space-y-2 mt-auto">
+                <Button
+                  className="w-full h-9 lg:h-10 text-xs lg:text-sm font-medium"
                   variant="pink"
-                  className="w-full h-9 lg:h-10 text-xs lg:text-sm font-semibold"
                   onClick={handleGeneratePDF}
                   disabled={selections.length === 0}
                 >
-                  <Printer className="w-4 lg:w-4.5 h-4 lg:h-4.5 mr-1.5 lg:mr-2" />
-                  Imprimir PDF ({totalLabels})
+                  <FileDown className="w-4 h-4 mr-1.5" />
+                  Imprimir PDF
                 </Button>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    className={`flex-1 h-7 lg:h-8 text-[10px] lg:text-xs ${isInIframe ? 'opacity-60' : ''}`}
-                    onClick={handleDirectPrintUSB}
-                    disabled={selections.length === 0}
-                    title={isInIframe ? 'USB indisponível no editor - abra em nova aba' : 'Impressão direta via USB'}
-                  >
-                    <Usb className="w-3 h-3 mr-1" />
-                    USB Direto
-                    {isInIframe && <AlertTriangle className="w-3 h-3 ml-1 text-yellow-500" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 lg:h-8 w-7 lg:w-8"
-                    onClick={() => setShowPrintHelp(true)}
-                    title="Ajuda com impressão"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+                <Button
+                  className="w-full h-8 lg:h-9 text-[10px] lg:text-xs"
+                  variant="outline"
+                  onClick={handleDirectPrintUSB}
+                  disabled={selections.length === 0}
+                >
+                  <Usb className="w-3.5 h-3.5 mr-1.5" />
+                  USB Direto (ZPL)
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Modal de Ajuda para Impressão */}
+      {/* Dialog de ajuda */}
       <Dialog open={showPrintHelp} onOpenChange={setShowPrintHelp}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="w-5 h-5 text-primary" />
-              Como Imprimir
+              <Printer className="w-5 h-5 text-pink-primary" />
+              Configuração de Impressão
             </DialogTitle>
             <DialogDescription>
-              Escolha o método mais adequado para seu ambiente
+              Para a Elgin L42 Pro com etiquetas de 3 colunas
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 text-sm">
-            <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Printer className="w-4 h-4 text-pink-primary" />
-                Imprimir PDF (Recomendado)
-              </h4>
-              <p className="text-muted-foreground pl-2">
-                Abre a janela de impressão do Windows/navegador. Funciona com qualquer impressora configurada no sistema. 
-                <strong> Selecione a Elgin L42 Pro</strong> na lista de impressoras.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Usb className="w-4 h-4" />
-                USB Direto (Avançado)
-              </h4>
-              <p className="text-muted-foreground pl-2">
-                Envia comandos direto para a impressora via USB. Requer Chrome ou Edge.
-              </p>
-              {isInIframe && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 p-2 rounded-lg text-xs">
-                  <p className="font-medium text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    Indisponível no editor
-                  </p>
-                  <p className="text-muted-foreground mt-1">
-                    USB só funciona quando a página está aberta em uma nova aba (fora do editor).
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
-              <h4 className="font-semibold">Configuração da Elgin L42 Pro</h4>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Etiquetas: 33mm x 22mm (3 por linha)</li>
-                <li>Gap: 3mm entre etiquetas</li>
-                <li>Rolo de 108mm de largura</li>
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <h4 className="font-medium mb-2">Formato atual:</h4>
+              <ul className="text-xs space-y-1 text-muted-foreground">
+                <li>• Página: {LABEL_CONFIG.pageWidth}mm × {LABEL_CONFIG.pageHeight}mm</li>
+                <li>• Etiqueta: {LABEL_CONFIG.labelWidth}mm × {LABEL_CONFIG.labelHeight}mm</li>
+                <li>• 3 colunas por linha</li>
+                <li>• Gap horizontal: {LABEL_CONFIG.gapHorizontal}mm</li>
               </ul>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button onClick={() => setShowPrintHelp(false)}>
-              Entendi
-            </Button>
+            <div>
+              <h4 className="font-medium mb-2">Imprimir PDF:</h4>
+              <ol className="text-xs space-y-1 text-muted-foreground list-decimal list-inside">
+                <li>Configure papel personalizado: 110×30mm</li>
+                <li>Margens: Nenhuma (0mm)</li>
+                <li>Escala: 100%</li>
+                <li>Desative cabeçalhos/rodapés</li>
+              </ol>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">USB Direto:</h4>
+              <p className="text-xs text-muted-foreground">
+                Envia comandos ZPL diretamente. Requer Chrome/Edge e impressora conectada via USB.
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Fallback quando USB falha */}
+      {/* Dialog de erro USB */}
       <AlertDialog open={showPrintFallback} onOpenChange={setShowPrintFallback}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              USB Bloqueado
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              Problema na Impressão USB
             </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p className="whitespace-pre-line text-sm">{printError}</p>
-                
-                {isInIframe && (
-                  <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg">
-                    <p className="font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5 mb-2">
-                      <ExternalLink className="w-4 h-4" />
-                      Abrir em Nova Aba
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      USB funciona quando a página está fora do editor. Clique abaixo para abrir em nova aba.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full h-8 text-xs"
-                      onClick={handleOpenInNewTab}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1.5" />
-                      Abrir em Nova Aba
-                    </Button>
-                  </div>
-                )}
-                
-                <div className="bg-muted/50 p-3 rounded-lg">
-                  <p className="font-medium text-foreground mb-1 flex items-center gap-1.5">
-                    <Printer className="w-4 h-4 text-pink-primary" />
-                    Alternativa: Imprimir PDF
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Funciona em qualquer lugar. Selecione a <strong>Elgin L42 Pro</strong> na lista de impressoras.
-                  </p>
-                </div>
-              </div>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {printError}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBrowserPrint} className="bg-pink-primary hover:bg-pink-primary/90">
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir PDF ({totalLabels})
+            {isInIframe && (
+              <Button
+                variant="outline"
+                onClick={handleOpenInNewTab}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Abrir em Nova Aba
+              </Button>
+            )}
+            <AlertDialogAction onClick={handleBrowserPrint}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Usar Impressão PDF
             </AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
