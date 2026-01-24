@@ -38,35 +38,35 @@ import {
 // - Gap horizontal: 0.3mm
 // ============================================
 // ============================================
-// CONFIGURAÇÕES PARA ELGIN L42 PRO (MESMO DO OUTRO SISTEMA)
+// CONFIGURAÇÕES PARA ELGIN L42 PRO
 // - Página: 110mm x 30mm
-// - Etiqueta: 34.1mm x 24mm
+// - Etiqueta: 33mm x 22mm (reduzida para caber com gaps)
 // - 3 colunas, 1 linha
-// - Margens: Superior 4mm, Inferior 2mm, Esq/Dir 3.5mm
-// - Gap horizontal: 0.3mm
+// - Margens: Superior 5mm, Inferior 2mm, Esq/Dir 2mm
+// - Gap horizontal: 2mm (aumentado para separar bem)
 // ============================================
 const LABEL_CONFIG = {
   // Página
   pageWidth: 110,    // mm
   pageHeight: 30,    // mm
   
-  // Etiqueta individual
-  labelWidth: 34.1,  // mm
-  labelHeight: 24,   // mm
+  // Etiqueta individual (reduzida para caber com gaps maiores)
+  labelWidth: 33,    // mm
+  labelHeight: 22,   // mm
   
   // Layout
   columns: 3,
   rows: 1,
   
   // Margens da página
-  marginTop: 4,      // mm
+  marginTop: 5,      // mm - AUMENTADO para não cortar nome
   marginBottom: 2,   // mm
-  marginLeft: 3.5,   // mm
-  marginRight: 3.5,  // mm
+  marginLeft: 2,     // mm
+  marginRight: 2,    // mm
   
-  // Espaçamento entre etiquetas
-  gapHorizontal: 0.3, // mm
-  gapVertical: 0,     // mm
+  // Espaçamento entre etiquetas (AUMENTADO para separar bem)
+  gapHorizontal: 2,  // mm
+  gapVertical: 0,    // mm
   
   // DPI da impressora
   dpi: 203,
@@ -316,8 +316,8 @@ export default function Labels() {
     }
 
     const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginBottom, marginLeft, marginRight, gapHorizontal } = LABEL_CONFIG;
-    // Ajuste fino de offset para não cortar o topo em algumas configurações de driver/navegador
-    const PRINT_OFFSET_TOP_MM = 1; // mm
+    // Ajuste fino de offset para não cortar o topo - AUMENTADO
+    const PRINT_OFFSET_TOP_MM = 2; // mm
 
     const printHtml = `
       <!DOCTYPE html>
@@ -515,23 +515,23 @@ export default function Labels() {
             overflow: hidden;
           }
 
-          /* SVG do código de barras - ALTURA REDUZIDA PARA CABER NÚMEROS */
+          /* SVG do código de barras - TAMANHO MAIOR */
           .barcode-container svg {
-            width: 30mm !important;
-            max-width: 30mm !important;
-            height: 10mm !important;
-            max-height: 10mm !important;
+            width: 29mm !important;
+            max-width: 29mm !important;
+            height: 11mm !important;
+            max-height: 11mm !important;
             flex-shrink: 0;
           }
 
-          /* Texto do número EAN abaixo das barras */
+          /* Texto do número EAN abaixo das barras - MAIOR */
           .barcode-number {
             font-family: monospace;
-            font-size: 8pt;
-            letter-spacing: 0.5px;
+            font-size: 9pt;
+            letter-spacing: 0.8px;
             text-align: center;
             color: #000;
-            margin-top: 0.5mm;
+            margin-top: 0.8mm;
             flex-shrink: 0;
           }
 
