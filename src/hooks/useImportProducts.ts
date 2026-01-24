@@ -13,9 +13,10 @@ interface ProductRow {
   m: number;
   g: number;
   gg: number;
-  xg: number;
-  xxg: number;
-  unico: number;
+  g1: number;
+  g2: number;
+  g3: number;
+  g4: number;
 }
 
 export function useImportProducts() {
@@ -84,16 +85,17 @@ export function useImportProducts() {
           continue;
         }
 
-        // Create sizes with quantities
+        // Tamanhos na ordem correta: PP, P, M, G, GG, G1, G2, G3, G4
         const sizesToInsert = [
           { size: 'PP', quantity: product.pp || 0 },
           { size: 'P', quantity: product.p || 0 },
           { size: 'M', quantity: product.m || 0 },
           { size: 'G', quantity: product.g || 0 },
           { size: 'GG', quantity: product.gg || 0 },
-          { size: 'XG', quantity: product.xg || 0 },
-          { size: 'XXG', quantity: product.xxg || 0 },
-          { size: 'Único', quantity: product.unico || 0 },
+          { size: 'G1', quantity: product.g1 || 0 },
+          { size: 'G2', quantity: product.g2 || 0 },
+          { size: 'G3', quantity: product.g3 || 0 },
+          { size: 'G4', quantity: product.g4 || 0 },
         ].filter(s => s.quantity > 0);
 
         if (sizesToInsert.length > 0) {
@@ -132,10 +134,11 @@ export function useImportProducts() {
 }
 
 export function generateTemplateExcel(): void {
-  const headers = ['Nome', 'Preço Compra', 'Preço Venda', 'Fornecedor', 'PP', 'P', 'M', 'G', 'GG', 'XG', 'XXG', 'Único'];
-  const exampleRow1 = ['Legging Fitness Premium', 45.00, 89.90, 'Distribuidora Fashion', 2, 5, 8, 6, 3, 0, 0, 0];
-  const exampleRow2 = ['Top Esportivo Basic', 25.00, 49.90, 'Distribuidora Fashion', 3, 6, 10, 8, 4, 0, 0, 0];
-  const exampleRow3 = ['Conjunto Yoga', 80.00, 159.90, 'Fornecedor XYZ', 0, 0, 0, 0, 0, 0, 0, 5];
+  // Ordem atualizada de tamanhos: PP, P, M, G, GG, G1, G2, G3, G4
+  const headers = ['Nome', 'Preço Compra', 'Preço Venda', 'Fornecedor', 'PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', 'G3', 'G4'];
+  const exampleRow1 = ['Legging Fitness Premium', 45.00, 89.90, 'Distribuidora Fashion', 2, 5, 8, 6, 3, 0, 0, 0, 0];
+  const exampleRow2 = ['Top Esportivo Basic', 25.00, 49.90, 'Distribuidora Fashion', 3, 6, 10, 8, 4, 0, 0, 0, 0];
+  const exampleRow3 = ['Conjunto Yoga', 80.00, 159.90, 'Fornecedor XYZ', 0, 0, 0, 0, 0, 5, 3, 2, 1];
 
   const wsData = [headers, exampleRow1, exampleRow2, exampleRow3];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -206,9 +209,10 @@ export function parseExcel(file: File): Promise<ProductRow[]> {
             m: parseInt(headers.indexOf('m') >= 0 ? row[headers.indexOf('m')] : 0) || 0,
             g: parseInt(headers.indexOf('g') >= 0 ? row[headers.indexOf('g')] : 0) || 0,
             gg: parseInt(getValue('gg')) || 0,
-            xg: parseInt(getValue('xg')) || 0,
-            xxg: parseInt(getValue('xxg')) || 0,
-            unico: parseInt(getValue('unico')) || 0,
+            g1: parseInt(getValue('g1')) || 0,
+            g2: parseInt(getValue('g2')) || 0,
+            g3: parseInt(getValue('g3')) || 0,
+            g4: parseInt(getValue('g4')) || 0,
           };
 
           if (product.nome) {

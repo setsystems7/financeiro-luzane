@@ -2,6 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Ordem fixa dos tamanhos - exportado para uso em outros componentes
+export const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', 'G3', 'G4'];
+
+// Função para ordenar tamanhos conforme a ordem padrão
+export function sortSizesByOrder<T extends { size: string }>(sizes: T[]): T[] {
+  return [...sizes].sort((a, b) => {
+    const indexA = SIZE_ORDER.indexOf(a.size);
+    const indexB = SIZE_ORDER.indexOf(b.size);
+    // Se não encontrar na lista, coloca no final
+    const orderA = indexA === -1 ? SIZE_ORDER.length : indexA;
+    const orderB = indexB === -1 ? SIZE_ORDER.length : indexB;
+    return orderA - orderB;
+  });
+}
+
 export interface ProductSize {
   id: string;
   size: string;
@@ -76,7 +91,7 @@ export function useProducts() {
         photo_url: product.photo_url,
         is_active: product.is_active,
         created_at: product.created_at,
-        sizes: product.product_sizes || [],
+        sizes: sortSizesByOrder(product.product_sizes || []),
       })) as Product[];
     },
   });

@@ -282,7 +282,7 @@ export default function Products() {
                   <div className="flex-1">
                     <h4 className="font-medium mb-1">Baixar Planilha Modelo</h4>
                     <p className="text-sm text-muted-foreground mb-3">
-                      A planilha contém as colunas: nome, preço de compra, preço de venda e todos os tamanhos (PP, P, M, G, GG, XG, XXG, Único).
+                      A planilha contém as colunas: nome, preço de compra, preço de venda e todos os tamanhos (PP, P, M, G, GG, G1, G2, G3, G4).
                     </p>
                     <Button variant="outline" onClick={handleDownloadTemplate} className="w-full sm:w-auto">
                       <Download className="w-4 h-4 mr-2" />

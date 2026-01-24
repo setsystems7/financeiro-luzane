@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Product as DBProduct, ProductFormData, useCategories, useColors, useSuppliers } from '@/hooks/useProducts';
+import { Product as DBProduct, ProductFormData, useCategories, useColors, useSuppliers, SIZE_ORDER, sortSizesByOrder } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,8 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
-const availableSizes = ['PP', 'P', 'M', 'G', 'GG', 'XGG'];
+// Usar a ordem de tamanhos do hook
+const availableSizes = SIZE_ORDER;
 
 // Calcula o dígito verificador EAN-13
 function calculateEAN13CheckDigit(digits: string): number {
@@ -174,10 +175,12 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
 
   const handleAddSize = () => {
     if (selectedSize && !sizeVariants.find(s => s.size === selectedSize)) {
-      setSizeVariants([
+      // Adiciona e reordena conforme SIZE_ORDER
+      const newVariants = sortSizesByOrder([
         ...sizeVariants,
         { size: selectedSize, quantity: 0, barcode: '' }
       ]);
+      setSizeVariants(newVariants);
       setSelectedSize('');
       // Foca no campo de barcode do novo tamanho após renderizar
       setTimeout(() => {
