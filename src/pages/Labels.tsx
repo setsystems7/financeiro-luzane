@@ -334,8 +334,11 @@ export default function Labels() {
           @media print {
             html, body {
               width: ${pageWidth}mm !important;
+              height: ${pageHeight}mm !important;
               margin: 0 !important;
               padding: 0 !important;
+              background: white !important;
+              overflow: hidden !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
@@ -371,6 +374,7 @@ export default function Labels() {
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin: 20px auto;
+            width: ${pageWidth}mm;
           }
 
           /* Cada linha de etiquetas = 1 página de impressão */
@@ -416,12 +420,12 @@ export default function Labels() {
 
           /* Nome do produto + tamanho - NO TOPO */
           .product-name {
-            font-size: 8pt;
+            font-size: 10pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
             width: 100%;
-            max-height: 4mm;
+            max-height: 5mm;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
@@ -442,10 +446,10 @@ export default function Labels() {
 
           /* SVG do código de barras - FORÇAR HORIZONTAL */
           .barcode-container svg {
-            width: 28mm !important;
-            max-width: 28mm !important;
-            height: 14mm !important;
-            max-height: 14mm !important;
+            width: 32mm !important;
+            max-width: 32mm !important;
+            height: 16mm !important;
+            max-height: 16mm !important;
           }
 
           /* Instruções (só na tela) */
@@ -602,12 +606,12 @@ export default function Labels() {
               try {
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.3,
-                  height: 35,
+                  width: 1.6,
+                  height: 55,
                   displayValue: true,
-                  fontSize: 9,
+                  fontSize: 11,
                   margin: 0,
-                  textMargin: 1,
+                  textMargin: 2,
                   background: 'transparent',
                   lineColor: '#000000',
                   flat: false
@@ -616,12 +620,12 @@ export default function Labels() {
                 try {
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.1,
-                    height: 35,
+                    width: 1.4,
+                    height: 55,
                     displayValue: true,
-                    fontSize: 9,
+                    fontSize: 11,
                     margin: 0,
-                    textMargin: 1,
+                    textMargin: 2,
                     background: 'transparent',
                     lineColor: '#000000',
                     flat: false
