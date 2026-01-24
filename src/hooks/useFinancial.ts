@@ -210,13 +210,26 @@ export function useCreateExpense() {
 
       if (mainError) throw mainError;
 
-      // If recurring, create additional expenses
+      // If recurring, create additional expenses for remaining months
       if (data.is_recurring && data.recurrence_months && data.recurrence_months > 1) {
         const recurringExpenses = [];
+        const originalDay = baseDate.getDate();
         
         for (let i = 1; i < data.recurrence_months; i++) {
+          // Calculate future date keeping the same day of month
           const futureDate = new Date(baseDate);
           futureDate.setMonth(futureDate.getMonth() + i);
+          
+          // Handle months with fewer days (e.g., Jan 31 -> Feb 28)
+          // If the original day doesn't exist in target month, use last day of month
+          const targetMonth = futureDate.getMonth();
+          futureDate.setDate(originalDay);
+          
+          // If setting the date changed the month, we went past the end of month
+          // So go back to the last day of the intended month
+          if (futureDate.getMonth() !== targetMonth) {
+            futureDate.setDate(0); // Goes to last day of previous month (which is our target)
+          }
           
           recurringExpenses.push({
             description: `${data.description} (${i + 1}/${data.recurrence_months})`,

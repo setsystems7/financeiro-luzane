@@ -116,8 +116,8 @@ export default function Financial() {
       return;
     }
 
-    if (data.is_recurring && (!data.recurrence_months || parseInt(data.recurrence_months) < 2)) {
-      toast.error('Para despesa recorrente, informe pelo menos 2 meses');
+    if (data.is_recurring && (!data.recurrence_months || parseInt(data.recurrence_months) < 1)) {
+      toast.error('Para despesa recorrente, informe pelo menos 1 mês');
       return;
     }
 
@@ -560,16 +560,15 @@ export default function Financial() {
                                   <SelectValue placeholder="Selecione o período" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="2">2 meses</SelectItem>
-                                  <SelectItem value="3">3 meses</SelectItem>
-                                  <SelectItem value="4">4 meses</SelectItem>
-                                  <SelectItem value="6">6 meses</SelectItem>
-                                  <SelectItem value="12">12 meses (1 ano)</SelectItem>
-                                  <SelectItem value="24">24 meses (2 anos)</SelectItem>
+                                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                                    <SelectItem key={month} value={String(month)}>
+                                      {month} {month === 1 ? 'mês' : 'meses'}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground mt-1">
-                                Todas as parcelas serão criadas automaticamente com vencimento mensal.
+                                Todas as parcelas serão criadas na mesma data de vencimento.
                               </p>
                             </div>
                           )}
