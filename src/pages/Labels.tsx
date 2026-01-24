@@ -93,6 +93,25 @@ interface LabelSelection {
   stockQuantity: number;
 }
 
+type PrintCalibration = {
+  /** escala em % (ex: 97 = 97%) */
+  scalePercent: number;
+  /** deslocamento horizontal em mm (positivo = direita) */
+  offsetXmm: number;
+  /** deslocamento vertical em mm (positivo = para baixo) */
+  offsetYmm: number;
+};
+
+const PRINT_CALIBRATION_STORAGE_KEY = 'labels:printCalibration:v1';
+
+const DEFAULT_PRINT_CALIBRATION: PrintCalibration = {
+  // A maioria dos drivers de térmica adiciona “overscan”/margem real.
+  // 97% costuma trazer a 3ª etiqueta de volta sem perder legibilidade.
+  scalePercent: 97,
+  offsetXmm: 0,
+  offsetYmm: 0,
+};
+
 // Componente para renderizar código de barras
 function BarcodeDisplay({ value, width = 1.2, height = 35 }: { value: string; width?: number; height?: number }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -184,9 +203,42 @@ export default function Labels() {
   const [showPrintHelp, setShowPrintHelp] = useState(false);
   const [showPrintFallback, setShowPrintFallback] = useState(false);
   const [printError, setPrintError] = useState<string>('');
+  const [printCalibration, setPrintCalibration] = useState<PrintCalibration>(DEFAULT_PRINT_CALIBRATION);
   
   // Detectar se está em iframe (preview do editor)
   const isInIframe = window.self !== window.top;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PRINT_CALIBRATION_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const next: PrintCalibration = {
+        scalePercent: Number(parsed?.scalePercent ?? DEFAULT_PRINT_CALIBRATION.scalePercent),
+        offsetXmm: Number(parsed?.offsetXmm ?? DEFAULT_PRINT_CALIBRATION.offsetXmm),
+        offsetYmm: Number(parsed?.offsetYmm ?? DEFAULT_PRINT_CALIBRATION.offsetYmm),
+      };
+      if (!Number.isFinite(next.scalePercent) || next.scalePercent <= 0) return;
+      setPrintCalibration(next);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const updatePrintCalibration = (patch: Partial<PrintCalibration>) => {
+    setPrintCalibration((prev) => {
+      const next = {
+        ...prev,
+        ...patch,
+      };
+      try {
+        localStorage.setItem(PRINT_CALIBRATION_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   // Filtrar produtos que têm pelo menos 1 unidade em qualquer tamanho e código de barras
   const productsWithStock = useMemo(() => {
@@ -326,6 +378,9 @@ export default function Labels() {
     const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginBottom, marginLeft, marginRight, gapHorizontal } = LABEL_CONFIG;
     // Offset = 0 porque já temos margem superior correta
     const PRINT_OFFSET_TOP_MM = 0; // mm
+    const scale = Math.max(50, Math.min(110, printCalibration.scalePercent)) / 100;
+    const offsetXmm = Math.max(-10, Math.min(10, printCalibration.offsetXmm));
+    const offsetYmm = Math.max(-10, Math.min(10, printCalibration.offsetYmm));
 
     const printHtml = `
       <!DOCTYPE html>
@@ -347,6 +402,12 @@ export default function Labels() {
             size: ${pageWidth}mm ${pageHeight}mm;
             margin: 0mm;
           }
+
+           :root {
+             --calib-scale: ${scale};
+             --calib-x-mm: ${offsetXmm};
+             --calib-y-mm: ${offsetYmm};
+           }
 
           /* Estilos de impressão */
           @media print {
@@ -386,6 +447,10 @@ export default function Labels() {
                padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
                box-sizing: border-box !important;
                overflow: visible !important;
+
+                /* Calibração (compensa variação do driver / área não-imprimível) */
+                transform: translate(calc(var(--calib-x-mm) * 1mm), calc(var(--calib-y-mm) * 1mm)) scale(var(--calib-scale)) !important;
+                transform-origin: top left !important;
              }
             .row:last-child {
               page-break-after: avoid !important;
@@ -676,6 +741,11 @@ export default function Labels() {
             <div class="info">
               <span>Etiqueta: ${labelWidth}×${labelHeight}mm</span>
               <span>3 colunas por linha</span>
+            </div>
+            <div class="info" style="margin-top:8px; display:block;">
+              <div style="font-size:12px; opacity:0.9;">
+                Calibração aplicada: <strong>${Math.round(scale * 100)}%</strong> • X <strong>${offsetXmm}mm</strong> • Y <strong>${offsetYmm}mm</strong>
+              </div>
             </div>
           </div>
           
@@ -1213,6 +1283,115 @@ export default function Labels() {
                 </p>
                 <p className="text-[10px] lg:text-xs text-muted-foreground">
                   Etiqueta: {LABEL_CONFIG.labelWidth}×{LABEL_CONFIG.labelHeight}mm • 3/linha
+                </p>
+              </div>
+
+              {/* Calibração (para quando o driver imprime diferente do PDF) */}
+              <div className="bg-muted/30 rounded-lg p-2 mb-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-[10px] lg:text-xs font-medium text-foreground">Calibração da impressão</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px] text-muted-foreground"
+                    onClick={() => updatePrintCalibration(DEFAULT_PRINT_CALIBRATION)}
+                  >
+                    Reset
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground">Escala (%)</p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ scalePercent: Math.max(80, printCalibration.scalePercent - 1) })}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        value={printCalibration.scalePercent}
+                        min={80}
+                        max={110}
+                        onChange={(e) => updatePrintCalibration({ scalePercent: Number(e.target.value) || 97 })}
+                        className="h-7 text-center text-[10px] px-1"
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ scalePercent: Math.min(110, printCalibration.scalePercent + 1) })}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground">Offset X (mm)</p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ offsetXmm: Number((printCalibration.offsetXmm - 0.5).toFixed(1)) })}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        step={0.5}
+                        value={printCalibration.offsetXmm}
+                        onChange={(e) => updatePrintCalibration({ offsetXmm: Number(e.target.value) || 0 })}
+                        className="h-7 text-center text-[10px] px-1"
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ offsetXmm: Number((printCalibration.offsetXmm + 0.5).toFixed(1)) })}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground">Offset Y (mm)</p>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ offsetYmm: Number((printCalibration.offsetYmm - 0.5).toFixed(1)) })}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        step={0.5}
+                        value={printCalibration.offsetYmm}
+                        onChange={(e) => updatePrintCalibration({ offsetYmm: Number(e.target.value) || 0 })}
+                        className="h-7 text-center text-[10px] px-1"
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-7 w-7"
+                        onClick={() => updatePrintCalibration({ offsetYmm: Number((printCalibration.offsetYmm + 0.5).toFixed(1)) })}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-2 text-[9px] lg:text-[10px] text-muted-foreground">
+                  Dica: se só imprime 2 etiquetas, diminua a <strong>Escala</strong> (ex: 97→95). Se corta o nome, aumente o <strong>Offset Y</strong> (+0.5 / +1mm).
                 </p>
               </div>
 
