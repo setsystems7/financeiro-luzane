@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Save, Loader2, Building2, Barcode, RefreshCw, Tag, Palette } from 'lucide-react';
+import { Plus, X, Save, Loader2, Building2, Barcode, RefreshCw, Tag, Palette, Pencil } from 'lucide-react';
 import { SupplierDialog } from './SupplierDialog';
 import { CategoryDialog } from './CategoryDialog';
 import { ColorDialog } from './ColorDialog';
+import { Supplier } from '@/hooks/useSuppliers';
 
 interface SizeVariant {
   size: string;
@@ -81,6 +82,8 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
   const [isSupplierDialogOpen, setIsSupplierDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isColorDialogOpen, setIsColorDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const barcodeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const scanBufferRef = useRef<string>('');
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -273,16 +276,38 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Categoria</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs text-pink-primary hover:text-pink-dark px-1"
-                      onClick={() => setIsCategoryDialogOpen(true)}
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Nova
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {formData.category_id && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs text-muted-foreground hover:text-foreground px-1"
+                          onClick={() => {
+                            const cat = categories.find(c => c.id === formData.category_id);
+                            if (cat) {
+                              setEditingCategory({ id: cat.id, name: cat.name });
+                              setIsCategoryDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs text-pink-primary hover:text-pink-dark px-1"
+                        onClick={() => {
+                          setEditingCategory(null);
+                          setIsCategoryDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Nova
+                      </Button>
+                    </div>
                   </div>
                   <Select
                     value={formData.category_id}
@@ -342,16 +367,38 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Fornecedor</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-pink-primary hover:text-pink-dark"
-                    onClick={() => setIsSupplierDialogOpen(true)}
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Novo Fornecedor
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {formData.supplier_id && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          const sup = suppliers.find(s => s.id === formData.supplier_id);
+                          if (sup) {
+                            setEditingSupplier(sup as Supplier);
+                            setIsSupplierDialogOpen(true);
+                          }
+                        }}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-pink-primary hover:text-pink-dark"
+                      onClick={() => {
+                        setEditingSupplier(null);
+                        setIsSupplierDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Novo Fornecedor
+                    </Button>
+                  </div>
                 </div>
                 <Select
                   value={formData.supplier_id}
@@ -625,14 +672,22 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
 
       <SupplierDialog
         open={isSupplierDialogOpen}
-        onOpenChange={setIsSupplierDialogOpen}
+        onOpenChange={(open) => {
+          setIsSupplierDialogOpen(open);
+          if (!open) setEditingSupplier(null);
+        }}
         onSuccess={handleSupplierCreated}
+        editSupplier={editingSupplier}
       />
 
       <CategoryDialog
         open={isCategoryDialogOpen}
-        onOpenChange={setIsCategoryDialogOpen}
+        onOpenChange={(open) => {
+          setIsCategoryDialogOpen(open);
+          if (!open) setEditingCategory(null);
+        }}
         onSuccess={handleCategoryCreated}
+        editCategory={editingCategory}
       />
 
       <ColorDialog

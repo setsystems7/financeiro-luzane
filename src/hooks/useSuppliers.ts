@@ -67,3 +67,36 @@ export function useCreateSupplier() {
     },
   });
 }
+
+export function useUpdateSupplier() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: SupplierFormData }) => {
+      const { data: supplier, error } = await supabase
+        .from('suppliers')
+        .update({
+          name: data.name,
+          contact_name: data.contact_name || null,
+          phone: data.phone || null,
+          email: data.email || null,
+          address: data.address || null,
+          notes: data.notes || null,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return supplier;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success('Fornecedor atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error updating supplier:', error);
+      toast.error('Erro ao atualizar fornecedor');
+    },
+  });
+}

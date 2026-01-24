@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, Building2 } from 'lucide-react';
-import { useCreateSupplier, SupplierFormData } from '@/hooks/useSuppliers';
+import { useCreateSupplier, useUpdateSupplier, Supplier, SupplierFormData } from '@/hooks/useSuppliers';
 
 interface SupplierDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (supplierId: string) => void;
+  editSupplier?: Supplier | null;
 }
 
-export function SupplierDialog({ open, onOpenChange, onSuccess }: SupplierDialogProps) {
+export function SupplierDialog({ open, onOpenChange, onSuccess, editSupplier }: SupplierDialogProps) {
   const createSupplier = useCreateSupplier();
+  const updateSupplier = useUpdateSupplier();
 
   const [formData, setFormData] = useState<SupplierFormData>({
     name: '',
@@ -25,24 +27,68 @@ export function SupplierDialog({ open, onOpenChange, onSuccess }: SupplierDialog
     notes: '',
   });
 
+  useEffect(() => {
+    if (editSupplier) {
+      setFormData({
+        name: editSupplier.name,
+        contact_name: editSupplier.contact_name || '',
+        phone: editSupplier.phone || '',
+        email: editSupplier.email || '',
+        address: editSupplier.address || '',
+        notes: editSupplier.notes || '',
+      });
+    } else {
+      setFormData({
+        name: '',
+        contact_name: '',
+        phone: '',
+        email: '',
+        address: '',
+        notes: '',
+      });
+    }
+  }, [editSupplier, open]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    createSupplier.mutate(formData, {
-      onSuccess: (supplier) => {
-        setFormData({
-          name: '',
-          contact_name: '',
-          phone: '',
-          email: '',
-          address: '',
-          notes: '',
-        });
-        onOpenChange(false);
-        onSuccess?.(supplier.id);
-      },
-    });
+    if (editSupplier) {
+      updateSupplier.mutate(
+        { id: editSupplier.id, data: formData },
+        {
+          onSuccess: (supplier) => {
+            setFormData({
+              name: '',
+              contact_name: '',
+              phone: '',
+              email: '',
+              address: '',
+              notes: '',
+            });
+            onOpenChange(false);
+            onSuccess?.(supplier.id);
+          },
+        }
+      );
+    } else {
+      createSupplier.mutate(formData, {
+        onSuccess: (supplier) => {
+          setFormData({
+            name: '',
+            contact_name: '',
+            phone: '',
+            email: '',
+            address: '',
+            notes: '',
+          });
+          onOpenChange(false);
+          onSuccess?.(supplier.id);
+        },
+      });
+    }
   };
+
+  const isLoading = createSupplier.isPending || updateSupplier.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,9 +96,11 @@ export function SupplierDialog({ open, onOpenChange, onSuccess }: SupplierDialog
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-pink-primary" />
-            Novo Fornecedor
+            {editSupplier ? 'Editar Fornecedor' : 'Novo Fornecedor'}
           </DialogTitle>
-          <DialogDescription>Cadastre um novo fornecedor para seus produtos.</DialogDescription>
+          <DialogDescription>
+            {editSupplier ? 'Atualize os dados do fornecedor.' : 'Cadastre um novo fornecedor para seus produtos.'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,13 +173,13 @@ export function SupplierDialog({ open, onOpenChange, onSuccess }: SupplierDialog
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="pink" disabled={createSupplier.isPending}>
-              {createSupplier.isPending ? (
+            <Button type="submit" variant="pink" disabled={isLoading}>
+              {isLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
-              Cadastrar
+              {editSupplier ? 'Atualizar' : 'Cadastrar'}
             </Button>
           </div>
         </form>
