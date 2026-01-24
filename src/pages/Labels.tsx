@@ -339,9 +339,12 @@ export default function Labels() {
               padding: 0 !important;
               background: white !important;
               overflow: hidden !important;
+                -webkit-text-size-adjust: 100% !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
+              /* Evita qualquer “auto fit”/escala estranha do navegador */
+              body { zoom: 1 !important; }
             .no-print { display: none !important; }
             .preview-container { display: none !important; }
             .labels-container { box-shadow: none !important; margin: 0 !important; }
@@ -349,6 +352,12 @@ export default function Labels() {
               page-break-inside: avoid !important;
               page-break-after: always !important;
               border: none !important;
+                /* Reafirma medidas EXATAS na impressão */
+                width: ${pageWidth}mm !important;
+                height: ${pageHeight}mm !important;
+                padding: ${marginTop}mm 0 0 ${marginLeft}mm !important;
+                margin: 0 !important;
+                background: #fff !important;
             }
             .row:last-child {
               page-break-after: avoid !important;
@@ -358,7 +367,14 @@ export default function Labels() {
               box-shadow: none !important;
               border-radius: 0 !important;
               background: white !important;
+                /* Reafirma medidas EXATAS da etiqueta */
+                width: ${labelWidth}mm !important;
+                height: ${labelHeight}mm !important;
+                padding: 1mm 0.5mm 0.5mm 0.5mm !important;
+                margin-right: ${gapHorizontal}mm !important;
+                overflow: hidden !important;
             }
+              .label:nth-child(3) { margin-right: 0 !important; }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
               border: none !important;
