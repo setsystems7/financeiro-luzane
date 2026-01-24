@@ -14,8 +14,9 @@ import { ImportFinancialDialog } from '@/components/financial/ImportFinancialDia
 import { formatCurrency } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -94,8 +95,12 @@ export default function Financial() {
       due_date: '',
       supplier_id: '',
       notes: '',
+      is_recurring: false,
+      recurrence_months: '',
     }
   });
+
+  const isRecurring = watch('is_recurring');
 
   const filteredReceivables = receivables.filter(r =>
     r.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -111,6 +116,11 @@ export default function Financial() {
       return;
     }
 
+    if (data.is_recurring && (!data.recurrence_months || parseInt(data.recurrence_months) < 2)) {
+      toast.error('Para despesa recorrente, informe pelo menos 2 meses');
+      return;
+    }
+
     createExpense.mutate({
       description: data.description,
       amount: parseFloat(data.amount),
@@ -118,6 +128,8 @@ export default function Financial() {
       due_date: data.due_date,
       supplier_id: data.supplier_id || undefined,
       notes: data.notes || undefined,
+      is_recurring: data.is_recurring,
+      recurrence_months: data.is_recurring ? parseInt(data.recurrence_months) : undefined,
     }, {
       onSuccess: () => {
         reset();
@@ -522,6 +534,47 @@ export default function Financial() {
                           <Label>Observações</Label>
                           <Input {...register('notes')} placeholder="Observações adicionais" />
                         </div>
+                        
+                        {/* Recurrence Section */}
+                        <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="is_recurring"
+                              checked={isRecurring}
+                              onCheckedChange={(checked) => setValue('is_recurring', checked === true)}
+                            />
+                            <label
+                              htmlFor="is_recurring"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                            >
+                              <Repeat className="w-4 h-4" />
+                              Despesa Recorrente
+                            </label>
+                          </div>
+                          
+                          {isRecurring && (
+                            <div className="pt-2">
+                              <Label>Quantos meses se repete? *</Label>
+                              <Select onValueChange={(v) => setValue('recurrence_months', v)}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione o período" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="2">2 meses</SelectItem>
+                                  <SelectItem value="3">3 meses</SelectItem>
+                                  <SelectItem value="4">4 meses</SelectItem>
+                                  <SelectItem value="6">6 meses</SelectItem>
+                                  <SelectItem value="12">12 meses (1 ano)</SelectItem>
+                                  <SelectItem value="24">24 meses (2 anos)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Todas as parcelas serão criadas automaticamente com vencimento mensal.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex justify-end gap-2">
                           <Button type="button" variant="outline" onClick={() => setIsExpenseDialogOpen(false)}>
                             Cancelar

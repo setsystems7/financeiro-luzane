@@ -8,6 +8,7 @@ import { LeastSoldProducts } from '@/components/dashboard/LeastSoldProducts';
 import { RestockNeeded } from '@/components/dashboard/RestockNeeded';
 import { ExchangesSummary } from '@/components/dashboard/ExchangesSummary';
 import { StockValue } from '@/components/dashboard/StockValue';
+import { OverdueExpensesAlert } from '@/components/dashboard/OverdueExpensesAlert';
 import { useTodaySales, useMonthSales, useMonthProfit } from '@/hooks/useSales';
 import { useLowStockProducts } from '@/hooks/useStock';
 import { useFinancialSummary } from '@/hooks/useFinancial';
@@ -72,6 +73,11 @@ export default function Dashboard() {
         {/* Exchanges Summary */}
         <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '0.7s' }}>
           <ExchangesSummary />
+        </div>
+
+        {/* Overdue Expenses Alert */}
+        <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '0.75s' }}>
+          <OverdueExpensesAlert />
         </div>
 
         {/* Bottom Row */}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   title: string;
@@ -30,6 +31,7 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <NotificationBell />
         <ThemeToggle />
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50">
           <User className="w-4 h-4 text-muted-foreground" />

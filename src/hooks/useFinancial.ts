@@ -181,24 +181,87 @@ export function useCreateExpense() {
       due_date: string;
       supplier_id?: string;
       notes?: string;
+      is_recurring?: boolean;
+      recurrence_months?: number;
     }) => {
-      const { data: expense, error } = await supabase
+      const expenses: any[] = [];
+      const baseDate = new Date(data.due_date);
+
+      // Create main expense
+      const mainExpense = {
+        description: data.description,
+        amount: data.amount,
+        category: data.category || null,
+        due_date: data.due_date,
+        supplier_id: data.supplier_id || null,
+        notes: data.notes || null,
+        user_id: user?.id || null,
+        status: 'pendente' as const,
+        is_recurring: data.is_recurring || false,
+        recurrence_months: data.recurrence_months || null,
+        recurrence_index: data.is_recurring ? 1 : null,
+      };
+
+      const { data: createdMain, error: mainError } = await supabase
         .from('expenses')
-        .insert({
-          ...data,
-          user_id: user?.id || null,
-          status: 'pendente',
-        })
+        .insert(mainExpense)
         .select()
         .single();
 
-      if (error) throw error;
-      return expense;
+      if (mainError) throw mainError;
+
+      // If recurring, create additional expenses
+      if (data.is_recurring && data.recurrence_months && data.recurrence_months > 1) {
+        const recurringExpenses = [];
+        
+        for (let i = 1; i < data.recurrence_months; i++) {
+          const futureDate = new Date(baseDate);
+          futureDate.setMonth(futureDate.getMonth() + i);
+          
+          recurringExpenses.push({
+            description: `${data.description} (${i + 1}/${data.recurrence_months})`,
+            amount: data.amount,
+            category: data.category || null,
+            due_date: futureDate.toISOString().split('T')[0],
+            supplier_id: data.supplier_id || null,
+            notes: data.notes || null,
+            user_id: user?.id || null,
+            status: 'pendente' as const,
+            is_recurring: true,
+            recurrence_months: data.recurrence_months,
+            parent_expense_id: createdMain.id,
+            recurrence_index: i + 1,
+          });
+        }
+
+        if (recurringExpenses.length > 0) {
+          const { error: recurringError } = await supabase
+            .from('expenses')
+            .insert(recurringExpenses);
+
+          if (recurringError) throw recurringError;
+        }
+
+        // Update the first expense to show it's part of recurrence
+        await supabase
+          .from('expenses')
+          .update({ description: `${data.description} (1/${data.recurrence_months})` })
+          .eq('id', createdMain.id);
+      }
+
+      return createdMain;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      toast.success('Despesa cadastrada com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
+      
+      if (variables.is_recurring && variables.recurrence_months) {
+        toast.success(`Despesa recorrente criada! ${variables.recurrence_months} parcelas cadastradas.`);
+      } else {
+        toast.success('Despesa cadastrada com sucesso!');
+      }
     },
     onError: () => {
       toast.error('Erro ao cadastrar despesa');

@@ -252,8 +252,12 @@ export type Database = {
           description: string
           due_date: string
           id: string
+          is_recurring: boolean | null
           notes: string | null
           paid_date: string | null
+          parent_expense_id: string | null
+          recurrence_index: number | null
+          recurrence_months: number | null
           status: Database["public"]["Enums"]["expense_status"] | null
           supplier_id: string | null
           updated_at: string
@@ -266,8 +270,12 @@ export type Database = {
           description: string
           due_date: string
           id?: string
+          is_recurring?: boolean | null
           notes?: string | null
           paid_date?: string | null
+          parent_expense_id?: string | null
+          recurrence_index?: number | null
+          recurrence_months?: number | null
           status?: Database["public"]["Enums"]["expense_status"] | null
           supplier_id?: string | null
           updated_at?: string
@@ -280,8 +288,12 @@ export type Database = {
           description?: string
           due_date?: string
           id?: string
+          is_recurring?: boolean | null
           notes?: string | null
           paid_date?: string | null
+          parent_expense_id?: string | null
+          recurrence_index?: number | null
+          recurrence_months?: number | null
           status?: Database["public"]["Enums"]["expense_status"] | null
           supplier_id?: string | null
           updated_at?: string
@@ -1029,7 +1041,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      update_overdue_expenses: { Args: never; Returns: undefined }
     }
     Enums: {
       abc_class: "A" | "B" | "C"
