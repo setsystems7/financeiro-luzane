@@ -464,39 +464,53 @@ export default function Labels() {
             background: #fafafa;
           }
 
-          /* Nome do produto + tamanho - NO TOPO - MAIOR */
+          /* Nome do produto + tamanho - NO TOPO */
           .product-name {
-            font-size: 9pt;
+            font-size: 8pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
             width: 100%;
-            max-height: 4mm;
+            height: 3.5mm;
+            max-height: 3.5mm;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             color: #000;
-            margin-bottom: 0.5mm;
+            margin-bottom: 0.3mm;
             flex-shrink: 0;
           }
 
-          /* Container do código de barras - PREENCHER ESPAÇO */
+          /* Container do código de barras - CABE TUDO DENTRO */
           .barcode-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             width: 100%;
-            min-height: 0;
+            max-height: 18mm;
+            overflow: hidden;
           }
 
-          /* SVG do código de barras - OCUPA QUASE TODA A ETIQUETA */
+          /* SVG do código de barras - ALTURA REDUZIDA PARA CABER NÚMEROS */
           .barcode-container svg {
-            width: 31mm !important;
-            max-width: 31mm !important;
-            height: 12mm !important;
-            max-height: 12mm !important;
+            width: 30mm !important;
+            max-width: 30mm !important;
+            height: 10mm !important;
+            max-height: 10mm !important;
+            flex-shrink: 0;
+          }
+
+          /* Texto do número EAN abaixo das barras */
+          .barcode-number {
+            font-family: monospace;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+            text-align: center;
+            color: #000;
+            margin-top: 0.5mm;
+            flex-shrink: 0;
           }
 
           /* Instruções (só na tela) */
@@ -655,16 +669,16 @@ export default function Labels() {
             return code;
           }
 
-          // Renderizar códigos de barras com JsBarcode - FORMATO EAN13 EXATO
+          // Renderizar códigos de barras com JsBarcode - FORMATO EAN13 COMPACTO
           labels.forEach(function(label, idx) {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
-                // EAN13 - barras finas, SEM displayValue (vamos adicionar manualmente)
+                // EAN13 - barras compactas, SEM displayValue (adicionamos manualmente)
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.4,
-                  height: 40,
+                  width: 1.2,
+                  height: 28,
                   displayValue: false,
                   margin: 0,
                   marginTop: 0,
@@ -676,9 +690,9 @@ export default function Labels() {
                   flat: true
                 });
                 
-                // Adicionar texto formatado manualmente abaixo do SVG
+                // Adicionar número formatado DENTRO do container (não vaza para fora)
                 var textDiv = document.createElement('div');
-                textDiv.style.cssText = 'font-family: monospace; font-size: 10pt; font-weight: normal; letter-spacing: 1px; text-align: center; margin-top: 1mm; color: #000;';
+                textDiv.className = 'barcode-number';
                 textDiv.textContent = formatEAN13(label.barcode);
                 svg.parentElement.appendChild(textDiv);
                 
@@ -687,12 +701,12 @@ export default function Labels() {
                   // Fallback CODE128
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.2,
-                    height: 40,
+                    width: 1.0,
+                    height: 28,
                     displayValue: true,
-                    fontSize: 10,
+                    fontSize: 8,
                     margin: 0,
-                    textMargin: 2,
+                    textMargin: 1,
                     background: 'transparent',
                     lineColor: '#000000',
                     font: 'monospace',
@@ -700,7 +714,7 @@ export default function Labels() {
                     flat: true
                   });
                 } catch(e2) {
-                  svg.parentElement.innerHTML = '<span style="font-size:8pt;color:#999;">Erro</span>';
+                  svg.parentElement.innerHTML = '<span style="font-size:7pt;color:#999;">Erro</span>';
                 }
               }
             }
