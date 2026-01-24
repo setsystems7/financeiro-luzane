@@ -96,6 +96,33 @@ export function useCategories() {
   });
 }
 
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { data, error } = await supabase
+        .from('categories')
+        .update({ name })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Categoria atualizada com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error updating category:', error);
+      toast.error('Erro ao atualizar categoria');
+    },
+  });
+}
+
 export function useColors() {
   return useQuery({
     queryKey: ['colors'],
