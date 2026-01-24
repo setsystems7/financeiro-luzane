@@ -342,3 +342,94 @@ export function useCardSales(startDate?: Date, endDate?: Date) {
     },
   });
 }
+
+export function useCancelSale() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (saleId: string) => {
+      // 1. Get sale items to restore stock
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('*')
+        .eq('sale_id', saleId);
+
+      if (itemsError) throw itemsError;
+
+      // 2. Get sale info
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', saleId)
+        .single();
+
+      if (saleError) throw saleError;
+
+      // 3. Restore stock for each item
+      for (const item of saleItems || []) {
+        if (item.product_size_id) {
+          const { data: sizeData } = await supabase
+            .from('product_sizes')
+            .select('quantity')
+            .eq('id', item.product_size_id)
+            .single();
+
+          if (sizeData) {
+            const newQuantity = sizeData.quantity + item.quantity;
+            await supabase
+              .from('product_sizes')
+              .update({ quantity: newQuantity })
+              .eq('id', item.product_size_id);
+
+            // Record stock movement
+            await supabase
+              .from('stock_movements')
+              .insert({
+                product_id: item.product_id,
+                product_size_id: item.product_size_id,
+                type: 'entrada',
+                quantity: item.quantity,
+                notes: `Estorno Venda #${sale.sale_number}`,
+                user_id: user?.id || null,
+              });
+          }
+        }
+      }
+
+      // 4. Delete related receivables
+      await supabase
+        .from('receivables')
+        .delete()
+        .eq('sale_id', saleId);
+
+      // 5. Delete sale items
+      await supabase
+        .from('sale_items')
+        .delete()
+        .eq('sale_id', saleId);
+
+      // 6. Delete the sale
+      const { error: deleteError } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', saleId);
+
+      if (deleteError) throw deleteError;
+
+      return sale;
+    },
+    onSuccess: (sale) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      toast.success(`Venda #${sale.sale_number} cancelada e estoque devolvido!`);
+    },
+    onError: (error: any) => {
+      console.error('Error cancelling sale:', error);
+      toast.error('Erro ao cancelar venda');
+    },
+  });
+}

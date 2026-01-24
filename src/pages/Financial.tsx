@@ -14,7 +14,7 @@ import { ImportFinancialDialog } from '@/components/financial/ImportFinancialDia
 import { formatCurrency } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
@@ -28,7 +28,7 @@ import {
   useCreateExpense,
   useFinancialRealtime
 } from '@/hooks/useFinancial';
-import { useCardSales } from '@/hooks/useSales';
+import { useCardSales, useCancelSale } from '@/hooks/useSales';
 import { useSuppliersList } from '@/hooks/useSuppliers';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -86,6 +86,7 @@ export default function Financial() {
   const markExpenseAsPaid = useMarkExpenseAsPaid();
   const markReceivableAsReceived = useMarkReceivableAsReceived();
   const createExpense = useCreateExpense();
+  const cancelSale = useCancelSale();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
@@ -398,20 +399,39 @@ export default function Financial() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center">
-                                {!item.is_received && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      markReceivableAsReceived.mutate(item.id);
-                                    }}
-                                    disabled={markReceivableAsReceived.isPending}
-                                  >
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Receber
-                                  </Button>
-                                )}
+                                <div className="flex items-center justify-center gap-1">
+                                  {!item.is_received && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        markReceivableAsReceived.mutate(item.id);
+                                      }}
+                                      disabled={markReceivableAsReceived.isPending}
+                                    >
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Receber
+                                    </Button>
+                                  )}
+                                  {item.sale_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Tem certeza que deseja estornar esta venda? O estoque será devolvido.')) {
+                                          cancelSale.mutate(item.sale_id!);
+                                        }
+                                      }}
+                                      disabled={cancelSale.isPending}
+                                    >
+                                      <Undo2 className="w-4 h-4 mr-1" />
+                                      Estornar
+                                    </Button>
+                                  )}
+                                </div>
                               </TableCell>
                             </TableRow>
                             {/* Linha expandida com itens da venda */}
