@@ -399,14 +399,19 @@ export default function Labels() {
                align-items: center !important;
                justify-content: flex-start !important;
              }
-             /* Nome do produto visível na impressão */
+             /* Nome do produto visível na impressão - QUEBRA LINHA SE GRANDE */
              .product-name {
-               font-size: 8pt !important;
+               font-size: 7pt !important;
                font-weight: bold !important;
                color: #000 !important;
-               margin-bottom: 1mm !important;
+               margin-bottom: 0.5mm !important;
                display: block !important;
                visibility: visible !important;
+               white-space: normal !important;
+               word-wrap: break-word !important;
+               text-align: center !important;
+               max-height: 7mm !important;
+               overflow: hidden !important;
              }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
@@ -481,20 +486,20 @@ export default function Labels() {
             background: #fafafa;
           }
 
-          /* Nome do produto + tamanho - NO TOPO */
+          /* Nome do produto + tamanho - NO TOPO, QUEBRA LINHA SE GRANDE */
           .product-name {
-            font-size: 8.5pt;
+            font-size: 7pt;
             font-weight: bold;
             text-align: center;
-            line-height: 1.1;
+            line-height: 1.2;
             width: 100%;
-            height: 4mm;
-            max-height: 4mm;
+            min-height: 3mm;
+            max-height: 7mm;
             overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
+            white-space: normal;
+            word-wrap: break-word;
             color: #000;
-            margin-bottom: 0.6mm;
+            margin-bottom: 0.5mm;
             flex-shrink: 0;
           }
 
