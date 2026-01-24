@@ -109,7 +109,7 @@ const PRINT_CALIBRATION_STORAGE_KEY = 'labels:printCalibration:v1';
 const DEFAULT_PRINT_CALIBRATION: PrintCalibration = {
   // A maioria dos drivers de térmica adiciona “overscan”/margem real.
   // 97% costuma trazer a 3ª etiqueta de volta sem perder legibilidade.
-  scalePercent: 100,
+  scalePercent: 97,
   offsetXmm: 0,
   // Um pequeno deslocamento para baixo evita cortar o nome em alguns drivers.
   offsetYmm: 1.5,
