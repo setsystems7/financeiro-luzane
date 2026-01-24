@@ -69,8 +69,10 @@ const LABEL_CONFIG = {
   marginTop: 2,      // mm
   marginBottom: 2,   // mm
   // Pequeno ajuste anti-arredondamento (evita a 3ª etiqueta “sumir”)
-  marginLeft: 2,     // mm
-  marginRight: 2,    // mm
+  // Em vez de “forçar” margem lateral (que pode causar encolhimento no Chrome
+  // quando a área imprimível é menor), centralizamos o grid na página.
+  marginLeft: 0,     // mm
+  marginRight: 0,    // mm
   
   // Espaçamento entre etiquetas
   gapHorizontal: 0.5, // mm
@@ -109,7 +111,8 @@ const DEFAULT_PRINT_CALIBRATION: PrintCalibration = {
   // 97% costuma trazer a 3ª etiqueta de volta sem perder legibilidade.
   scalePercent: 100,
   offsetXmm: 0,
-  offsetYmm: 0.5,
+  // Um pequeno deslocamento para baixo evita cortar o nome em alguns drivers.
+  offsetYmm: 1.5,
 };
 
 // Componente para renderizar código de barras
@@ -442,9 +445,10 @@ export default function Labels() {
                grid-template-columns: repeat(${columns}, ${labelWidth}mm) !important;
                column-gap: ${gapHorizontal}mm !important;
                align-content: start !important;
-               justify-content: start !important;
+                /* Centraliza as 3 etiquetas na folha (evita “3 no espaço de 2”) */
+                justify-content: center !important;
 
-               padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
+                padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm 0mm ${marginBottom}mm 0mm !important;
                box-sizing: border-box !important;
                overflow: visible !important;
 
@@ -461,10 +465,10 @@ export default function Labels() {
                border-radius: 0 !important;
                background: white !important;
                /* Medidas EXATAS da etiqueta */
-               width: ${labelWidth}mm !important;
-               height: ${labelHeight}mm !important;
-                /* Mais respiro em cima/baixo para não cortar nome/número */
-                padding: 2.6mm 1mm 2mm 1mm !important;
+                width: ${labelWidth}mm !important;
+                height: ${labelHeight}mm !important;
+                 /* Desce o conteúdo para não cortar o nome e dá mais presença */
+                 padding: 3.6mm 1.2mm 2.2mm 1.2mm !important;
                 overflow: visible !important;
                box-sizing: border-box !important;
                display: flex !important;
@@ -477,6 +481,7 @@ export default function Labels() {
                font-size: 8pt !important;
                font-weight: bold !important;
                color: #000 !important;
+                margin-top: 0.6mm !important;
                margin-bottom: 1mm !important;
                display: block !important;
                visibility: visible !important;
