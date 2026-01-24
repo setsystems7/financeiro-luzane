@@ -38,31 +38,35 @@ import {
 // - Gap horizontal: 0.3mm
 // ============================================
 // ============================================
-// CONFIGURAÇÃO PARA ETIQUETAS 33x21mm (3 colunas)
-// Papel contínuo largura ~100mm
+// CONFIGURAÇÕES PARA ELGIN L42 PRO (MESMO DO OUTRO SISTEMA)
+// - Página: 110mm x 30mm
+// - Etiqueta: 34.1mm x 24mm
+// - 3 colunas, 1 linha
+// - Margens: Superior 4mm, Inferior 2mm, Esq/Dir 3.5mm
+// - Gap horizontal: 0.3mm
 // ============================================
 const LABEL_CONFIG = {
-  // Página (largura do papel contínuo)
-  pageWidth: 100,    // mm - largura real do papel
-  pageHeight: 25,    // mm - altura de 1 linha de etiquetas
+  // Página
+  pageWidth: 110,    // mm
+  pageHeight: 30,    // mm
   
   // Etiqueta individual
-  labelWidth: 33,    // mm
-  labelHeight: 21,   // mm
+  labelWidth: 34.1,  // mm
+  labelHeight: 24,   // mm
   
   // Layout
   columns: 3,
   rows: 1,
   
-  // Margens da página (pequenas para maximizar espaço)
-  marginTop: 2,      // mm
+  // Margens da página
+  marginTop: 4,      // mm
   marginBottom: 2,   // mm
-  marginLeft: 0.5,   // mm
-  marginRight: 0.5,  // mm
+  marginLeft: 3.5,   // mm
+  marginRight: 3.5,  // mm
   
-  // Espaçamento entre etiquetas (gap físico entre elas)
-  gapHorizontal: 0,  // mm - sem gap, etiquetas lado a lado
-  gapVertical: 0,    // mm
+  // Espaçamento entre etiquetas
+  gapHorizontal: 0.3, // mm
+  gapVertical: 0,     // mm
   
   // DPI da impressora
   dpi: 203,
@@ -311,7 +315,7 @@ export default function Labels() {
       return;
     }
 
-    const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginLeft, gapHorizontal } = LABEL_CONFIG;
+    const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginBottom, marginLeft, marginRight, gapHorizontal } = LABEL_CONFIG;
 
     const printHtml = `
       <!DOCTYPE html>
@@ -352,21 +356,31 @@ export default function Labels() {
             .no-print { display: none !important; }
             .preview-container { display: none !important; }
             .labels-container { box-shadow: none !important; margin: 0 !important; }
-            .row {
-              page-break-inside: avoid !important;
-              page-break-after: always !important;
-              border: none !important;
-                /* Reafirma medidas EXATAS na impressão */
-                width: ${pageWidth}mm !important;
-                height: ${pageHeight}mm !important;
-                padding: ${marginTop}mm 0 0 ${marginLeft}mm !important;
-                margin: 0 !important;
-                background: #fff !important;
-            }
+             .row {
+               page-break-inside: avoid !important;
+               page-break-after: always !important;
+               border: none !important;
+               /* Reafirma medidas EXATAS na impressão */
+               width: ${pageWidth}mm !important;
+               height: ${pageHeight}mm !important;
+               margin: 0 !important;
+               background: #fff !important;
+
+               /* Grid FIXO: 3 colunas exatas + gap exato (evita “3 em 2” e encolhimento) */
+               display: grid !important;
+               grid-template-columns: repeat(${columns}, ${labelWidth}mm) !important;
+               column-gap: ${gapHorizontal}mm !important;
+               align-content: start !important;
+               justify-content: start !important;
+
+               padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
+               box-sizing: border-box !important;
+               overflow: hidden !important;
+             }
             .row:last-child {
               page-break-after: avoid !important;
             }
-            .label {
+             .label {
               border: none !important;
               box-shadow: none !important;
               border-radius: 0 !important;
@@ -375,10 +389,9 @@ export default function Labels() {
                 width: ${labelWidth}mm !important;
                 height: ${labelHeight}mm !important;
                 padding: 1mm 0.5mm 0.5mm 0.5mm !important;
-                margin-right: ${gapHorizontal}mm !important;
                 overflow: hidden !important;
+                box-sizing: border-box !important;
             }
-              .label:nth-child(3) { margin-right: 0 !important; }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
               border: none !important;
@@ -411,40 +424,40 @@ export default function Labels() {
           }
 
           /* Cada linha de etiquetas = 1 página de impressão */
-          .row {
-            width: ${pageWidth}mm;
-            height: ${pageHeight}mm;
-            padding: ${marginTop}mm 0 0 ${marginLeft}mm;
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            background: white;
-            border-bottom: 1px dashed #ccc;
-          }
+           .row {
+             width: ${pageWidth}mm;
+             height: ${pageHeight}mm;
+             padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
+             display: grid;
+             grid-template-columns: repeat(${columns}, ${labelWidth}mm);
+             column-gap: ${gapHorizontal}mm;
+             align-content: start;
+             justify-content: start;
+             background: white;
+             border-bottom: 1px dashed #ccc;
+             box-sizing: border-box;
+             overflow: hidden;
+           }
 
           .row:last-child {
             border-bottom: none;
           }
 
           /* Cada etiqueta individual - LAYOUT HORIZONTAL */
-          .label {
-            width: ${labelWidth}mm;
-            height: ${labelHeight}mm;
-            margin-right: ${gapHorizontal}mm;
-            padding: 1mm 0.5mm 0.5mm 0.5mm;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            overflow: hidden;
-            background: white;
-            border: 0.2mm solid #e0e0e0;
-            border-radius: 0.5mm;
-          }
-
-          .label:nth-child(3) {
-            margin-right: 0;
-          }
+           .label {
+             width: ${labelWidth}mm;
+             height: ${labelHeight}mm;
+             padding: 1mm 0.5mm 0.5mm 0.5mm;
+             display: flex;
+             flex-direction: column;
+             align-items: center;
+             justify-content: center;
+             overflow: hidden;
+             background: white;
+             border: 0.2mm solid #e0e0e0;
+             border-radius: 0.5mm;
+             box-sizing: border-box;
+           }
 
           .label.empty {
             border: 0.2mm dashed #ddd;
