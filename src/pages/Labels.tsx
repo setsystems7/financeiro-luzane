@@ -66,11 +66,12 @@ const LABEL_CONFIG = {
   // Margens da página
   marginTop: 3,      // mm
   marginBottom: 3,   // mm
-  marginLeft: 3.5,   // mm
-  marginRight: 3.5,  // mm
+  // Pequeno ajuste anti-arredondamento (evita a 3ª etiqueta “sumir”)
+  marginLeft: 3.4,   // mm
+  marginRight: 3.4,  // mm
   
   // Espaçamento entre etiquetas
-  gapHorizontal: 0.35, // mm (calculado)
+  gapHorizontal: 0.3, // mm
   gapVertical: 0,      // mm
   
   // DPI da impressora
@@ -353,7 +354,7 @@ export default function Labels() {
               margin: 0 !important;
               padding: 0 !important;
               background: white !important;
-              overflow: hidden !important;
+                overflow: visible !important;
                 -webkit-text-size-adjust: 100% !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
@@ -480,7 +481,7 @@ export default function Labels() {
              background: white;
              border-bottom: 1px dashed #ccc;
              box-sizing: border-box;
-             overflow: hidden;
+              overflow: visible;
            }
 
           .row:last-child {
@@ -558,12 +559,14 @@ export default function Labels() {
           /* Números EAN - 3mm como na foto */
           .barcode-number {
             font-family: monospace;
-            font-size: 9pt;
-            letter-spacing: 1px;
+            font-size: 8pt;
+            letter-spacing: 0.6px;
             text-align: center;
             color: #000;
             margin-top: 1mm;
             height: 3mm;
+            width: 100%;
+            white-space: nowrap;
             flex-shrink: 0;
           }
 
