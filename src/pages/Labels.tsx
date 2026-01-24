@@ -37,28 +37,32 @@ import {
 // - Margens: Superior 4mm, Inferior 2mm, Esq/Dir 3.5mm
 // - Gap horizontal: 0.3mm
 // ============================================
+// ============================================
+// CONFIGURAÇÃO PARA ETIQUETAS 33x21mm (3 colunas)
+// Papel contínuo largura ~100mm
+// ============================================
 const LABEL_CONFIG = {
-  // Página
-  pageWidth: 110,    // mm
-  pageHeight: 30,    // mm
+  // Página (largura do papel contínuo)
+  pageWidth: 100,    // mm - largura real do papel
+  pageHeight: 25,    // mm - altura de 1 linha de etiquetas
   
   // Etiqueta individual
-  labelWidth: 34.1,  // mm
-  labelHeight: 24,   // mm
+  labelWidth: 33,    // mm
+  labelHeight: 21,   // mm
   
   // Layout
   columns: 3,
   rows: 1,
   
-  // Margens da página
-  marginTop: 4,      // mm
+  // Margens da página (pequenas para maximizar espaço)
+  marginTop: 2,      // mm
   marginBottom: 2,   // mm
-  marginLeft: 3.5,   // mm
-  marginRight: 3.5,  // mm
+  marginLeft: 0.5,   // mm
+  marginRight: 0.5,  // mm
   
-  // Espaçamento entre etiquetas
-  gapHorizontal: 0.3, // mm
-  gapVertical: 0,     // mm
+  // Espaçamento entre etiquetas (gap físico entre elas)
+  gapHorizontal: 0,  // mm - sem gap, etiquetas lado a lado
+  gapVertical: 0,    // mm
   
   // DPI da impressora
   dpi: 203,
@@ -474,12 +478,12 @@ export default function Labels() {
             min-height: 0;
           }
 
-          /* SVG do código de barras - TAMANHO MÁXIMO NA ETIQUETA */
+          /* SVG do código de barras - OCUPA QUASE TODA A ETIQUETA */
           .barcode-container svg {
-            width: 30mm !important;
-            max-width: 30mm !important;
-            height: 13mm !important;
-            max-height: 13mm !important;
+            width: 31mm !important;
+            max-width: 31mm !important;
+            height: 12mm !important;
+            max-height: 12mm !important;
           }
 
           /* Instruções (só na tela) */
