@@ -383,17 +383,31 @@ export default function Labels() {
               page-break-after: avoid !important;
             }
              .label {
-              border: none !important;
-              box-shadow: none !important;
-              border-radius: 0 !important;
-              background: white !important;
-                /* Reafirma medidas EXATAS da etiqueta */
-                width: ${labelWidth}mm !important;
-                height: ${labelHeight}mm !important;
-                padding: 1mm 0.5mm 0.5mm 0.5mm !important;
-                overflow: hidden !important;
-                box-sizing: border-box !important;
-            }
+               border: none !important;
+               box-shadow: none !important;
+               border-radius: 0 !important;
+               background: white !important;
+               /* Reafirma medidas EXATAS da etiqueta */
+               width: ${labelWidth}mm !important;
+               height: ${labelHeight}mm !important;
+               /* Padding maior no topo para não cortar o nome */
+               padding: 2mm 1mm 1mm 1mm !important;
+               overflow: hidden !important;
+               box-sizing: border-box !important;
+               display: flex !important;
+               flex-direction: column !important;
+               align-items: center !important;
+               justify-content: flex-start !important;
+             }
+             /* Nome do produto visível na impressão */
+             .product-name {
+               font-size: 8pt !important;
+               font-weight: bold !important;
+               color: #000 !important;
+               margin-bottom: 1mm !important;
+               display: block !important;
+               visibility: visible !important;
+             }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
               border: none !important;
