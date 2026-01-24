@@ -166,6 +166,26 @@ export function useSuppliers() {
   });
 }
 
+// Função para deduplicar tamanhos (junta quantidades se mesmo tamanho aparecer mais de uma vez)
+function deduplicateSizes(sizes: { size: string; quantity: number; barcode?: string }[]) {
+  const sizeMap = new Map<string, { size: string; quantity: number; barcode?: string }>();
+  
+  for (const s of sizes) {
+    const existing = sizeMap.get(s.size);
+    if (existing) {
+      // Se já existe, soma as quantidades e mantém o primeiro barcode não-vazio
+      existing.quantity += s.quantity;
+      if (!existing.barcode && s.barcode) {
+        existing.barcode = s.barcode;
+      }
+    } else {
+      sizeMap.set(s.size, { ...s });
+    }
+  }
+  
+  return Array.from(sizeMap.values());
+}
+
 export function useCreateProduct() {
   const queryClient = useQueryClient();
 
@@ -188,8 +208,11 @@ export function useCreateProduct() {
 
       if (productError) throw productError;
 
-      if (data.sizes.length > 0) {
-        const sizesData = data.sizes.map(s => ({
+      // Deduplica tamanhos antes de inserir
+      const uniqueSizes = deduplicateSizes(data.sizes);
+      
+      if (uniqueSizes.length > 0) {
+        const sizesData = uniqueSizes.map(s => ({
           product_id: product.id,
           size: s.size,
           quantity: s.quantity,
@@ -240,8 +263,11 @@ export function useUpdateProduct() {
       // Delete existing sizes and insert new ones
       await supabase.from('product_sizes').delete().eq('product_id', id);
 
-      if (data.sizes.length > 0) {
-        const sizesData = data.sizes.map(s => ({
+      // Deduplica tamanhos antes de inserir
+      const uniqueSizes = deduplicateSizes(data.sizes);
+
+      if (uniqueSizes.length > 0) {
+        const sizesData = uniqueSizes.map(s => ({
           product_id: id,
           size: s.size,
           quantity: s.quantity,
