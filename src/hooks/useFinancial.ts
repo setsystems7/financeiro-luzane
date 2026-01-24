@@ -144,6 +144,16 @@ export function useExpenses(filters?: {
   return useQuery({
     queryKey: ['expenses', filters],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // First, update any pendente expenses that are now overdue
+      await supabase
+        .from('expenses')
+        .update({ status: 'vencido' })
+        .eq('status', 'pendente')
+        .lt('due_date', today);
+
+      // Then fetch expenses
       let query = supabase
         .from('expenses')
         .select('*, suppliers(name)')
@@ -166,6 +176,8 @@ export function useExpenses(filters?: {
       if (error) throw error;
       return data as Expense[];
     },
+    staleTime: 0,
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 }
 
