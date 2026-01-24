@@ -55,8 +55,10 @@ const LABEL_CONFIG = {
   pageWidth: 110,    // mm
   pageHeight: 30,    // mm
   
-  // Etiqueta individual (EXATO como no outro sistema)
-  labelWidth: 34.1,  // mm
+  // Etiqueta individual (ajuste “safe” p/ impressão física)
+  // Motivo: alguns drivers/impressão térmica aplicam pequena escala/margem real,
+  // o que fazia a 3ª etiqueta não sair e/ou “encavaldar”.
+  labelWidth: 33.9,  // mm
   labelHeight: 24,   // mm
   
   // Layout
@@ -67,11 +69,11 @@ const LABEL_CONFIG = {
   marginTop: 3,      // mm
   marginBottom: 3,   // mm
   // Pequeno ajuste anti-arredondamento (evita a 3ª etiqueta “sumir”)
-  marginLeft: 3.4,   // mm
-  marginRight: 3.4,  // mm
+  marginLeft: 3.55,  // mm
+  marginRight: 3.55, // mm
   
   // Espaçamento entre etiquetas
-  gapHorizontal: 0.3, // mm
+  gapHorizontal: 0.55, // mm (mais folga p/ não encavaldar)
   gapVertical: 0,      // mm
   
   // DPI da impressora
@@ -383,7 +385,7 @@ export default function Labels() {
 
                padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
                box-sizing: border-box !important;
-               overflow: hidden !important;
+               overflow: visible !important;
              }
             .row:last-child {
               page-break-after: avoid !important;
@@ -396,9 +398,9 @@ export default function Labels() {
                /* Medidas EXATAS da etiqueta */
                width: ${labelWidth}mm !important;
                height: ${labelHeight}mm !important;
-               /* Padding: 2mm topo, 1.5mm baixo, 1mm laterais */
-               padding: 2mm 1mm 1.5mm 1mm !important;
-               overflow: hidden !important;
+                /* Mais respiro em cima/baixo para não cortar nome/número */
+                padding: 2.6mm 1mm 2mm 1mm !important;
+                overflow: visible !important;
                box-sizing: border-box !important;
                display: flex !important;
                flex-direction: column !important;
@@ -417,8 +419,8 @@ export default function Labels() {
                word-wrap: break-word !important;
                text-align: center !important;
                min-height: 4mm !important;
-               max-height: 8mm !important;
-               overflow: hidden !important;
+                max-height: 9mm !important;
+                overflow: hidden !important;
                line-height: 1.3 !important;
              }
              /* Código de barras centralizado */
@@ -427,16 +429,25 @@ export default function Labels() {
                flex-direction: column !important;
                align-items: center !important;
                justify-content: center !important;
+                width: 100% !important;
+                overflow: visible !important;
              }
              .barcode-container svg {
-               width: 30mm !important;
-               height: 12mm !important;
+                width: 29.5mm !important;
+                height: 11mm !important;
              }
-             .barcode-number {
-               font-family: monospace !important;
-               font-size: 9pt !important;
-               margin-top: 1mm !important;
-             }
+              .barcode-number {
+                font-family: monospace !important;
+                font-size: 8pt !important;
+                letter-spacing: 0.6px !important;
+                text-align: center !important;
+                color: #000 !important;
+                margin-top: 0.8mm !important;
+                height: 3mm !important;
+                width: 100% !important;
+                white-space: nowrap !important;
+                line-height: 1 !important;
+              }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
               border: none !important;
@@ -474,7 +485,7 @@ export default function Labels() {
              height: ${pageHeight}mm;
              padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
              display: grid;
-             grid-template-columns: repeat(${columns}, ${labelWidth}mm);
+              grid-template-columns: repeat(${columns}, ${labelWidth}mm);
              column-gap: ${gapHorizontal}mm;
              align-content: start;
              justify-content: start;
@@ -492,13 +503,13 @@ export default function Labels() {
            .label {
              width: ${labelWidth}mm;
              height: ${labelHeight}mm;
-             /* Padding: 2mm em cima/baixo, 1mm nas laterais */
-             padding: 2mm 1mm 1.5mm 1mm;
+              /* Mais respiro em cima/baixo para não cortar na impressão */
+              padding: 2.6mm 1mm 2mm 1mm;
              display: flex;
              flex-direction: column;
              align-items: center;
              justify-content: flex-start;
-             overflow: hidden;
+              overflow: visible;
              background: white;
              border: 0.2mm solid #e0e0e0;
              border-radius: 0.5mm;
@@ -544,15 +555,15 @@ export default function Labels() {
             align-items: center;
             justify-content: center;
             width: 100%;
-            overflow: hidden;
+            overflow: visible;
           }
 
           /* SVG do código de barras - 12mm altura como na foto */
           .barcode-container svg {
-            width: 30mm !important;
-            max-width: 30mm !important;
-            height: 12mm !important;
-            max-height: 12mm !important;
+            width: 29.5mm !important;
+            max-width: 29.5mm !important;
+            height: 11mm !important;
+            max-height: 11mm !important;
             flex-shrink: 0;
           }
 
