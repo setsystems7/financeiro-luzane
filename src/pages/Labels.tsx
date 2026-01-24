@@ -316,6 +316,8 @@ export default function Labels() {
     }
 
     const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginBottom, marginLeft, marginRight, gapHorizontal } = LABEL_CONFIG;
+    // Ajuste fino de offset para não cortar o topo em algumas configurações de driver/navegador
+    const PRINT_OFFSET_TOP_MM = 1; // mm
 
     const printHtml = `
       <!DOCTYPE html>
@@ -373,7 +375,7 @@ export default function Labels() {
                align-content: start !important;
                justify-content: start !important;
 
-               padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
+               padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm !important;
                box-sizing: border-box !important;
                overflow: hidden !important;
              }
@@ -427,7 +429,7 @@ export default function Labels() {
            .row {
              width: ${pageWidth}mm;
              height: ${pageHeight}mm;
-             padding: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
+             padding: ${marginTop + PRINT_OFFSET_TOP_MM}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
              display: grid;
              grid-template-columns: repeat(${columns}, ${labelWidth}mm);
              column-gap: ${gapHorizontal}mm;
@@ -447,7 +449,8 @@ export default function Labels() {
            .label {
              width: ${labelWidth}mm;
              height: ${labelHeight}mm;
-             padding: 1mm 0.5mm 0.5mm 0.5mm;
+             /* mais respiro no topo para não cortar o nome */
+             padding: 1.6mm 0.6mm 0.6mm 0.6mm;
              display: flex;
              flex-direction: column;
              align-items: center;
@@ -466,18 +469,18 @@ export default function Labels() {
 
           /* Nome do produto + tamanho - NO TOPO */
           .product-name {
-            font-size: 8pt;
+            font-size: 8.5pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
             width: 100%;
-            height: 3.5mm;
-            max-height: 3.5mm;
+            height: 4mm;
+            max-height: 4mm;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             color: #000;
-            margin-bottom: 0.3mm;
+            margin-bottom: 0.6mm;
             flex-shrink: 0;
           }
 
@@ -487,7 +490,7 @@ export default function Labels() {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             width: 100%;
             max-height: 18mm;
             overflow: hidden;
