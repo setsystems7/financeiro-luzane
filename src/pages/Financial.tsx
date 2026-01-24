@@ -242,7 +242,7 @@ export default function Financial() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="receivable" className="gap-2">
               <CreditCard className="w-4 h-4" />
-              A Receber ({filteredReceivables.length})
+              Recebidos ({filteredReceivables.length})
             </TabsTrigger>
             <TabsTrigger value="payable" className="gap-2">
               <Receipt className="w-4 h-4" />
