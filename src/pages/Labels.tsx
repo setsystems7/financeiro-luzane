@@ -612,38 +612,46 @@ export default function Labels() {
             container.appendChild(row);
           }
 
-          // Renderizar códigos de barras com JsBarcode
+          // Renderizar códigos de barras com JsBarcode - FORMATO EAN13 EXATO
           labels.forEach(function(label, idx) {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
+                // EAN13 - barras finas, número formatado embaixo
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 2,
-                  height: 50,
+                  width: 1.5,
+                  height: 45,
                   displayValue: true,
-                  fontSize: 12,
+                  fontSize: 11,
                   margin: 0,
-                  textMargin: 1,
+                  marginTop: 0,
+                  marginBottom: 0,
+                  marginLeft: 0,
+                  marginRight: 0,
+                  textMargin: 2,
                   background: 'transparent',
                   lineColor: '#000000',
-                  fontOptions: 'bold',
-                  flat: false
+                  font: 'monospace',
+                  textAlign: 'center',
+                  flat: true
                 });
               } catch(e) {
                 try {
+                  // Fallback CODE128
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.8,
-                    height: 50,
+                    width: 1.3,
+                    height: 45,
                     displayValue: true,
-                    fontSize: 12,
+                    fontSize: 11,
                     margin: 0,
-                    textMargin: 1,
+                    textMargin: 2,
                     background: 'transparent',
                     lineColor: '#000000',
-                    fontOptions: 'bold',
-                    flat: false
+                    font: 'monospace',
+                    textAlign: 'center',
+                    flat: true
                   });
                 } catch(e2) {
                   svg.parentElement.innerHTML = '<span style="font-size:8pt;color:#999;">Erro</span>';
