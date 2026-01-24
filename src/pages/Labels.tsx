@@ -411,7 +411,7 @@ export default function Labels() {
             width: ${labelWidth}mm;
             height: ${labelHeight}mm;
             margin-right: ${gapHorizontal}mm;
-            padding: 2mm 1.5mm 1mm 1.5mm;
+            padding: 1mm 0.5mm 0.5mm 0.5mm;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -431,23 +431,23 @@ export default function Labels() {
             background: #fafafa;
           }
 
-          /* Nome do produto + tamanho - NO TOPO */
+          /* Nome do produto + tamanho - NO TOPO - MAIOR */
           .product-name {
-            font-size: 10pt;
+            font-size: 9pt;
             font-weight: bold;
             text-align: center;
             line-height: 1.1;
             width: 100%;
-            max-height: 5mm;
+            max-height: 4mm;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
             color: #000;
-            margin-bottom: 1.5mm;
+            margin-bottom: 0.5mm;
             flex-shrink: 0;
           }
 
-          /* Container do código de barras - HORIZONTAL */
+          /* Container do código de barras - PREENCHER ESPAÇO */
           .barcode-container {
             flex: 1;
             display: flex;
@@ -457,12 +457,12 @@ export default function Labels() {
             min-height: 0;
           }
 
-          /* SVG do código de barras - FORÇAR HORIZONTAL */
+          /* SVG do código de barras - TAMANHO MÁXIMO NA ETIQUETA */
           .barcode-container svg {
-            width: 32mm !important;
-            max-width: 32mm !important;
-            height: 16mm !important;
-            max-height: 16mm !important;
+            width: 31mm !important;
+            max-width: 31mm !important;
+            height: 17mm !important;
+            max-height: 17mm !important;
           }
 
           /* Instruções (só na tela) */
@@ -619,12 +619,12 @@ export default function Labels() {
               try {
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.6,
-                  height: 55,
+                  width: 2,
+                  height: 50,
                   displayValue: true,
-                  fontSize: 11,
+                  fontSize: 12,
                   margin: 0,
-                  textMargin: 2,
+                  textMargin: 1,
                   background: 'transparent',
                   lineColor: '#000000',
                   fontOptions: 'bold',
@@ -634,19 +634,19 @@ export default function Labels() {
                 try {
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.4,
-                    height: 55,
+                    width: 1.8,
+                    height: 50,
                     displayValue: true,
-                    fontSize: 11,
+                    fontSize: 12,
                     margin: 0,
-                    textMargin: 2,
+                    textMargin: 1,
                     background: 'transparent',
                     lineColor: '#000000',
                     fontOptions: 'bold',
                     flat: false
                   });
                 } catch(e2) {
-                  svg.parentElement.innerHTML = '<span style="font-size:7pt;color:#999;">Código inválido</span>';
+                  svg.parentElement.innerHTML = '<span style="font-size:8pt;color:#999;">Erro</span>';
                 }
               }
             }
