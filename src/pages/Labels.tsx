@@ -451,6 +451,7 @@ export default function Labels() {
           .barcode-container {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             width: 100%;
@@ -459,10 +460,10 @@ export default function Labels() {
 
           /* SVG do código de barras - TAMANHO MÁXIMO NA ETIQUETA */
           .barcode-container svg {
-            width: 31mm !important;
-            max-width: 31mm !important;
-            height: 17mm !important;
-            max-height: 17mm !important;
+            width: 30mm !important;
+            max-width: 30mm !important;
+            height: 13mm !important;
+            max-height: 13mm !important;
           }
 
           /* Instruções (só na tela) */
@@ -612,39 +613,51 @@ export default function Labels() {
             container.appendChild(row);
           }
 
+          // Função para formatar número EAN-13 com espaçamentos corretos
+          function formatEAN13(code) {
+            if (code.length === 13) {
+              // Formato: X XXXXX X XXXXX X (ex: 7 88818 2 90003 4)
+              return code[0] + ' ' + code.substring(1, 6) + ' ' + code[6] + ' ' + code.substring(7, 12) + ' ' + code[12];
+            }
+            return code;
+          }
+
           // Renderizar códigos de barras com JsBarcode - FORMATO EAN13 EXATO
           labels.forEach(function(label, idx) {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
-                // EAN13 - barras finas, número formatado embaixo
+                // EAN13 - barras finas, SEM displayValue (vamos adicionar manualmente)
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.5,
-                  height: 45,
-                  displayValue: true,
-                  fontSize: 11,
+                  width: 1.4,
+                  height: 40,
+                  displayValue: false,
                   margin: 0,
                   marginTop: 0,
                   marginBottom: 0,
                   marginLeft: 0,
                   marginRight: 0,
-                  textMargin: 2,
                   background: 'transparent',
                   lineColor: '#000000',
-                  font: 'monospace',
-                  textAlign: 'center',
                   flat: true
                 });
+                
+                // Adicionar texto formatado manualmente abaixo do SVG
+                var textDiv = document.createElement('div');
+                textDiv.style.cssText = 'font-family: monospace; font-size: 10pt; font-weight: normal; letter-spacing: 1px; text-align: center; margin-top: 1mm; color: #000;';
+                textDiv.textContent = formatEAN13(label.barcode);
+                svg.parentElement.appendChild(textDiv);
+                
               } catch(e) {
                 try {
                   // Fallback CODE128
                   JsBarcode(svg, label.barcode, {
                     format: 'CODE128',
-                    width: 1.3,
-                    height: 45,
+                    width: 1.2,
+                    height: 40,
                     displayValue: true,
-                    fontSize: 11,
+                    fontSize: 10,
                     margin: 0,
                     textMargin: 2,
                     background: 'transparent',
