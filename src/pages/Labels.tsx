@@ -58,7 +58,7 @@ const LABEL_CONFIG = {
   // Etiqueta individual (ajuste “safe” p/ impressão física)
   // Motivo: alguns drivers/impressão térmica aplicam pequena escala/margem real,
   // o que fazia a 3ª etiqueta não sair e/ou “encavaldar”.
-  labelWidth: 33.9,  // mm
+  labelWidth: 33.5,  // mm (reduzido para caber com folga)
   labelHeight: 24,   // mm
   
   // Layout
@@ -66,14 +66,14 @@ const LABEL_CONFIG = {
   rows: 1,
   
   // Margens da página
-  marginTop: 3,      // mm
-  marginBottom: 3,   // mm
+  marginTop: 2.5,    // mm
+  marginBottom: 2.5, // mm
   // Pequeno ajuste anti-arredondamento (evita a 3ª etiqueta “sumir”)
-  marginLeft: 3.55,  // mm
-  marginRight: 3.55, // mm
+  marginLeft: 3,     // mm
+  marginRight: 3,    // mm
   
   // Espaçamento entre etiquetas
-  gapHorizontal: 0.55, // mm (mais folga p/ não encavaldar)
+  gapHorizontal: 0.5, // mm
   gapVertical: 0,      // mm
   
   // DPI da impressora
@@ -107,9 +107,9 @@ const PRINT_CALIBRATION_STORAGE_KEY = 'labels:printCalibration:v1';
 const DEFAULT_PRINT_CALIBRATION: PrintCalibration = {
   // A maioria dos drivers de térmica adiciona “overscan”/margem real.
   // 97% costuma trazer a 3ª etiqueta de volta sem perder legibilidade.
-  scalePercent: 97,
+  scalePercent: 100,
   offsetXmm: 0,
-  offsetYmm: 0,
+  offsetYmm: 0.5,
 };
 
 // Componente para renderizar código de barras
