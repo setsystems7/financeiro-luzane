@@ -1291,17 +1291,40 @@ export default function Labels() {
                 </p>
               </div>
 
+              {/* Aviso automático de encavalamento */}
+              {printCalibration.scalePercent >= 100 && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 mb-3 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] lg:text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Risco de 3 colunas encavaladas
+                    </p>
+                    <p className="text-[9px] lg:text-[10px] text-muted-foreground mt-0.5">
+                      A escala está em {printCalibration.scalePercent}%. Reduza para 97% ou menos se as etiquetas saírem sobrepostas.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[10px] mt-1.5 border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                      onClick={() => updatePrintCalibration(DEFAULT_PRINT_CALIBRATION)}
+                    >
+                      Corrigir agora (97%, Y=1.5mm)
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Calibração (para quando o driver imprime diferente do PDF) */}
               <div className="bg-muted/30 rounded-lg p-2 mb-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="text-[10px] lg:text-xs font-medium text-foreground">Calibração da impressão</p>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="h-6 px-2 text-[10px] text-muted-foreground"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
                     onClick={() => updatePrintCalibration(DEFAULT_PRINT_CALIBRATION)}
                   >
-                    Reset
+                    Resetar (97%, Y=1.5)
                   </Button>
                 </div>
 
