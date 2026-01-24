@@ -343,9 +343,12 @@ export default function Labels() {
               print-color-adjust: exact !important;
             }
             .no-print { display: none !important; }
+            .preview-container { display: none !important; }
+            .labels-container { box-shadow: none !important; margin: 0 !important; }
             .row {
               page-break-inside: avoid !important;
               page-break-after: always !important;
+              border: none !important;
             }
             .row:last-child {
               page-break-after: avoid !important;
@@ -353,7 +356,17 @@ export default function Labels() {
             .label {
               border: none !important;
               box-shadow: none !important;
+              border-radius: 0 !important;
+              background: white !important;
             }
+            /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
+            .label.empty {
+              border: none !important;
+              background: transparent !important;
+            }
+
+            /* Nitidez do código de barras (SVG) */
+            svg { shape-rendering: crispEdges !important; }
           }
 
           /* Estilos de visualização em tela */
@@ -614,6 +627,7 @@ export default function Labels() {
                   textMargin: 2,
                   background: 'transparent',
                   lineColor: '#000000',
+                  fontOptions: 'bold',
                   flat: false
                 });
               } catch(e) {
@@ -628,6 +642,7 @@ export default function Labels() {
                     textMargin: 2,
                     background: 'transparent',
                     lineColor: '#000000',
+                    fontOptions: 'bold',
                     flat: false
                   });
                 } catch(e2) {
