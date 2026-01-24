@@ -58,7 +58,7 @@ const LABEL_CONFIG = {
   // Etiqueta individual (ajuste “safe” p/ impressão física)
   // Motivo: alguns drivers/impressão térmica aplicam pequena escala/margem real,
   // o que fazia a 3ª etiqueta não sair e/ou “encavaldar”.
-  labelWidth: 33.5,  // mm (reduzido para caber com folga)
+  labelWidth: 32,    // mm (reduzido para Chrome + driver Elgin)
   labelHeight: 24,   // mm
   
   // Layout
@@ -66,11 +66,11 @@ const LABEL_CONFIG = {
   rows: 1,
   
   // Margens da página
-  marginTop: 2.5,    // mm
-  marginBottom: 2.5, // mm
+  marginTop: 2,      // mm
+  marginBottom: 2,   // mm
   // Pequeno ajuste anti-arredondamento (evita a 3ª etiqueta “sumir”)
-  marginLeft: 3,     // mm
-  marginRight: 3,    // mm
+  marginLeft: 2,     // mm
+  marginRight: 2,    // mm
   
   // Espaçamento entre etiquetas
   gapHorizontal: 0.5, // mm
