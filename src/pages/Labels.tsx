@@ -38,35 +38,40 @@ import {
 // - Gap horizontal: 0.3mm
 // ============================================
 // ============================================
-// CONFIGURAÇÕES PARA ELGIN L42 PRO
+// CONFIGURAÇÕES CALCULADAS PARA ELGIN L42 PRO
+// Baseado na foto de referência:
 // - Página: 110mm x 30mm
-// - Etiqueta: 33mm x 22mm (reduzida para caber com gaps)
-// - 3 colunas, 1 linha
-// - Margens: Superior 5mm, Inferior 2mm, Esq/Dir 2mm
-// - Gap horizontal: 2mm (aumentado para separar bem)
+// - Etiqueta: 34.1mm x 24mm
+// - 3 colunas
+// 
+// CÁLCULO:
+// 3 etiquetas × 34.1mm = 102.3mm
+// Margens laterais: 3.5mm × 2 = 7mm  
+// Gaps: 0.35mm × 2 = 0.7mm
+// Total: 102.3 + 7 + 0.7 = 110mm ✓
 // ============================================
 const LABEL_CONFIG = {
   // Página
   pageWidth: 110,    // mm
   pageHeight: 30,    // mm
   
-  // Etiqueta individual (reduzida para caber com gaps maiores)
-  labelWidth: 33,    // mm
-  labelHeight: 22,   // mm
+  // Etiqueta individual (EXATO como no outro sistema)
+  labelWidth: 34.1,  // mm
+  labelHeight: 24,   // mm
   
   // Layout
   columns: 3,
   rows: 1,
   
   // Margens da página
-  marginTop: 5,      // mm - AUMENTADO para não cortar nome
-  marginBottom: 2,   // mm
-  marginLeft: 2,     // mm
-  marginRight: 2,    // mm
+  marginTop: 3,      // mm
+  marginBottom: 3,   // mm
+  marginLeft: 3.5,   // mm
+  marginRight: 3.5,  // mm
   
-  // Espaçamento entre etiquetas (AUMENTADO para separar bem)
-  gapHorizontal: 2,  // mm
-  gapVertical: 0,    // mm
+  // Espaçamento entre etiquetas
+  gapHorizontal: 0.35, // mm (calculado)
+  gapVertical: 0,      // mm
   
   // DPI da impressora
   dpi: 203,
@@ -316,8 +321,8 @@ export default function Labels() {
     }
 
     const { pageWidth, pageHeight, labelWidth, labelHeight, columns, marginTop, marginBottom, marginLeft, marginRight, gapHorizontal } = LABEL_CONFIG;
-    // Ajuste fino de offset para não cortar o topo - AUMENTADO
-    const PRINT_OFFSET_TOP_MM = 2; // mm
+    // Offset = 0 porque já temos margem superior correta
+    const PRINT_OFFSET_TOP_MM = 0; // mm
 
     const printHtml = `
       <!DOCTYPE html>
@@ -387,11 +392,11 @@ export default function Labels() {
                box-shadow: none !important;
                border-radius: 0 !important;
                background: white !important;
-               /* Reafirma medidas EXATAS da etiqueta */
+               /* Medidas EXATAS da etiqueta */
                width: ${labelWidth}mm !important;
                height: ${labelHeight}mm !important;
-               /* Padding maior no topo para não cortar o nome */
-               padding: 2mm 1mm 1mm 1mm !important;
+               /* Padding: 2mm topo, 1.5mm baixo, 1mm laterais */
+               padding: 2mm 1mm 1.5mm 1mm !important;
                overflow: hidden !important;
                box-sizing: border-box !important;
                display: flex !important;
@@ -399,19 +404,37 @@ export default function Labels() {
                align-items: center !important;
                justify-content: flex-start !important;
              }
-             /* Nome do produto visível na impressão - QUEBRA LINHA SE GRANDE */
+             /* Nome do produto - IGUAL À FOTO */
              .product-name {
-               font-size: 7pt !important;
+               font-size: 8pt !important;
                font-weight: bold !important;
                color: #000 !important;
-               margin-bottom: 0.5mm !important;
+               margin-bottom: 1mm !important;
                display: block !important;
                visibility: visible !important;
                white-space: normal !important;
                word-wrap: break-word !important;
                text-align: center !important;
-               max-height: 7mm !important;
+               min-height: 4mm !important;
+               max-height: 8mm !important;
                overflow: hidden !important;
+               line-height: 1.3 !important;
+             }
+             /* Código de barras centralizado */
+             .barcode-container {
+               display: flex !important;
+               flex-direction: column !important;
+               align-items: center !important;
+               justify-content: center !important;
+             }
+             .barcode-container svg {
+               width: 30mm !important;
+               height: 12mm !important;
+             }
+             .barcode-number {
+               font-family: monospace !important;
+               font-size: 9pt !important;
+               margin-top: 1mm !important;
              }
             /* MUITO IMPORTANTE: etiquetas vazias NÃO podem ter fundo/borda (evita “manchas”/pontilhado) */
             .label.empty {
@@ -464,16 +487,16 @@ export default function Labels() {
             border-bottom: none;
           }
 
-          /* Cada etiqueta individual - LAYOUT HORIZONTAL */
+          /* Cada etiqueta individual - CENTRALIZADO */
            .label {
              width: ${labelWidth}mm;
              height: ${labelHeight}mm;
-             /* mais respiro no topo para não cortar o nome */
-             padding: 1.6mm 0.6mm 0.6mm 0.6mm;
+             /* Padding: 2mm em cima/baixo, 1mm nas laterais */
+             padding: 2mm 1mm 1.5mm 1mm;
              display: flex;
              flex-direction: column;
              align-items: center;
-             justify-content: center;
+             justify-content: flex-start;
              overflow: hidden;
              background: white;
              border: 0.2mm solid #e0e0e0;
@@ -486,24 +509,33 @@ export default function Labels() {
             background: #fafafa;
           }
 
-          /* Nome do produto + tamanho - NO TOPO, QUEBRA LINHA SE GRANDE */
+          /* ============================================
+             LAYOUT INTERNO DA ETIQUETA (34.1mm × 24mm)
+             Baseado na foto de referência:
+             - Margem interna: 2mm
+             - Nome: 4mm (1 linha) ou até 8mm (2 linhas)
+             - Código de barras: 12mm
+             - Números EAN: 3mm
+             ============================================ */
+
+          /* Nome do produto - IGUAL À FOTO */
           .product-name {
-            font-size: 7pt;
+            font-size: 8pt;
             font-weight: bold;
             text-align: center;
-            line-height: 1.2;
+            line-height: 1.3;
             width: 100%;
-            min-height: 3mm;
-            max-height: 7mm;
+            min-height: 4mm;
+            max-height: 8mm;
             overflow: hidden;
             white-space: normal;
             word-wrap: break-word;
             color: #000;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
             flex-shrink: 0;
           }
 
-          /* Container do código de barras - CABE TUDO DENTRO */
+          /* Container do código de barras - CENTRALIZADO */
           .barcode-container {
             flex: 1;
             display: flex;
@@ -511,27 +543,27 @@ export default function Labels() {
             align-items: center;
             justify-content: center;
             width: 100%;
-            max-height: 18mm;
             overflow: hidden;
           }
 
-          /* SVG do código de barras - TAMANHO MAIOR */
+          /* SVG do código de barras - 12mm altura como na foto */
           .barcode-container svg {
-            width: 29mm !important;
-            max-width: 29mm !important;
-            height: 11mm !important;
-            max-height: 11mm !important;
+            width: 30mm !important;
+            max-width: 30mm !important;
+            height: 12mm !important;
+            max-height: 12mm !important;
             flex-shrink: 0;
           }
 
-          /* Texto do número EAN abaixo das barras - MAIOR */
+          /* Números EAN - 3mm como na foto */
           .barcode-number {
             font-family: monospace;
             font-size: 9pt;
-            letter-spacing: 0.8px;
+            letter-spacing: 1px;
             text-align: center;
             color: #000;
-            margin-top: 0.8mm;
+            margin-top: 1mm;
+            height: 3mm;
             flex-shrink: 0;
           }
 
@@ -696,11 +728,11 @@ export default function Labels() {
             var svg = document.getElementById('barcode-' + idx);
             if (label.barcode && svg) {
               try {
-                // EAN13 - barras compactas, SEM displayValue (adicionamos manualmente)
+                // EAN13 - altura 35px para ficar proporcional à foto
                 JsBarcode(svg, label.barcode, {
                   format: 'EAN13',
-                  width: 1.2,
-                  height: 28,
+                  width: 1.3,
+                  height: 35,
                   displayValue: false,
                   margin: 0,
                   marginTop: 0,
