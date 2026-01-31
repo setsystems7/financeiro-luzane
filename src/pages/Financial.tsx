@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ImportFinancialDialog } from '@/components/financial/ImportFinancialDialog';
 import { formatCurrency } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2, Pencil, Trash2, CalendarIcon
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
@@ -26,12 +28,15 @@ import {
   useMarkExpenseAsPaid,
   useMarkReceivableAsReceived,
   useCreateExpense,
-  useFinancialRealtime
+  useFinancialRealtime,
+  useUpdateExpenseDueDate,
+  useDeleteExpense
 } from '@/hooks/useFinancial';
 import { useCardSales, useCancelSale } from '@/hooks/useSales';
 import { useSuppliersList } from '@/hooks/useSuppliers';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function Financial() {
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'pending' | 'received'>('all');
@@ -46,6 +51,8 @@ export default function Financial() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editDueDate, setEditDueDate] = useState<Date | undefined>(undefined);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -87,6 +94,8 @@ export default function Financial() {
   const markReceivableAsReceived = useMarkReceivableAsReceived();
   const createExpense = useCreateExpense();
   const cancelSale = useCancelSale();
+  const updateExpenseDueDate = useUpdateExpenseDueDate();
+  const deleteExpense = useDeleteExpense();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
@@ -632,12 +641,66 @@ export default function Financial() {
                     <TableBody>
                       {filteredExpenses.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.description}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{item.description}</span>
+                              {item.is_recurring && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Repeat className="w-3 h-3" />
+                                  Recorrente
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{item.category || 'Sem categoria'}</Badge>
                           </TableCell>
                           <TableCell>
-                            {format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                            <div className="flex items-center gap-2">
+                              <span>{format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                              {item.status !== 'pago' && (
+                                <Popover 
+                                  open={editingExpenseId === item.id} 
+                                  onOpenChange={(open) => {
+                                    if (open) {
+                                      setEditingExpenseId(item.id);
+                                      setEditDueDate(new Date(item.due_date));
+                                    } else {
+                                      setEditingExpenseId(null);
+                                      setEditDueDate(undefined);
+                                    }
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                                      <Pencil className="w-3 h-3" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={editDueDate}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          setEditDueDate(date);
+                                          updateExpenseDueDate.mutate(
+                                            { id: item.id, due_date: date.toISOString().split('T')[0] },
+                                            {
+                                              onSuccess: () => {
+                                                setEditingExpenseId(null);
+                                                setEditDueDate(undefined);
+                                              }
+                                            }
+                                          );
+                                        }
+                                      }}
+                                      locale={ptBR}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             R$ {formatCurrency(item.amount)}
@@ -656,17 +719,32 @@ export default function Financial() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            {item.status !== 'pago' && (
+                            <div className="flex items-center justify-center gap-1">
+                              {item.status !== 'pago' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => markExpenseAsPaid.mutate(item.id)}
+                                  disabled={markExpenseAsPaid.isPending}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Pagar
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
-                                size="sm"
-                                onClick={() => markExpenseAsPaid.mutate(item.id)}
-                                disabled={markExpenseAsPaid.isPending}
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+                                    deleteExpense.mutate(item.id);
+                                  }
+                                }}
+                                disabled={deleteExpense.isPending}
                               >
-                                <Check className="w-4 h-4 mr-1" />
-                                Pagar
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
