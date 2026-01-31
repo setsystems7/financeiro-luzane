@@ -406,6 +406,70 @@ export function useUpdateExpenseDueDate() {
   });
 }
 
+export function useUpdateExpenseCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, category }: { id: string; category: string }) => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({ category })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Categoria atualizada!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar categoria');
+    },
+  });
+}
+
+export function useCanDeleteRecurringExpense() {
+  return async (expense: Expense): Promise<{ canDelete: boolean; reason?: string }> => {
+    // Non-recurring expenses can always be deleted
+    if (!expense.is_recurring) {
+      return { canDelete: true };
+    }
+
+    // Check if this expense is already paid
+    if (expense.status === 'pago') {
+      return { canDelete: false, reason: 'Esta parcela já foi paga e não pode ser excluída.' };
+    }
+
+    // For recurring expenses, check if any installment is paid
+    // Get all related expenses (same parent or same id as parent)
+    const parentId = expense.parent_expense_id || expense.id;
+    
+    const { data: relatedExpenses, error } = await supabase
+      .from('expenses')
+      .select('id, status')
+      .or(`id.eq.${parentId},parent_expense_id.eq.${parentId}`);
+
+    if (error) {
+      console.error('Error checking related expenses:', error);
+      return { canDelete: false, reason: 'Erro ao verificar parcelas relacionadas.' };
+    }
+
+    const hasPaidInstallment = relatedExpenses?.some(e => e.status === 'pago');
+    
+    if (hasPaidInstallment) {
+      return { 
+        canDelete: false, 
+        reason: 'Não é possível excluir: existe pelo menos uma parcela paga neste lançamento recorrente.' 
+      };
+    }
+
+    return { canDelete: true };
+  };
+}
+
 export function useDeleteExpense() {
   const queryClient = useQueryClient();
 

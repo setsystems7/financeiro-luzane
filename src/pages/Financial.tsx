@@ -31,7 +31,10 @@ import {
   useCreateExpense,
   useFinancialRealtime,
   useUpdateExpenseDueDate,
-  useDeleteExpense
+  useUpdateExpenseCategory,
+  useCanDeleteRecurringExpense,
+  useDeleteExpense,
+  type Expense
 } from '@/hooks/useFinancial';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useCardSales, useCancelSale } from '@/hooks/useSales';
@@ -55,6 +58,7 @@ export default function Financial() {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [editingCategoryExpenseId, setEditingCategoryExpenseId] = useState<string | null>(null);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -98,6 +102,8 @@ export default function Financial() {
   const createExpense = useCreateExpense();
   const cancelSale = useCancelSale();
   const updateExpenseDueDate = useUpdateExpenseDueDate();
+  const updateExpenseCategory = useUpdateExpenseCategory();
+  const canDeleteRecurringExpense = useCanDeleteRecurringExpense();
   const deleteExpense = useDeleteExpense();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
@@ -691,7 +697,39 @@ export default function Financial() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{item.category || 'Sem categoria'}</Badge>
+                            {editingCategoryExpenseId === item.id ? (
+                              <Select
+                                value={expenseCategories.find(c => c.name === item.category)?.id || ''}
+                                onValueChange={(catId) => {
+                                  const cat = expenseCategories.find(c => c.id === catId);
+                                  if (cat) {
+                                    updateExpenseCategory.mutate({ id: item.id, category: cat.name });
+                                  }
+                                  setEditingCategoryExpenseId(null);
+                                }}
+                                open={true}
+                                onOpenChange={(open) => {
+                                  if (!open) setEditingCategoryExpenseId(null);
+                                }}
+                              >
+                                <SelectTrigger className="w-[140px] h-8">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {expenseCategories.map((cat) => (
+                                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge 
+                                variant="outline" 
+                                className="cursor-pointer hover:bg-muted transition-colors"
+                                onClick={() => setEditingCategoryExpenseId(item.id)}
+                              >
+                                {item.category || 'Sem categoria'}
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -774,7 +812,13 @@ export default function Financial() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => {
+                                onClick={async () => {
+                                  // Check if can delete recurring expense
+                                  const result = await canDeleteRecurringExpense(item);
+                                  if (!result.canDelete) {
+                                    toast.error(result.reason || 'Não é possível excluir esta despesa.');
+                                    return;
+                                  }
                                   if (confirm('Tem certeza que deseja excluir esta despesa?')) {
                                     deleteExpense.mutate(item.id);
                                   }
