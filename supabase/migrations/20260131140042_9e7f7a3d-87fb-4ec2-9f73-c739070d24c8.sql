@@ -1,0 +1,1 @@
+DELETE FROM expense_categories WHERE id = '6b150a68-d976-483d-941f-d6e158f39abf';
