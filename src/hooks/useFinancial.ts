@@ -53,6 +53,10 @@ export interface Expense {
   supplier_id: string | null;
   notes: string | null;
   created_at: string;
+  is_recurring: boolean | null;
+  recurrence_months: number | null;
+  recurrence_index: number | null;
+  parent_expense_id: string | null;
   suppliers?: { name: string } | null;
 }
 
@@ -312,10 +316,68 @@ export function useMarkExpenseAsPaid() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
       toast.success('Despesa marcada como paga!');
     },
     onError: () => {
       toast.error('Erro ao atualizar despesa');
+    },
+  });
+}
+
+export function useUpdateExpenseDueDate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, due_date }: { id: string; due_date: string }) => {
+      const today = new Date().toISOString().split('T')[0];
+      const newStatus = due_date < today ? 'vencido' : 'pendente';
+      
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          due_date,
+          status: newStatus,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
+      toast.success('Data de vencimento atualizada!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar vencimento');
+    },
+  });
+}
+
+export function useDeleteExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
+      toast.success('Despesa excluída!');
+    },
+    onError: () => {
+      toast.error('Erro ao excluir despesa');
     },
   });
 }
