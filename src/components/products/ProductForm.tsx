@@ -548,7 +548,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
                         <Input
                           type="number"
                           min="0"
-                          value={variant.quantity || ''}
+                          value={variant.quantity}
                           onChange={(e) => handleSizeQuantityChange(variant.size, parseInt(e.target.value) || 0)}
                           className="h-10 text-center text-lg font-semibold"
                           placeholder="0"
