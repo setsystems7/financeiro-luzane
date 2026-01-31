@@ -42,13 +42,11 @@ import { toast } from 'sonner';
 export default function Financial() {
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'pending' | 'received'>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const defaultStart = new Date();
-  defaultStart.setHours(0, 0, 0, 0);
-  const defaultEnd = addDays(defaultStart, 30);
 
-  const [expenseStatus, setExpenseStatus] = useState<'all' | 'pendente' | 'pago' | 'vencido'>('pendente');
-  const [startDate, setStartDate] = useState<string>(defaultStart.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(defaultEnd.toISOString().split('T')[0]);
+  // Start with no date filters to show all expenses by default
+  const [expenseStatus, setExpenseStatus] = useState<'all' | 'pendente' | 'pago' | 'vencido'>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -154,12 +152,10 @@ export default function Financial() {
   };
 
   const clearFilters = () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = addDays(start, 30);
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate('');
+    setEndDate('');
     setSearchTerm('');
+    setExpenseStatus('all');
   };
 
   return (
