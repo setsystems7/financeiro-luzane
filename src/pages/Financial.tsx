@@ -699,14 +699,15 @@ export default function Financial() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <span>{format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                              <span>{format(new Date(item.due_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}</span>
                               {item.status !== 'pago' && (
                                 <Popover 
                                   open={editingExpenseId === item.id} 
                                   onOpenChange={(open) => {
                                     if (open) {
                                       setEditingExpenseId(item.id);
-                                      setEditDueDate(new Date(item.due_date));
+                                      // Usa meio-dia para evitar problemas de timezone
+                                      setEditDueDate(new Date(item.due_date + 'T12:00:00'));
                                     } else {
                                       setEditingExpenseId(null);
                                       setEditDueDate(undefined);
@@ -718,29 +719,26 @@ export default function Financial() {
                                       <Pencil className="w-3 h-3" />
                                     </Button>
                                   </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
+                                  <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                                     <Calendar
                                       mode="single"
-                                      selected={editDueDate}
+                                      selected={editingExpenseId === item.id ? editDueDate : undefined}
                                       onSelect={(date) => {
                                         if (date) {
-                                          setEditDueDate(date);
-                                          updateExpenseDueDate.mutate(
-                                            { id: item.id, due_date: format(date, 'yyyy-MM-dd') },
-                                            {
-                                              onSuccess: () => {
-                                                setEditingExpenseId(null);
-                                                setEditDueDate(undefined);
-                                              },
-                                            }
-                                          );
-
-                                          // Fecha imediatamente (a tela já atualiza via otimista)
+                                          const newDueDate = format(date, 'yyyy-MM-dd');
+                                          const expenseId = item.id;
+                                          
+                                          // Fecha popover imediatamente
                                           setEditingExpenseId(null);
+                                          setEditDueDate(undefined);
+                                          
+                                          // Dispara update (otimista já vai atualizar a tela na hora)
+                                          updateExpenseDueDate.mutate({ id: expenseId, due_date: newDueDate });
                                         }
                                       }}
                                       locale={ptBR}
                                       initialFocus
+                                      className="pointer-events-auto"
                                     />
                                   </PopoverContent>
                                 </Popover>
