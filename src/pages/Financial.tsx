@@ -13,10 +13,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ImportFinancialDialog } from '@/components/financial/ImportFinancialDialog';
-import { formatCurrency } from '@/lib/utils';
+import { ExpenseCategoryDialog } from '@/components/financial/ExpenseCategoryDialog';
+import { formatCurrency, cn } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2, Pencil, Trash2, CalendarIcon
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2, Pencil, Trash2
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
@@ -32,11 +33,11 @@ import {
   useUpdateExpenseDueDate,
   useDeleteExpense
 } from '@/hooks/useFinancial';
+import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useCardSales, useCancelSale } from '@/hooks/useSales';
 import { useSuppliersList } from '@/hooks/useSuppliers';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 export default function Financial() {
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'pending' | 'received'>('all');
@@ -53,6 +54,9 @@ export default function Financial() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editDueDate, setEditDueDate] = useState<Date | undefined>(undefined);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
@@ -85,6 +89,7 @@ export default function Financial() {
     endDate: endDate ? new Date(endDate) : undefined,
   });
   const { data: suppliers = [] } = useSuppliersList();
+  const { data: expenseCategories = [] } = useExpenseCategories();
   const { data: cardSalesData, isLoading: cardSalesLoading } = useCardSales(
     startDate ? new Date(startDate) : undefined,
     endDate ? new Date(endDate) : undefined
@@ -531,18 +536,55 @@ export default function Financial() {
                           </div>
                         </div>
                         <div>
-                          <Label>Categoria</Label>
-                          <Select onValueChange={(v) => setValue('category', v)}>
+                          <div className="flex items-center justify-between mb-1">
+                            <Label>Categoria</Label>
+                            <div className="flex items-center gap-1">
+                              {selectedCategoryId && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    const cat = expenseCategories.find(c => c.id === selectedCategoryId);
+                                    if (cat) {
+                                      setEditingCategory({ id: cat.id, name: cat.name });
+                                      setIsCategoryDialogOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => {
+                                  setEditingCategory(null);
+                                  setIsCategoryDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <Select 
+                            value={selectedCategoryId}
+                            onValueChange={(v) => {
+                              setSelectedCategoryId(v);
+                              const cat = expenseCategories.find(c => c.id === v);
+                              setValue('category', cat?.name || v);
+                            }}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                              <SelectItem value="aluguel">Aluguel</SelectItem>
-                              <SelectItem value="energia">Energia</SelectItem>
-                              <SelectItem value="agua">Água</SelectItem>
-                              <SelectItem value="internet">Internet</SelectItem>
-                              <SelectItem value="outros">Outros</SelectItem>
+                              {expenseCategories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -761,6 +803,20 @@ export default function Financial() {
         <ImportFinancialDialog
           open={isImportDialogOpen}
           onOpenChange={setIsImportDialogOpen}
+        />
+
+        {/* Expense Category Dialog */}
+        <ExpenseCategoryDialog
+          open={isCategoryDialogOpen}
+          onOpenChange={(open) => {
+            setIsCategoryDialogOpen(open);
+            if (!open) setEditingCategory(null);
+          }}
+          editCategory={editingCategory}
+          onSuccess={(categoryId, categoryName) => {
+            setSelectedCategoryId(categoryId);
+            setValue('category', categoryName);
+          }}
         />
       </main>
     </MainLayout>
