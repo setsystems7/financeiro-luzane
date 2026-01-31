@@ -334,24 +334,30 @@ export function useUpdateExpenseDueDate() {
       const today = new Date().toISOString().split('T')[0];
       const newStatus = due_date < today ? 'vencido' : 'pendente';
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('expenses')
         .update({
           due_date,
           status: newStatus,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
+      // Force immediate refetch with await
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.refetchQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
       toast.success('Data de vencimento atualizada!');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error updating due date:', error);
       toast.error('Erro ao atualizar vencimento');
     },
   });

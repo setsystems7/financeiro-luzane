@@ -536,57 +536,57 @@ export default function Financial() {
                           </div>
                         </div>
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <Label>Categoria</Label>
-                            <div className="flex items-center gap-1">
-                              {selectedCategoryId && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => {
-                                    const cat = expenseCategories.find(c => c.id === selectedCategoryId);
-                                    if (cat) {
-                                      setEditingCategory({ id: cat.id, name: cat.name });
-                                      setIsCategoryDialogOpen(true);
-                                    }
-                                  }}
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                              )}
+                          <Label>Categoria</Label>
+                          <div className="flex gap-2">
+                            <Select 
+                              value={selectedCategoryId}
+                              onValueChange={(v) => {
+                                setSelectedCategoryId(v);
+                                const cat = expenseCategories.find(c => c.id === v);
+                                setValue('category', cat?.name || v);
+                              }}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {expenseCategories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {selectedCategoryId && (
                               <Button
                                 type="button"
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="shrink-0"
                                 onClick={() => {
-                                  setEditingCategory(null);
-                                  setIsCategoryDialogOpen(true);
+                                  const cat = expenseCategories.find(c => c.id === selectedCategoryId);
+                                  if (cat) {
+                                    setEditingCategory({ id: cat.id, name: cat.name });
+                                    setIsCategoryDialogOpen(true);
+                                  }
                                 }}
+                                title="Editar categoria"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Pencil className="w-4 h-4" />
                               </Button>
-                            </div>
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="shrink-0"
+                              onClick={() => {
+                                setEditingCategory(null);
+                                setIsCategoryDialogOpen(true);
+                              }}
+                              title="Adicionar categoria"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
                           </div>
-                          <Select 
-                            value={selectedCategoryId}
-                            onValueChange={(v) => {
-                              setSelectedCategoryId(v);
-                              const cat = expenseCategories.find(c => c.id === v);
-                              setValue('category', cat?.name || v);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {expenseCategories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div>
                           <Label>Fornecedor</Label>
