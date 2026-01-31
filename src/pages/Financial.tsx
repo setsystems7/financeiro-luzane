@@ -726,14 +726,17 @@ export default function Financial() {
                                         if (date) {
                                           setEditDueDate(date);
                                           updateExpenseDueDate.mutate(
-                                            { id: item.id, due_date: date.toISOString().split('T')[0] },
+                                            { id: item.id, due_date: format(date, 'yyyy-MM-dd') },
                                             {
                                               onSuccess: () => {
                                                 setEditingExpenseId(null);
                                                 setEditDueDate(undefined);
-                                              }
+                                              },
                                             }
                                           );
+
+                                          // Fecha imediatamente (a tela já atualiza via otimista)
+                                          setEditingExpenseId(null);
                                         }
                                       }}
                                       locale={ptBR}

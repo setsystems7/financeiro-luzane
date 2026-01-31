@@ -329,7 +329,36 @@ export function useMarkExpenseAsPaid() {
 export function useUpdateExpenseDueDate() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    any,
+    unknown,
+    { id: string; due_date: string },
+    { previous: Array<[readonly unknown[], unknown]> }
+  >({
+    // Otimista: troca na tela imediatamente, depois confirma com o banco.
+    onMutate: async ({ id, due_date }: { id: string; due_date: string }) => {
+      await queryClient.cancelQueries({ queryKey: ['expenses'] });
+
+      const today = new Date().toISOString().split('T')[0];
+      const newStatus = due_date < today ? 'vencido' : 'pendente';
+
+      const previous = queryClient.getQueriesData({
+        queryKey: ['expenses'],
+      }) as Array<[readonly unknown[], unknown]>;
+
+      // Atualiza todas as variações de queryKey que começam com ['expenses', ...]
+      previous.forEach(([key, data]) => {
+        if (!Array.isArray(data)) return;
+        queryClient.setQueryData(
+          key,
+          data.map((e: any) =>
+            e?.id === id ? { ...e, due_date, status: newStatus } : e
+          )
+        );
+      });
+
+      return { previous };
+    },
     mutationFn: async ({ id, due_date }: { id: string; due_date: string }) => {
       const today = new Date().toISOString().split('T')[0];
       const newStatus = due_date < today ? 'vencido' : 'pendente';
@@ -347,16 +376,30 @@ export function useUpdateExpenseDueDate() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      // Force immediate refetch with await
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.refetchQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
+    onSuccess: (updated) => {
+      // Confirma o valor retornado do banco em todas as caches abertas.
+      const queries = queryClient.getQueriesData({ queryKey: ['expenses'] });
+      queries.forEach(([key, data]) => {
+        if (!Array.isArray(data)) return;
+        queryClient.setQueryData(
+          key,
+          data.map((e: any) => (e?.id === updated?.id ? { ...e, ...updated } : e))
+        );
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['expenses'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'], refetchType: 'active' });
+
       toast.success('Data de vencimento atualizada!');
     },
-    onError: (error) => {
+    onError: (error, _vars, ctx) => {
+      // Rollback do otimista
+      if (ctx?.previous) {
+        ctx.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      }
+
       console.error('Error updating due date:', error);
       toast.error('Erro ao atualizar vencimento');
     },
