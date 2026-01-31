@@ -32,6 +32,7 @@ import {
   useFinancialRealtime,
   useUpdateExpenseDueDate,
   useUpdateExpenseCategory,
+  useUpdateExpenseDescription,
   useCanDeleteRecurringExpense,
   useDeleteExpense,
   type Expense
@@ -59,7 +60,8 @@ export default function Financial() {
   const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [editingCategoryExpenseId, setEditingCategoryExpenseId] = useState<string | null>(null);
-
+  const [editingDescriptionExpenseId, setEditingDescriptionExpenseId] = useState<string | null>(null);
+  const [editDescriptionValue, setEditDescriptionValue] = useState<string>('');
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
@@ -103,6 +105,7 @@ export default function Financial() {
   const cancelSale = useCancelSale();
   const updateExpenseDueDate = useUpdateExpenseDueDate();
   const updateExpenseCategory = useUpdateExpenseCategory();
+  const updateExpenseDescription = useUpdateExpenseDescription();
   const canDeleteRecurringExpense = useCanDeleteRecurringExpense();
   const deleteExpense = useDeleteExpense();
 
@@ -686,15 +689,46 @@ export default function Financial() {
                       {filteredExpenses.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
-                            <div className="flex flex-col">
-                              <span>{item.description}</span>
-                              {item.is_recurring && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Repeat className="w-3 h-3" />
-                                  Recorrente
-                                </span>
-                              )}
-                            </div>
+                            {editingDescriptionExpenseId === item.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={editDescriptionValue}
+                                  onChange={(e) => setEditDescriptionValue(e.target.value)}
+                                  className="h-8"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updateExpenseDescription.mutate({ id: item.id, description: editDescriptionValue });
+                                      setEditingDescriptionExpenseId(null);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingDescriptionExpenseId(null);
+                                    }
+                                  }}
+                                  onBlur={() => {
+                                    if (editDescriptionValue !== item.description) {
+                                      updateExpenseDescription.mutate({ id: item.id, description: editDescriptionValue });
+                                    }
+                                    setEditingDescriptionExpenseId(null);
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div 
+                                className="flex flex-col cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 transition-colors"
+                                onClick={() => {
+                                  setEditingDescriptionExpenseId(item.id);
+                                  setEditDescriptionValue(item.description);
+                                }}
+                              >
+                                <span>{item.description}</span>
+                                {item.is_recurring && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Repeat className="w-3 h-3" />
+                                    Recorrente
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             {editingCategoryExpenseId === item.id ? (

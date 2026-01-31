@@ -431,6 +431,31 @@ export function useUpdateExpenseCategory() {
   });
 }
 
+export function useUpdateExpenseDescription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, description }: { id: string; description: string }) => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({ description })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Descrição atualizada!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar descrição');
+    },
+  });
+}
+
 export function useCanDeleteRecurringExpense() {
   return async (expense: Expense): Promise<{ canDelete: boolean; reason?: string }> => {
     // Non-recurring expenses can always be deleted
