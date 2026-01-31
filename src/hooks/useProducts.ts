@@ -260,25 +260,54 @@ export function useUpdateProduct() {
 
       if (productError) throw productError;
 
-      // Delete existing sizes and insert new ones
-      await supabase.from('product_sizes').delete().eq('product_id', id);
-
-      // Deduplica tamanhos antes de inserir
+      // Deduplica tamanhos antes de processar
       const uniqueSizes = deduplicateSizes(data.sizes);
 
-      if (uniqueSizes.length > 0) {
-        const sizesData = uniqueSizes.map(s => ({
-          product_id: id,
-          size: s.size,
-          quantity: s.quantity,
-          barcode: s.barcode || null,
-        }));
+      // Get existing sizes for this product
+      const { data: existingSizes } = await supabase
+        .from('product_sizes')
+        .select('id, size')
+        .eq('product_id', id);
 
-        const { error: sizesError } = await supabase
+      const existingSizeMap = new Map(existingSizes?.map(s => [s.size, s.id]) || []);
+      const newSizeNames = new Set(uniqueSizes.map(s => s.size));
+
+      // Delete sizes that are no longer in the list
+      const sizesToDelete = existingSizes?.filter(s => !newSizeNames.has(s.size)).map(s => s.id) || [];
+      if (sizesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
           .from('product_sizes')
-          .insert(sizesData);
+          .delete()
+          .in('id', sizesToDelete);
+        if (deleteError) throw deleteError;
+      }
 
-        if (sizesError) throw sizesError;
+      // Upsert remaining sizes (update existing, insert new)
+      for (const s of uniqueSizes) {
+        const existingId = existingSizeMap.get(s.size);
+        
+        if (existingId) {
+          // Update existing size
+          const { error: updateError } = await supabase
+            .from('product_sizes')
+            .update({
+              quantity: s.quantity,
+              barcode: s.barcode || null,
+            })
+            .eq('id', existingId);
+          if (updateError) throw updateError;
+        } else {
+          // Insert new size
+          const { error: insertError } = await supabase
+            .from('product_sizes')
+            .insert({
+              product_id: id,
+              size: s.size,
+              quantity: s.quantity,
+              barcode: s.barcode || null,
+            });
+          if (insertError) throw insertError;
+        }
       }
 
       return { id };
