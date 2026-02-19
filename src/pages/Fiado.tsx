@@ -7,12 +7,80 @@ import { ShoppingCart, ClipboardList, HelpCircle, DollarSign, Pencil, MessageCir
 import { type SupportSection } from '@/components/layout/SupportButton';
 
 const fiadoSupportSections: SupportSection[] = [
-  { title: 'O que é o módulo Fiado', icon: HelpCircle, content: 'O módulo Fiado permite registrar vendas a prazo (fiado/promissória) para clientes que pagarão depois. Você controla quem deve, quanto deve e quando vence.' },
-  { title: 'Como criar uma venda fiado', icon: ShoppingCart, content: 'Na aba "Nova Venda", busque e adicione os produtos ao carrinho. Informe o nome do cliente, telefone, CPF (opcional), data de vencimento e número de parcelas. Finalize a venda para registrar.' },
-  { title: 'Como registrar pagamento', icon: DollarSign, content: 'Na aba "Vendas Fiado", clique em "Registrar Pagamento" ao lado da venda. Informe o valor pago e o método de pagamento. Pagamentos parciais são permitidos.' },
-  { title: 'Status das vendas', icon: ClipboardList, content: '• Pendente: nenhum pagamento realizado.\n• Parcial: pagamento parcial feito, ainda há saldo devedor.\n• Atrasado: a data de vencimento passou sem pagamento total.\n• Pago: valor total quitado.\n• Cancelado: venda cancelada (estoque devolvido).' },
-  { title: 'Como editar ou cancelar uma venda', icon: Pencil, content: 'Use o botão de editar (lápis) para alterar dados da venda. Para cancelar, clique no X vermelho - o sistema pedirá confirmação e devolverá o estoque automaticamente.' },
-  { title: 'Dicas de cobrança', icon: MessageCircle, content: 'O sistema mostra alertas de fiados vencendo nos próximos 3 dias. Use o botão de WhatsApp ao lado de cada venda para enviar uma mensagem de cobrança diretamente ao cliente.' },
+  {
+    title: 'O que é o módulo Fiado',
+    icon: HelpCircle,
+    tag: 'essencial',
+    content: 'O módulo Fiado permite registrar vendas a prazo (fiado/promissória) para clientes que vão pagar depois. Aqui você controla quem deve, quanto deve, quando vence e registra pagamentos.',
+  },
+  {
+    title: 'Como criar uma venda fiado',
+    icon: ShoppingCart,
+    tag: 'essencial',
+    content: 'Siga os passos para registrar uma venda a prazo:',
+    steps: [
+      { text: 'Vá na aba "Nova Venda" (já é a aba padrão ao abrir o módulo).' },
+      { text: 'Busque e adicione os produtos ao carrinho — funciona igual ao PDV.' },
+      { text: 'Preencha os dados do cliente: Nome (obrigatório), Telefone e CPF (opcionais).', tip: 'O telefone é importante para cobrança por WhatsApp depois.' },
+      { text: 'Defina a data de vencimento e o número de parcelas.' },
+      { text: 'Adicione observações se necessário (ex: "combinado pagar dia 15").' },
+      { text: 'Clique em "Finalizar Venda Fiado" para registrar.' },
+    ],
+    warning: 'A venda fiado desconta do estoque normalmente. O produto sai do estoque no momento do registro.',
+  },
+  {
+    title: 'Como registrar pagamento',
+    icon: DollarSign,
+    tag: 'essencial',
+    content: 'Quando o cliente pagar (parcial ou total):',
+    steps: [
+      { text: 'Vá na aba "Vendas Fiado" para ver a lista de vendas pendentes.' },
+      { text: 'Encontre a venda do cliente e clique em "Registrar Pagamento".' },
+      { text: 'Informe o valor que o cliente está pagando e o método de pagamento (dinheiro, PIX, etc.).' },
+      { text: 'Confirme o pagamento. O saldo devedor será atualizado automaticamente.' },
+    ],
+    tips: [
+      'Pagamentos parciais são permitidos — o saldo vai diminuindo a cada pagamento.',
+      'Quando o valor total é quitado, o status muda automaticamente para "Pago".',
+    ],
+  },
+  {
+    title: 'Status das vendas fiado',
+    icon: ClipboardList,
+    content: 'Entenda cada status:',
+    tips: [
+      'Pendente: nenhum pagamento foi feito ainda.',
+      'Parcial: o cliente já pagou parte, mas ainda deve.',
+      'Atrasado: a data de vencimento passou e ainda há saldo devedor.',
+      'Pago: o valor total foi quitado — tudo certo!',
+      'Cancelado: venda cancelada — o estoque é devolvido automaticamente.',
+    ],
+  },
+  {
+    title: 'Como cobrar pelo WhatsApp',
+    icon: MessageCircle,
+    tag: 'dica',
+    content: 'Use o recurso de cobrança rápida por WhatsApp:',
+    steps: [
+      { text: 'Na aba "Vendas Fiado", encontre a venda do cliente.' },
+      { text: 'Clique no ícone do WhatsApp (💬) ao lado da venda.' },
+      { text: 'Uma mensagem de cobrança será preparada automaticamente e o WhatsApp será aberto.' },
+    ],
+    tips: [
+      'O sistema mostra alertas de fiados vencendo nos próximos 3 dias.',
+      'Mantenha o telefone do cliente sempre atualizado para facilitar cobranças.',
+    ],
+  },
+  {
+    title: 'Como editar ou cancelar',
+    icon: Pencil,
+    content: 'Modifique ou cancele vendas fiado:',
+    steps: [
+      { text: 'Na lista de vendas, clique no ícone de lápis (✏️) para editar dados como nome, telefone ou observações.' },
+      { text: 'Para cancelar, clique no X vermelho. O sistema pedirá confirmação.' },
+    ],
+    warning: 'Ao cancelar uma venda fiado, o estoque dos produtos é devolvido automaticamente.',
+  },
 ];
 
 export default function Fiado() {

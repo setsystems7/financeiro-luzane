@@ -30,9 +30,9 @@ import { cn } from '@/lib/utils';
 import { type SupportSection } from '@/components/layout/SupportButton';
 
 const restockSupportSections: SupportSection[] = [
-  { title: 'Como funciona', icon: HelpCircle, content: 'Este módulo analisa o estoque atual e o ritmo de vendas dos últimos 30 dias para classificar cada produto por nível de urgência de reposição.' },
-  { title: 'Interpretando os dados', icon: BarChart3, content: '• Venda/dia: média de unidades vendidas por dia nos últimos 30 dias.\n• Cobertura: quantos dias o estoque atual dura no ritmo atual de vendas.\n• Status: indica se precisa comprar agora, em breve, ou se está OK.' },
-  { title: 'Tomando decisão de compra', icon: ShoppingCart, content: 'Foque nos produtos com status "Sem Estoque" e "Crítico" primeiro. Use a coluna de venda/dia para priorizar os que vendem mais. A coluna de custo estimado ajuda a planejar o investimento.' },
+  { title: 'Como funciona', icon: HelpCircle, tag: 'essencial', content: 'Este módulo analisa o estoque atual e o ritmo de vendas dos últimos 30 dias para classificar cada produto por urgência de reposição.', tips: ['Produtos com mais saída e menos estoque aparecem primeiro.', 'Use os cards no topo para filtrar por status clicando neles.'] },
+  { title: 'Interpretando os dados', icon: BarChart3, content: 'Entenda cada coluna da tabela:', tips: ['Venda/dia: média de unidades vendidas por dia nos últimos 30 dias.', 'Cobertura: quantos dias o estoque dura no ritmo atual.', 'Velocidade: 🔥 Alta saída, ⚡ Média saída, 📊 Baixa saída.', 'Custo Reposição: quanto custa repor o estoque sugerido.'] },
+  { title: 'Tomando decisão de compra', icon: ShoppingCart, tag: 'essencial', content: 'Use a seção "Reposição Urgente" para priorizar:', steps: [{ text: 'Olhe primeiro a seção vermelha "Reposição Urgente" — são produtos que vendem mas estão acabando.' }, { text: 'Priorize os com ícone de 🔥 (alta saída) — são os que mais vendem.' }, { text: 'Use a coluna "Custo Reposição" para planejar o investimento.' }, { text: 'Filtre por fornecedor para agrupar pedidos de compra.' }] },
 ];
 
 type SortKey = 'name' | 'stock' | 'demand' | 'coverage' | 'urgency';

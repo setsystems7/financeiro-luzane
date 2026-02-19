@@ -46,12 +46,68 @@ export default function Products() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const productsSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Produtos', icon: HelpCircle, content: 'O módulo Produtos é onde você cadastra, edita e organiza todo o catálogo da sua loja. Cada produto pode ter múltiplos tamanhos, códigos de barras, categoria, cor e fornecedor.' },
-    { title: 'Como cadastrar um produto', icon: Plus, content: 'Clique em "Novo Produto" no canto superior direito. Preencha o nome, preço de custo, preço de venda e adicione os tamanhos com suas quantidades. Opcionalmente, defina categoria, cor, fornecedor e estoque mínimo.' },
-    { title: 'Como editar ou excluir', icon: Pencil, content: 'Para editar, clique no ícone de lápis no card do produto. Para excluir, clique no ícone de lixeira. A exclusão pedirá confirmação antes de prosseguir.' },
-    { title: 'Como gerenciar tamanhos e códigos de barras', icon: Package, content: 'No formulário do produto, adicione tamanhos (PP, P, M, G, GG, etc.) com a quantidade em estoque e um código de barras opcional para cada. Os tamanhos são ordenados automaticamente.' },
-    { title: 'Como importar produtos por planilha', icon: Upload, content: 'Clique em "Importar" para abrir o assistente. Primeiro baixe a planilha modelo, preencha com seus produtos e quantidades por tamanho, depois selecione o arquivo para importação automática.' },
-    { title: 'Como usar os filtros', icon: Filter, content: 'Use a barra de busca para encontrar por nome ou descrição. Filtre por categoria, cor ou fornecedor usando os seletores. Alterne entre visualização em grid ou lista.' },
+    {
+      title: 'O que é o módulo Produtos',
+      icon: HelpCircle,
+      tag: 'essencial',
+      content: 'Aqui você cadastra, edita e organiza todo o catálogo da sua loja. Cada produto pode ter vários tamanhos, código de barras, categoria, cor e fornecedor.',
+    },
+    {
+      title: 'Como cadastrar um produto',
+      icon: Plus,
+      tag: 'essencial',
+      content: 'Siga os passos para cadastrar um novo produto:',
+      steps: [
+        { text: 'Clique no botão "Novo Produto" no canto superior direito da tela.' },
+        { text: 'Preencha o nome do produto (obrigatório).', tip: 'Use nomes claros como "CALÇA EMPINA BB VIC" para facilitar a busca no PDV.' },
+        { text: 'Informe o preço de custo e o preço de venda. O markup será calculado automaticamente.' },
+        { text: 'Adicione os tamanhos disponíveis (PP, P, M, G, GG, etc.) com a quantidade em estoque de cada um.', tip: 'Você pode adicionar um código de barras diferente para cada tamanho.' },
+        { text: 'Opcionalmente, selecione a categoria, cor, fornecedor e defina o estoque mínimo.' },
+        { text: 'Clique em "Salvar" para finalizar o cadastro.' },
+      ],
+      tips: [
+        'O estoque mínimo serve para alertar quando o produto estiver acabando.',
+        'Você pode adicionar categorias e fornecedores novos direto no formulário.',
+      ],
+    },
+    {
+      title: 'Como editar ou excluir um produto',
+      icon: Pencil,
+      content: 'Para modificar ou remover um produto existente:',
+      steps: [
+        { text: 'Encontre o produto na lista usando a busca ou filtros.' },
+        { text: 'Clique no ícone de lápis (✏️) no card do produto para editar.' },
+        { text: 'Para excluir, clique no ícone de lixeira (🗑️). O sistema pedirá confirmação antes de excluir.' },
+      ],
+      warning: 'Excluir um produto é permanente e não pode ser desfeito. Produtos com vendas vinculadas não devem ser excluídos.',
+    },
+    {
+      title: 'Como importar produtos por planilha',
+      icon: Upload,
+      tag: 'avançado',
+      content: 'Ideal para cadastrar muitos produtos de uma vez:',
+      steps: [
+        { text: 'Clique no botão "Importar" na barra de ferramentas.' },
+        { text: 'Baixe a planilha modelo clicando no link fornecido no assistente.' },
+        { text: 'Preencha a planilha com os dados dos produtos — nome, custo, venda, tamanhos e quantidades.' },
+        { text: 'Selecione o arquivo preenchido e confirme a importação.' },
+      ],
+      tips: [
+        'A planilha modelo já vem com as colunas corretas — não altere os cabeçalhos.',
+        'Produtos com nomes duplicados serão atualizados, não duplicados.',
+      ],
+    },
+    {
+      title: 'Como usar filtros e busca',
+      icon: Filter,
+      tag: 'dica',
+      content: 'Encontre produtos rapidamente:',
+      steps: [
+        { text: 'Use a barra de busca para pesquisar por nome ou descrição do produto.' },
+        { text: 'Use os seletores de categoria, cor e fornecedor para filtrar resultados.' },
+        { text: 'Alterne entre visualização em cards (grid) ou lista usando os ícones no topo.' },
+      ],
+    },
   ];
 
   const filteredProducts = products.filter(product => {

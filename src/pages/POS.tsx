@@ -31,12 +31,58 @@ import { toast } from 'sonner';
 import { type SupportSection } from '@/components/layout/SupportButton';
 
 const posSupportSections: SupportSection[] = [
-  { title: 'O que é o PDV', content: 'O PDV (Ponto de Venda) é onde você registra as vendas da loja. Adicione produtos ao carrinho por busca, seleção ou leitura de código de barras, aplique descontos, escolha o método de pagamento e finalize a venda.' },
-  { title: 'Como adicionar produtos ao carrinho', content: 'Use o campo de busca à direita para pesquisar por nome ou escanear o código de barras. Selecione o produto e tamanho desejado. O sistema verifica o estoque automaticamente e impede venda sem estoque.' },
-  { title: 'Como usar o leitor de código de barras', content: 'Com o cursor no campo de busca, escaneie o produto com o leitor. Se o código for EAN-13 (13 dígitos), o produto é adicionado automaticamente ao carrinho. Se não encontrado, uma mensagem de erro será exibida.' },
-  { title: 'Métodos de pagamento', content: 'Escolha entre: Dinheiro, PIX, Débito ou Crédito. Para crédito, selecione a bandeira do cartão e o número de parcelas. As taxas são calculadas automaticamente e somadas ao valor da venda.' },
-  { title: 'Como aplicar desconto', content: 'No campo "Desconto", informe o percentual (0 a 100%). O desconto é aplicado sobre o subtotal de todos os produtos do carrinho. O valor com desconto é exibido em tempo real.' },
-  { title: 'Taxas de cartão', content: 'Ao pagar com cartão de crédito, o sistema calcula a taxa baseada na bandeira e número de parcelas. A taxa é somada ao valor que o cliente paga, garantindo que a loja receba o valor integral da venda.' },
+  {
+    title: 'O que é o PDV',
+    tag: 'essencial',
+    content: 'O PDV (Ponto de Venda) é a tela principal onde você registra todas as vendas da loja. Aqui você monta o carrinho com os produtos, aplica descontos e finaliza com o pagamento.',
+    icon: undefined,
+  },
+  {
+    title: 'Como registrar uma venda',
+    tag: 'essencial',
+    content: 'Siga os passos abaixo para fazer uma venda completa:',
+    steps: [
+      { text: 'No painel da direita, busque o produto pelo nome ou escaneie o código de barras com o leitor.', tip: 'O cursor já fica posicionado no campo de busca automaticamente.' },
+      { text: 'Clique no produto desejado e selecione o tamanho. O item será adicionado ao carrinho à esquerda.', tip: 'Se o produto não tiver estoque naquele tamanho, ele não poderá ser adicionado.' },
+      { text: 'Repita para todos os produtos que o cliente deseja comprar.' },
+      { text: 'Se necessário, aplique um desconto no campo "Desconto (%)" — digite o percentual (ex: 10 para 10%).' },
+      { text: 'Escolha o método de pagamento: Dinheiro, PIX, Débito ou Crédito.' },
+      { text: 'Para crédito, selecione a bandeira do cartão e o número de parcelas. As taxas são calculadas automaticamente.', tip: 'A taxa do cartão é somada ao valor final que o cliente paga, garantindo que a loja receba o valor integral.' },
+      { text: 'Confira o resumo e clique em "Finalizar Venda" para concluir.' },
+    ],
+    warning: 'Após finalizar, a venda não pode ser desfeita — apenas trocada pelo módulo de Trocas.',
+  },
+  {
+    title: 'Como usar o leitor de código de barras',
+    content: 'O sistema detecta automaticamente leitores de código de barras USB.',
+    steps: [
+      { text: 'Certifique-se de que o cursor está no campo de busca de produtos (painel da direita).' },
+      { text: 'Escaneie o produto com o leitor de código de barras.' },
+      { text: 'Se o código for EAN-13 (13 dígitos), o produto é identificado e adicionado ao carrinho automaticamente.', tip: 'Se o produto não for encontrado, verifique se o código de barras foi cadastrado corretamente em Produtos.' },
+    ],
+  },
+  {
+    title: 'Como alterar quantidade ou remover itens',
+    content: 'No carrinho (painel esquerdo):',
+    steps: [
+      { text: 'Use os botões "+" e "-" ao lado de cada item para aumentar ou diminuir a quantidade.' },
+      { text: 'Clique no ícone de lixeira (X) para remover o item completamente do carrinho.' },
+    ],
+    tips: [
+      'O sistema não permite vender mais do que o estoque disponível.',
+      'Os valores são recalculados em tempo real a cada alteração.',
+    ],
+  },
+  {
+    title: 'Taxas de cartão de crédito',
+    tag: 'avançado',
+    content: 'Ao pagar com cartão de crédito, o sistema aplica automaticamente a taxa com base na bandeira e número de parcelas.',
+    tips: [
+      'A taxa é somada ao valor que o cliente paga — a loja recebe sempre o valor cheio.',
+      'As taxas podem ser configuradas por bandeira e parcelas nas Configurações.',
+      'Para pagamento à vista no crédito (1x), a taxa costuma ser menor.',
+    ],
+  },
 ];
 
 interface CartItem extends SaleItem {
