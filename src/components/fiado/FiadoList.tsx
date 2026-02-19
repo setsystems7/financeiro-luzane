@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Search,
@@ -11,28 +11,53 @@ import {
   CheckCircle,
   XCircle,
   DollarSign,
-  Eye,
   X,
   Pencil,
   Trash2,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  AlertTriangle,
+  CircleDot
 } from 'lucide-react';
 import { useFiadoSales, useCancelFiadoSale, useDeleteFiadoSale } from '@/hooks/useFiado';
 import { FiadoDetailsDialog } from './FiadoDetailsDialog';
 import { FiadoEditDialog } from './FiadoEditDialog';
 import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
+
+type FilterType = 'all' | 'pendente' | 'parcial' | 'atrasado' | 'pago' | 'cancelado';
+
+const getEffectiveStatus = (sale: any): string => {
+  if (sale.status === 'pago' || sale.status === 'cancelado') return sale.status;
+  
+  // Has partial payment
+  if (Number(sale.amount_paid) > 0 && Number(sale.amount_pending) > 0) {
+    // Check if overdue
+    if (sale.due_date) {
+      const dueDate = new Date(sale.due_date + 'T12:00:00');
+      if (isPast(dueDate) && !isToday(dueDate)) return 'atrasado';
+    }
+    return 'parcial';
+  }
+  
+  // No payment yet, check if overdue
+  if (sale.due_date) {
+    const dueDate = new Date(sale.due_date + 'T12:00:00');
+    if (isPast(dueDate) && !isToday(dueDate)) return 'atrasado';
+  }
+  
+  return 'pendente';
+};
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   pendente: { label: 'Pendente', color: 'bg-yellow-500', icon: Clock },
-  aprovado: { label: 'Aprovado', color: 'bg-blue-500', icon: CheckCircle },
-  pago: { label: 'Pago', color: 'bg-green-500', icon: DollarSign },
-  cancelado: { label: 'Cancelado', color: 'bg-red-500', icon: XCircle },
+  parcial: { label: 'Parcial', color: 'bg-blue-500', icon: CircleDot },
+  atrasado: { label: 'Atrasado', color: 'bg-red-500', icon: AlertTriangle },
+  pago: { label: 'Pago', color: 'bg-green-500', icon: CheckCircle },
+  cancelado: { label: 'Cancelado', color: 'bg-muted-foreground', icon: XCircle },
 };
 
 export function FiadoList() {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
@@ -41,8 +66,14 @@ export function FiadoList() {
   const cancelFiadoSale = useCancelFiadoSale();
   const deleteFiadoSale = useDeleteFiadoSale();
 
-  const filteredSales = fiadoSales?.filter(sale => {
-    const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
+  // Enrich sales with effective status
+  const enrichedSales = fiadoSales?.map(sale => ({
+    ...sale,
+    effectiveStatus: getEffectiveStatus(sale),
+  }));
+
+  const filteredSales = enrichedSales?.filter(sale => {
+    const matchesStatus = statusFilter === 'all' || sale.effectiveStatus === statusFilter;
     const matchesSearch = !searchTerm ||
       sale.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.customer_phone?.includes(searchTerm) ||
@@ -62,21 +93,14 @@ export function FiadoList() {
     }
   };
 
-  const getDueDateColor = (dueDate: string | null, status: string) => {
-    if (!dueDate || status === 'pago' || status === 'cancelado') return '';
-    const date = new Date(dueDate + 'T12:00:00');
-    if (isPast(date) && !isToday(date)) return 'text-red-600 font-semibold';
-    if (isToday(date)) return 'text-orange-600 font-semibold';
-    return '';
-  };
-
   // Calculate summary stats
   const stats = {
-    pending: fiadoSales?.filter(s => s.status === 'pendente').length || 0,
-    approved: fiadoSales?.filter(s => s.status === 'aprovado').length || 0,
-    paid: fiadoSales?.filter(s => s.status === 'pago').length || 0,
-    totalPending: fiadoSales
-      ?.filter(s => s.status === 'pendente' || s.status === 'aprovado')
+    pendente: enrichedSales?.filter(s => s.effectiveStatus === 'pendente').length || 0,
+    parcial: enrichedSales?.filter(s => s.effectiveStatus === 'parcial').length || 0,
+    atrasado: enrichedSales?.filter(s => s.effectiveStatus === 'atrasado').length || 0,
+    pago: enrichedSales?.filter(s => s.effectiveStatus === 'pago').length || 0,
+    totalPending: enrichedSales
+      ?.filter(s => s.effectiveStatus !== 'pago' && s.effectiveStatus !== 'cancelado')
       .reduce((acc, s) => acc + Number(s.amount_pending), 0) || 0,
   };
 
@@ -84,47 +108,60 @@ export function FiadoList() {
     <>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card>
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+          <Card className="cursor-pointer hover:ring-2 hover:ring-yellow-500/50 transition-all" onClick={() => setStatusFilter('pendente')}>
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-1.5 md:p-2 rounded-full bg-yellow-500/10">
                   <Clock className="w-4 h-4 md:w-5 md:h-5 text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold">{stats.pending}</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.pendente}</p>
                   <p className="text-xs md:text-sm text-muted-foreground">Pendentes</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all" onClick={() => setStatusFilter('parcial')}>
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-1.5 md:p-2 rounded-full bg-blue-500/10">
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
+                  <CircleDot className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold">{stats.approved}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Aprovados</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.parcial}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Parcial</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer hover:ring-2 hover:ring-red-500/50 transition-all" onClick={() => setStatusFilter('atrasado')}>
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-full bg-red-500/10">
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-xl md:text-2xl font-bold">{stats.atrasado}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Atrasados</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="cursor-pointer hover:ring-2 hover:ring-green-500/50 transition-all" onClick={() => setStatusFilter('pago')}>
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-1.5 md:p-2 rounded-full bg-green-500/10">
-                  <DollarSign className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold">{stats.paid}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">Quitados</p>
+                  <p className="text-xl md:text-2xl font-bold">{stats.pago}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Pagos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all" onClick={() => setStatusFilter('all')}>
             <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-1.5 md:p-2 rounded-full bg-primary/10">
@@ -158,12 +195,13 @@ export function FiadoList() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as FilterType)}>
               <div className="overflow-x-auto -mx-2 px-2 pb-2">
-                <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-2xl md:grid-cols-5 mb-4">
+                <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-3xl md:grid-cols-6 mb-4">
                   <TabsTrigger value="all" className="text-xs md:text-sm">Todos</TabsTrigger>
                   <TabsTrigger value="pendente" className="text-xs md:text-sm">Pendentes</TabsTrigger>
-                  <TabsTrigger value="aprovado" className="text-xs md:text-sm">Aprovados</TabsTrigger>
+                  <TabsTrigger value="parcial" className="text-xs md:text-sm">Parcial</TabsTrigger>
+                  <TabsTrigger value="atrasado" className="text-xs md:text-sm">Atrasados</TabsTrigger>
                   <TabsTrigger value="pago" className="text-xs md:text-sm">Pagos</TabsTrigger>
                   <TabsTrigger value="cancelado" className="text-xs md:text-sm">Cancelados</TabsTrigger>
                 </TabsList>
@@ -181,13 +219,14 @@ export function FiadoList() {
                 ) : (
                   <div className="space-y-3">
                     {filteredSales?.map((sale) => {
-                      const status = statusConfig[sale.status] || statusConfig.pendente;
-                      const StatusIcon = status.icon;
-                      const dueDateColor = getDueDateColor(sale.due_date, sale.status);
+                      const effStatus = statusConfig[sale.effectiveStatus] || statusConfig.pendente;
+                      const StatusIcon = effStatus.icon;
                       return (
                         <div
                           key={sale.id}
-                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                          className={`border rounded-lg p-4 hover:bg-muted/50 transition-colors ${
+                            sale.effectiveStatus === 'atrasado' ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/10' : ''
+                          }`}
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div className="flex-1">
@@ -195,10 +234,10 @@ export function FiadoList() {
                                 <h3 className="font-semibold">{sale.customer_name}</h3>
                                 <Badge
                                   variant="secondary"
-                                  className={`${status.color} text-white`}
+                                  className={`${effStatus.color} text-white`}
                                 >
                                   <StatusIcon className="w-3 h-3 mr-1" />
-                                  {status.label}
+                                  {effStatus.label}
                                 </Badge>
                               </div>
                               <div className="text-sm text-muted-foreground space-y-1">
@@ -206,17 +245,17 @@ export function FiadoList() {
                                   {format(new Date(sale.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                 </p>
                                 {sale.due_date && (
-                                  <p className={`flex items-center gap-1 ${dueDateColor}`}>
+                                  <p className={`flex items-center gap-1 ${
+                                    sale.effectiveStatus === 'atrasado' ? 'text-red-600 font-semibold' : ''
+                                  }`}>
                                     <CalendarIcon className="w-3 h-3" />
                                     Vence: {format(new Date(sale.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                                    {sale.effectiveStatus === 'atrasado' && ' (Atrasado!)'}
                                   </p>
                                 )}
                                 <p>
                                   {sale.installments}x de R$ {(Number(sale.total) / sale.installments).toFixed(2)}
                                 </p>
-                                {sale.customer_phone && (
-                                  <p>Tel: {sale.customer_phone}</p>
-                                )}
                               </div>
                             </div>
 
@@ -231,7 +270,7 @@ export function FiadoList() {
                                   </span>
                                 </div>
                               )}
-                              {Number(sale.amount_pending) > 0 && sale.status !== 'pago' && (
+                              {Number(sale.amount_pending) > 0 && sale.effectiveStatus !== 'pago' && (
                                 <div className="text-sm">
                                   <span className="text-orange-600">
                                     Pendente: R$ {Number(sale.amount_pending).toFixed(2)}
@@ -241,7 +280,7 @@ export function FiadoList() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                              {Number(sale.amount_pending) > 0 && sale.status !== 'cancelado' && sale.status !== 'pago' && (
+                              {Number(sale.amount_pending) > 0 && sale.effectiveStatus !== 'cancelado' && sale.effectiveStatus !== 'pago' && (
                                 <Button
                                   variant="default"
                                   size="sm"
@@ -254,7 +293,7 @@ export function FiadoList() {
                                 </Button>
                               )}
 
-                              {sale.status !== 'cancelado' && sale.status !== 'pago' && (
+                              {sale.effectiveStatus !== 'cancelado' && sale.effectiveStatus !== 'pago' && (
                                 <>
                                   <Button
                                     variant="outline"
