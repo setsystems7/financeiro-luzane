@@ -10,14 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Store, Bell, Plus, Edit, Loader2, Users, Lock, Eye, EyeOff, HelpCircle, Save, Download } from 'lucide-react';
+import { Store, Bell, Plus, Edit, Loader2, Users, Lock, Eye, EyeOff, HelpCircle, Save, Download, Database } from 'lucide-react';
 import { type SupportSection } from '@/components/layout/SupportButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfiles, useCreateUser, useUpdateProfile, useUpdatePassword } from '@/hooks/useUsers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useProducts } from '@/hooks/useProducts';
+import { useSales } from '@/hooks/useSales';
+import { useExpenses, useReceivables } from '@/hooks/useFinancial';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -26,6 +30,12 @@ export default function Settings() {
   const createUser = useCreateUser();
   const updateProfile = useUpdateProfile();
   const updatePassword = useUpdatePassword();
+
+  // Data for backup
+  const { data: products = [] } = useProducts();
+  const { data: sales = [] } = useSales();
+  const { data: expenses = [] } = useExpenses();
+  const { data: receivables = [] } = useReceivables();
 
   // Store settings form
   const [storeName, setStoreName] = useState(settings.storeName);
@@ -65,13 +75,8 @@ export default function Settings() {
       toast.error('A senha deve ter pelo menos 6 caracteres');
       return;
     }
-
     createUser.mutate(
-      {
-        email: newUserEmail,
-        password: newUserPassword,
-        fullName: newUserName,
-      },
+      { email: newUserEmail, password: newUserPassword, fullName: newUserName },
       {
         onSuccess: () => {
           setIsCreateUserOpen(false);
@@ -94,8 +99,6 @@ export default function Settings() {
 
   const handleUpdateUser = async () => {
     if (!selectedProfile) return;
-
-    // Validate password if provided
     if (editPassword) {
       if (editPassword !== editConfirmPassword) {
         toast.error('As senhas não conferem');
@@ -106,16 +109,10 @@ export default function Settings() {
         return;
       }
     }
-
     updateProfile.mutate(
-      {
-        id: selectedProfile.id,
-        full_name: editName,
-        role: editRole,
-      },
+      { id: selectedProfile.id, full_name: editName, role: editRole },
       {
         onSuccess: async () => {
-          // If password was provided, update it (only works for current user)
           if (editPassword && selectedProfile.user_id === user?.id) {
             await updatePassword.mutateAsync({ newPassword: editPassword });
           } else if (editPassword) {
@@ -141,7 +138,6 @@ export default function Settings() {
       toast.error('A senha deve ter pelo menos 6 caracteres');
       return;
     }
-
     updatePassword.mutate(
       { newPassword },
       {
@@ -160,11 +156,73 @@ export default function Settings() {
     updateSettings({ [key]: value } as any);
   };
 
+  const handleExportBackup = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Products sheet
+      const productsData = products.map(p => ({
+        'Nome': p.name,
+        'Categoria': p.category_name || '-',
+        'Cor': p.color_name || '-',
+        'Fornecedor': p.supplier_name || '-',
+        'Preço Custo': p.cost_price,
+        'Preço Venda': p.sale_price,
+        'Estoque Total': p.sizes.reduce((sum, s) => sum + s.quantity, 0),
+        'Estoque Mínimo': p.min_stock,
+        'Ativo': p.is_active ? 'Sim' : 'Não',
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(productsData), 'Produtos');
+
+      // Sales sheet
+      const salesData = sales.map(s => ({
+        'Número': s.sale_number,
+        'Data': format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+        'Cliente': s.customer_name || '-',
+        'Pagamento': s.payment_method,
+        'Subtotal': Number(s.total),
+        'Desconto': Number(s.discount || 0),
+        'Total': Number(s.final_total),
+        'Status': s.status,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData), 'Vendas');
+
+      // Expenses sheet
+      const expensesData = expenses.map(e => ({
+        'Descrição': e.description,
+        'Categoria': e.category || '-',
+        'Valor': Number(e.amount),
+        'Juros': Number(e.interest_amount || 0),
+        'Vencimento': format(new Date(e.due_date), 'dd/MM/yyyy'),
+        'Status': e.status,
+        'Pago em': e.paid_date ? format(new Date(e.paid_date), 'dd/MM/yyyy') : '-',
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expensesData), 'Despesas');
+
+      // Receivables sheet
+      const receivablesData = receivables.map(r => ({
+        'Descrição': r.description,
+        'Valor Bruto': Number(r.amount),
+        'Taxa': Number(r.fee || 0),
+        'Valor Líquido': Number(r.net_amount),
+        'Vencimento': format(new Date(r.due_date), 'dd/MM/yyyy'),
+        'Recebido': r.is_received ? 'Sim' : 'Não',
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(receivablesData), 'Recebíveis');
+
+      XLSX.writeFile(wb, `backup-luzane-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      toast.success('Backup exportado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao gerar backup');
+    }
+  };
+
   const settingsSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Configurações', icon: HelpCircle, content: 'O módulo de Configurações permite personalizar o sistema: dados da loja, gerenciamento de usuários, alteração de senha e preferências de notificação.' },
+    { title: 'O que é o módulo Configurações', icon: HelpCircle, content: 'O módulo de Configurações permite personalizar o sistema: dados da loja, gerenciamento de usuários, alteração de senha, backup de dados e preferências de notificação.' },
     { title: 'Como alterar dados da loja', icon: Store, content: 'Na seção "Dados da Loja", preencha o nome da loja, CNPJ e endereço. Clique em "Salvar Alterações" para gravar. Esses dados são usados em etiquetas e relatórios.' },
     { title: 'Como gerenciar usuários', icon: Users, content: 'Na seção "Gerenciar Usuários", veja a lista de todos os usuários do sistema. Clique em "Novo Usuário" para cadastrar. Use o botão de editar para alterar nome e função (Administrador ou Usuário).' },
     { title: 'Como alterar senha', icon: Lock, content: 'Na seção "Alterar Minha Senha", insira a nova senha e confirme. A senha deve ter no mínimo 6 caracteres. Cada usuário só pode alterar a própria senha.' },
+    { title: 'Como fazer backup dos dados', icon: Database, content: 'Clique em "Exportar Backup" para baixar um arquivo Excel com todos os dados do sistema: produtos, vendas, despesas e recebíveis. Recomendamos fazer backup regularmente.' },
     { title: 'Notificações', icon: Bell, content: 'Configure quais notificações você deseja receber: alerta de estoque baixo, resumo diário de vendas e alerta de contas a vencer. Ative ou desative cada uma com o toggle.' },
   ];
 
@@ -192,25 +250,39 @@ export default function Settings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input
-                  id="cnpj"
-                  value={cnpj}
-                  onChange={(e) => setCnpj(e.target.value)}
-                  placeholder="00.000.000/0000-00"
-                />
+                <Input id="cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Rua, número, bairro, cidade"
-              />
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Rua, número, bairro, cidade" />
             </div>
             <Button variant="pink" onClick={handleSaveStoreSettings}>
               Salvar Alterações
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Backup / Export */}
+        <Card variant="elevated">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Database className="w-5 h-5 text-pink-dark" />
+              </div>
+              <div>
+                <CardTitle>Backup de Dados</CardTitle>
+                <CardDescription>Exporte todos os dados do sistema em Excel</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              O backup inclui: produtos ({products.length}), vendas ({sales.length}), despesas ({expenses.length}) e recebíveis ({receivables.length}).
+            </p>
+            <Button variant="pink" onClick={handleExportBackup}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Backup
             </Button>
           </CardContent>
         </Card>
@@ -241,12 +313,7 @@ export default function Settings() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="pr-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
-                  >
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -262,12 +329,7 @@ export default function Settings() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pr-10"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
-                  >
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -275,13 +337,8 @@ export default function Settings() {
             </div>
             <Button variant="pink" onClick={handleChangePassword} disabled={updatePassword.isPending}>
               {updatePassword.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Atualizando...
-                </>
-              ) : (
-                'Atualizar Senha'
-              )}
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Atualizando...</>
+              ) : 'Atualizar Senha'}
             </Button>
           </CardContent>
         </Card>
@@ -313,20 +370,11 @@ export default function Settings() {
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2">
                       <Label>Nome Completo</Label>
-                      <Input
-                        placeholder="Nome do usuário"
-                        value={newUserName}
-                        onChange={(e) => setNewUserName(e.target.value)}
-                      />
+                      <Input placeholder="Nome do usuário" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>E-mail *</Label>
-                      <Input
-                        type="email"
-                        placeholder="email@exemplo.com"
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                      />
+                      <Input type="email" placeholder="email@exemplo.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>Senha *</Label>
@@ -338,29 +386,15 @@ export default function Settings() {
                           onChange={(e) => setNewUserPassword(e.target.value)}
                           className="pr-10"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowCreatePassword(!showCreatePassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          tabIndex={-1}
-                        >
+                        <button type="button" onClick={() => setShowCreatePassword(!showCreatePassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" tabIndex={-1}>
                           {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
-                      <Button variant="outline" onClick={() => setIsCreateUserOpen(false)}>
-                        Cancelar
-                      </Button>
+                      <Button variant="outline" onClick={() => setIsCreateUserOpen(false)}>Cancelar</Button>
                       <Button variant="pink" onClick={handleCreateUser} disabled={createUser.isPending}>
-                        {createUser.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Cadastrando...
-                          </>
-                        ) : (
-                          'Cadastrar'
-                        )}
+                        {createUser.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Cadastrando...</> : 'Cadastrar'}
                       </Button>
                     </div>
                   </div>
@@ -428,55 +462,29 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label>Função</Label>
                 <Select value={editRole} onValueChange={setEditRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">Usuário</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <Separator className="my-4" />
-
               <div className="space-y-2">
                 <Label>Nova Senha (opcional)</Label>
-                <Input
-                  type="password"
-                  placeholder="Deixe vazio para manter a senha atual"
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                />
+                <Input type="password" placeholder="Deixe vazio para manter a senha atual" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Confirmar Nova Senha</Label>
-                <Input
-                  type="password"
-                  placeholder="Confirme a nova senha"
-                  value={editConfirmPassword}
-                  onChange={(e) => setEditConfirmPassword(e.target.value)}
-                />
+                <Input type="password" placeholder="Confirme a nova senha" value={editConfirmPassword} onChange={(e) => setEditConfirmPassword(e.target.value)} />
                 {selectedProfile?.user_id !== user?.id && editPassword && (
-                  <p className="text-xs text-muted-foreground">
-                    Nota: A senha só pode ser alterada pelo próprio usuário
-                  </p>
+                  <p className="text-xs text-muted-foreground">Nota: A senha só pode ser alterada pelo próprio usuário</p>
                 )}
               </div>
-
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>
-                  Cancelar
-                </Button>
+                <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>Cancelar</Button>
                 <Button variant="pink" onClick={handleUpdateUser} disabled={updateProfile.isPending}>
-                  {updateProfile.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar'
-                  )}
+                  {updateProfile.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : 'Salvar'}
                 </Button>
               </div>
             </div>
@@ -500,9 +508,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-foreground">Alerta de estoque baixo</p>
-                <p className="text-sm text-muted-foreground">
-                  Receba notificação quando produtos atingirem estoque mínimo
-                </p>
+                <p className="text-sm text-muted-foreground">Receba notificação quando produtos atingirem estoque mínimo</p>
               </div>
               <Switch checked={settings.lowStockAlert} onCheckedChange={(v) => handleNotificationChange('lowStockAlert', v)} />
             </div>
