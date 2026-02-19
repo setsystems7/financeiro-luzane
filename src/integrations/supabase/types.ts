@@ -439,6 +439,7 @@ export type Database = {
           customer_cpf: string | null
           customer_name: string
           customer_phone: string | null
+          due_date: string | null
           id: string
           installments: number
           notes: string | null
@@ -456,6 +457,7 @@ export type Database = {
           customer_cpf?: string | null
           customer_name: string
           customer_phone?: string | null
+          due_date?: string | null
           id?: string
           installments?: number
           notes?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           customer_cpf?: string | null
           customer_name?: string
           customer_phone?: string | null
+          due_date?: string | null
           id?: string
           installments?: number
           notes?: string | null

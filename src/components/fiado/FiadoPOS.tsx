@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, forwardRef } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Search,
   Plus,
@@ -17,11 +20,14 @@ import {
   FileText,
   Phone,
   CreditCard,
-  ShoppingBag
+  ShoppingBag,
+  CalendarIcon
 } from 'lucide-react';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useCreateFiadoSale, FiadoSaleItem } from '@/hooks/useFiado';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface CartItem extends FiadoSaleItem {
   id: string;
@@ -45,6 +51,7 @@ export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function Fiado
   const [customerCpf, setCustomerCpf] = useState('');
   const [installments, setInstallments] = useState('1');
   const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((acc, item) => acc + item.total, 0);
@@ -118,12 +125,9 @@ export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function Fiado
     const newCart = cart.map(item => {
       if (item.id === itemId) {
         const newQty = Math.max(1, item.quantity + delta);
-
-        // Check stock
         const product = products?.find(p => p.id === item.product_id);
         const size = product?.sizes?.find(s => s.size === item.size);
         const maxQty = size?.quantity || 0;
-
         const finalQty = Math.min(newQty, maxQty);
         return {
           ...item,
@@ -147,14 +151,14 @@ export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function Fiado
     setCustomerCpf('');
     setInstallments('1');
     setNotes('');
+    setDueDate(undefined);
   };
 
   const handleFinalizeSale = async () => {
-    if (cart.length === 0) {
-      return;
-    }
-
-    if (!customerName.trim()) {
+    if (cart.length === 0) return;
+    if (!customerName.trim()) return;
+    if (!dueDate) {
+      toast.error('Selecione a data de vencimento');
       return;
     }
 
@@ -176,13 +180,14 @@ export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function Fiado
       total: cartTotal,
       installments: parseInt(installments) || 1,
       notes: notes.trim() || undefined,
+      due_date: format(dueDate, 'yyyy-MM-dd'),
     });
 
     clearCart();
     onSaleComplete();
   };
 
-  const isFormValid = cart.length > 0 && customerName.trim().length > 0;
+  const isFormValid = cart.length > 0 && customerName.trim().length > 0 && !!dueDate;
 
   return (
     <div ref={ref} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -318,6 +323,35 @@ export const FiadoPOS = forwardRef<HTMLDivElement, FiadoPOSProps>(function Fiado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label>Data de Vencimento *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dueDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate}
+                    onSelect={setDueDate}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div>
               <Label htmlFor="installments">Parcelas (Promissória)</Label>
               <Select value={installments} onValueChange={setInstallments}>
