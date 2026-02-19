@@ -197,13 +197,12 @@ export function FiadoList() {
           <CardContent>
             <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as FilterType)}>
               <div className="overflow-x-auto -mx-2 px-2 pb-2">
-                <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-3xl md:grid-cols-6 mb-4">
+                <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-2xl md:grid-cols-5 mb-4">
                   <TabsTrigger value="all" className="text-xs md:text-sm">Todos</TabsTrigger>
                   <TabsTrigger value="pendente" className="text-xs md:text-sm">Pendentes</TabsTrigger>
                   <TabsTrigger value="parcial" className="text-xs md:text-sm">Parcial</TabsTrigger>
                   <TabsTrigger value="atrasado" className="text-xs md:text-sm">Atrasados</TabsTrigger>
                   <TabsTrigger value="pago" className="text-xs md:text-sm">Pagos</TabsTrigger>
-                  <TabsTrigger value="cancelado" className="text-xs md:text-sm">Cancelados</TabsTrigger>
                 </TabsList>
               </div>
 
