@@ -13,12 +13,17 @@ import {
   DollarSign,
   Eye,
   Check,
-  X
+  X,
+  Pencil,
+  Trash2,
+  Calendar as CalendarIcon
 } from 'lucide-react';
-import { useFiadoSales, useApproveFiadoSale, useCancelFiadoSale } from '@/hooks/useFiado';
+import { useFiadoSales, useApproveFiadoSale, useCancelFiadoSale, useDeleteFiadoSale } from '@/hooks/useFiado';
 import { FiadoDetailsDialog } from './FiadoDetailsDialog';
-import { format } from 'date-fns';
+import { FiadoEditDialog } from './FiadoEditDialog';
+import { format, isPast, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   pendente: { label: 'Pendente', color: 'bg-yellow-500', icon: Clock },
@@ -31,10 +36,12 @@ export function FiadoList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
 
   const { data: fiadoSales, isLoading } = useFiadoSales();
   const approveFiadoSale = useApproveFiadoSale();
   const cancelFiadoSale = useCancelFiadoSale();
+  const deleteFiadoSale = useDeleteFiadoSale();
 
   const filteredSales = fiadoSales?.filter(sale => {
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
@@ -53,6 +60,20 @@ export function FiadoList() {
     if (confirm('Tem certeza que deseja cancelar esta venda? O estoque será devolvido.')) {
       await cancelFiadoSale.mutateAsync(saleId);
     }
+  };
+
+  const handleDelete = async (saleId: string) => {
+    if (confirm('Tem certeza que deseja EXCLUIR esta venda? Esta ação não pode ser desfeita.')) {
+      await deleteFiadoSale.mutateAsync(saleId);
+    }
+  };
+
+  const getDueDateColor = (dueDate: string | null, status: string) => {
+    if (!dueDate || status === 'pago' || status === 'cancelado') return '';
+    const date = new Date(dueDate + 'T12:00:00');
+    if (isPast(date) && !isToday(date)) return 'text-red-600 font-semibold';
+    if (isToday(date)) return 'text-orange-600 font-semibold';
+    return '';
   };
 
   // Calculate summary stats
@@ -168,6 +189,7 @@ export function FiadoList() {
                     {filteredSales?.map((sale) => {
                       const status = statusConfig[sale.status] || statusConfig.pendente;
                       const StatusIcon = status.icon;
+                      const dueDateColor = getDueDateColor(sale.due_date, sale.status);
                       return (
                         <div
                           key={sale.id}
@@ -189,6 +211,12 @@ export function FiadoList() {
                                 <p>
                                   {format(new Date(sale.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                 </p>
+                                {sale.due_date && (
+                                  <p className={`flex items-center gap-1 ${dueDateColor}`}>
+                                    <CalendarIcon className="w-3 h-3" />
+                                    Vence: {format(new Date(sale.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                                  </p>
+                                )}
                                 <p>
                                   {sale.installments}x de R$ {(Number(sale.total) / sale.installments).toFixed(2)}
                                 </p>
@@ -229,6 +257,18 @@ export function FiadoList() {
                                 <span className="hidden sm:inline">Detalhes</span>
                               </Button>
 
+                              {sale.status !== 'cancelado' && sale.status !== 'pago' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingSaleId(sale.id)}
+                                  className="text-xs md:text-sm"
+                                >
+                                  <Pencil className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                  <span className="hidden sm:inline">Editar</span>
+                                </Button>
+                              )}
+
                               {sale.status === 'pendente' && (
                                 <>
                                   <Button
@@ -253,6 +293,16 @@ export function FiadoList() {
                                   </Button>
                                 </>
                               )}
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(sale.id)}
+                                disabled={deleteFiadoSale.isPending}
+                                className="text-xs md:text-sm text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -272,6 +322,15 @@ export function FiadoList() {
           saleId={selectedSaleId}
           open={!!selectedSaleId}
           onClose={() => setSelectedSaleId(null)}
+        />
+      )}
+
+      {/* Edit Dialog */}
+      {editingSaleId && (
+        <FiadoEditDialog
+          saleId={editingSaleId}
+          open={!!editingSaleId}
+          onClose={() => setEditingSaleId(null)}
         />
       )}
     </>

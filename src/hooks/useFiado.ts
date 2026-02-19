@@ -21,6 +21,7 @@ export interface CreateFiadoSaleData {
   total: number;
   installments: number;
   notes?: string;
+  due_date?: string;
 }
 
 export interface FiadoPaymentData {
@@ -44,6 +45,7 @@ export interface FiadoSale {
   approved_by: string | null;
   notes: string | null;
   user_id: string | null;
+  due_date: string | null;
   created_at: string;
   updated_at: string;
   fiado_sale_items?: FiadoSaleItemRow[];
@@ -153,7 +155,6 @@ export function useCreateFiadoSale() {
 
   return useMutation({
     mutationFn: async (data: CreateFiadoSaleData) => {
-      // Create the fiado sale
       const { data: fiadoSale, error: saleError } = await supabase
         .from('fiado_sales')
         .insert({
@@ -165,6 +166,7 @@ export function useCreateFiadoSale() {
           amount_pending: data.total,
           installments: data.installments,
           notes: data.notes || null,
+          due_date: data.due_date || null,
           user_id: user?.id || null,
           status: 'pendente',
         })
@@ -191,10 +193,9 @@ export function useCreateFiadoSale() {
 
       if (itemsError) throw itemsError;
 
-      // Update stock for each item (deduct immediately)
+      // Update stock for each item
       for (const item of data.items) {
         if (item.product_size_id) {
-          // Get current quantity
           const { data: sizeData } = await supabase
             .from('product_sizes')
             .select('quantity')
@@ -208,7 +209,6 @@ export function useCreateFiadoSale() {
               .update({ quantity: newQuantity })
               .eq('id', item.product_size_id);
 
-            // Record stock movement
             await supabase
               .from('stock_movements')
               .insert({
@@ -223,12 +223,27 @@ export function useCreateFiadoSale() {
         }
       }
 
+      // Create receivable entry for the fiado sale
+      await supabase
+        .from('receivables')
+        .insert({
+          sale_id: null,
+          description: `Fiado - ${data.customer_name}`,
+          amount: data.total,
+          fee: 0,
+          net_amount: data.total,
+          due_date: data.due_date || new Date().toISOString().split('T')[0],
+          is_received: false,
+          notes: `Venda fiado - ${data.installments}x - ID: ${fiadoSale.id}`,
+        });
+
       return fiadoSale;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
       toast.success('Venda fiado registrada com sucesso!');
     },
     onError: (error: any) => {
@@ -245,7 +260,6 @@ export function useApproveFiadoSale() {
 
   return useMutation({
     mutationFn: async (fiadoSaleId: string) => {
-      // Get the fiado sale details
       const { data: fiadoSale, error: fetchError } = await supabase
         .from('fiado_sales')
         .select('*')
@@ -254,7 +268,6 @@ export function useApproveFiadoSale() {
 
       if (fetchError) throw fetchError;
 
-      // Update status to approved
       const { error: updateError } = await supabase
         .from('fiado_sales')
         .update({
@@ -266,34 +279,12 @@ export function useApproveFiadoSale() {
 
       if (updateError) throw updateError;
 
-      // Create receivables for each installment
-      const installmentAmount = Number(fiadoSale.amount_pending) / fiadoSale.installments;
-      const today = new Date();
-
-      for (let i = 0; i < fiadoSale.installments; i++) {
-        const dueDate = new Date(today);
-        dueDate.setMonth(dueDate.getMonth() + i + 1); // First installment due next month
-
-        await supabase
-          .from('receivables')
-          .insert({
-            sale_id: null,
-            description: `Fiado - ${fiadoSale.customer_name} (${i + 1}/${fiadoSale.installments})`,
-            amount: installmentAmount,
-            fee: 0,
-            net_amount: installmentAmount,
-            due_date: dueDate.toISOString().split('T')[0],
-            is_received: false,
-            notes: `Venda fiado ID: ${fiadoSaleId}`,
-          });
-      }
-
       return fiadoSale;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
       queryClient.invalidateQueries({ queryKey: ['receivables'] });
-      toast.success('Venda fiado aprovada! Parcelas criadas no financeiro.');
+      toast.success('Venda fiado aprovada!');
     },
     onError: (error: any) => {
       console.error('Error approving fiado sale:', error);
@@ -309,7 +300,6 @@ export function useRegisterFiadoPayment() {
 
   return useMutation({
     mutationFn: async (data: FiadoPaymentData) => {
-      // Get current fiado sale
       const { data: fiadoSale, error: fetchError } = await supabase
         .from('fiado_sales')
         .select('*')
@@ -318,7 +308,6 @@ export function useRegisterFiadoPayment() {
 
       if (fetchError) throw fetchError;
 
-      // Create payment record
       const { error: paymentError } = await supabase
         .from('fiado_payments')
         .insert({
@@ -331,7 +320,6 @@ export function useRegisterFiadoPayment() {
 
       if (paymentError) throw paymentError;
 
-      // Update amounts in fiado sale
       const newAmountPaid = Number(fiadoSale.amount_paid) + data.amount;
       const newAmountPending = Number(fiadoSale.total) - newAmountPaid;
       const newStatus = newAmountPending <= 0 ? 'pago' : fiadoSale.status;
@@ -359,7 +347,7 @@ export function useRegisterFiadoPayment() {
           due_date: new Date().toISOString().split('T')[0],
           is_received: true,
           received_date: new Date().toISOString().split('T')[0],
-          notes: `Pagamento parcial - ${data.payment_method}`,
+          notes: `Pagamento ${newAmountPending <= 0 ? 'total' : 'parcial'} - ${data.payment_method}`,
         });
 
       return { newAmountPaid, newAmountPending };
@@ -367,6 +355,7 @@ export function useRegisterFiadoPayment() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
       queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       if (result.newAmountPending <= 0) {
         toast.success('Pagamento registrado! Venda fiado quitada.');
       } else {
@@ -387,7 +376,6 @@ export function useCancelFiadoSale() {
 
   return useMutation({
     mutationFn: async (fiadoSaleId: string) => {
-      // Get the fiado sale with items
       const { data: fiadoSale, error: fetchError } = await supabase
         .from('fiado_sales')
         .select(`
@@ -415,7 +403,6 @@ export function useCancelFiadoSale() {
               .update({ quantity: newQuantity })
               .eq('id', item.product_size_id);
 
-            // Record stock movement (return)
             await supabase
               .from('stock_movements')
               .insert({
@@ -430,7 +417,6 @@ export function useCancelFiadoSale() {
         }
       }
 
-      // Update status to cancelled
       const { error: updateError } = await supabase
         .from('fiado_sales')
         .update({ status: 'cancelado' })
@@ -449,6 +435,123 @@ export function useCancelFiadoSale() {
     onError: (error: any) => {
       console.error('Error cancelling fiado sale:', error);
       toast.error('Erro ao cancelar venda fiado');
+    },
+  });
+}
+
+// Hook to update a fiado sale
+export function useUpdateFiadoSale() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { id: string; customer_name?: string; customer_phone?: string; customer_cpf?: string; due_date?: string; notes?: string; installments?: number }) => {
+      const updateData: Record<string, any> = {};
+      if (data.customer_name !== undefined) updateData.customer_name = data.customer_name;
+      if (data.customer_phone !== undefined) updateData.customer_phone = data.customer_phone || null;
+      if (data.customer_cpf !== undefined) updateData.customer_cpf = data.customer_cpf || null;
+      if (data.due_date !== undefined) updateData.due_date = data.due_date || null;
+      if (data.notes !== undefined) updateData.notes = data.notes || null;
+      if (data.installments !== undefined) updateData.installments = data.installments;
+
+      const { error } = await supabase
+        .from('fiado_sales')
+        .update(updateData)
+        .eq('id', data.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['fiado-sale'] });
+      toast.success('Venda fiado atualizada!');
+    },
+    onError: (error: any) => {
+      console.error('Error updating fiado sale:', error);
+      toast.error('Erro ao atualizar venda fiado');
+    },
+  });
+}
+
+// Hook to delete a fiado sale
+export function useDeleteFiadoSale() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (fiadoSaleId: string) => {
+      // Get the fiado sale with items to return stock
+      const { data: fiadoSale, error: fetchError } = await supabase
+        .from('fiado_sales')
+        .select(`
+          *,
+          fiado_sale_items(*)
+        `)
+        .eq('id', fiadoSaleId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Return items to stock if not cancelled already
+      if (fiadoSale.status !== 'cancelado') {
+        for (const item of fiadoSale.fiado_sale_items || []) {
+          if (item.product_size_id) {
+            const { data: sizeData } = await supabase
+              .from('product_sizes')
+              .select('quantity')
+              .eq('id', item.product_size_id)
+              .single();
+
+            if (sizeData) {
+              const newQuantity = sizeData.quantity + item.quantity;
+              await supabase
+                .from('product_sizes')
+                .update({ quantity: newQuantity })
+                .eq('id', item.product_size_id);
+
+              await supabase
+                .from('stock_movements')
+                .insert({
+                  product_id: item.product_id,
+                  product_size_id: item.product_size_id,
+                  type: 'entrada',
+                  quantity: item.quantity,
+                  notes: `Exclusão Fiado - ${fiadoSale.customer_name}`,
+                  user_id: user?.id || null,
+                });
+            }
+          }
+        }
+      }
+
+      // Delete payments first (cascade should handle but being safe)
+      await supabase
+        .from('fiado_payments')
+        .delete()
+        .eq('fiado_sale_id', fiadoSaleId);
+
+      // Delete items
+      await supabase
+        .from('fiado_sale_items')
+        .delete()
+        .eq('fiado_sale_id', fiadoSaleId);
+
+      // Delete the sale
+      const { error } = await supabase
+        .from('fiado_sales')
+        .delete()
+        .eq('id', fiadoSaleId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      toast.success('Venda fiado excluída com sucesso!');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting fiado sale:', error);
+      toast.error('Erro ao excluir venda fiado');
     },
   });
 }

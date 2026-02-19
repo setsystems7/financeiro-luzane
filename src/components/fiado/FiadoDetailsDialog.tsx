@@ -124,6 +124,16 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
                     {format(new Date(sale.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
                 </div>
+                {sale.due_date && (
+                  <div>
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> Vencimento:
+                    </span>
+                    <p className="font-medium text-orange-600">
+                      {format(new Date(sale.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
