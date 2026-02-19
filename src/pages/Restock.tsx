@@ -22,6 +22,9 @@ import {
   AlertCircle,
   TrendingDown,
   Filter,
+  Flame,
+  Zap,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type SupportSection } from '@/components/layout/SupportButton';
@@ -53,6 +56,33 @@ function formatCurrency(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Velocity indicator: how fast the product sells relative to others
+function getVelocityInfo(dailyDemand: number, maxDemand: number) {
+  if (dailyDemand === 0) return { label: 'Parado', icon: 'parado', level: 0 };
+  const ratio = maxDemand > 0 ? dailyDemand / maxDemand : 0;
+  if (ratio >= 0.6) return { label: 'Alta saída', icon: 'alta', level: 3 };
+  if (ratio >= 0.3) return { label: 'Média saída', icon: 'media', level: 2 };
+  return { label: 'Baixa saída', icon: 'baixa', level: 1 };
+}
+
+function VelocityBadge({ dailyDemand, maxDemand }: { dailyDemand: number; maxDemand: number }) {
+  const info = getVelocityInfo(dailyDemand, maxDemand);
+  if (info.level === 0) return <span className="text-xs text-muted-foreground">Parado</span>;
+  return (
+    <div className={cn(
+      "flex items-center gap-1 text-xs font-medium",
+      info.level === 3 && "text-destructive",
+      info.level === 2 && "text-warning",
+      info.level === 1 && "text-muted-foreground",
+    )}>
+      {info.level === 3 && <Flame className="w-3 h-3" />}
+      {info.level === 2 && <Zap className="w-3 h-3" />}
+      {info.level === 1 && <Activity className="w-3 h-3" />}
+      {info.label}
+    </div>
+  );
+}
+
 export default function Restock() {
   const { data: restockData, isLoading } = useRestockCalculations();
   const [search, setSearch] = useState('');
@@ -79,7 +109,16 @@ export default function Restock() {
     const totalUnidades = products.reduce((s, p) => s + p.currentStock, 0);
     const valorEstoque = products.reduce((s, p) => s + p.stockValue, 0);
     const custoReposicao = products.filter(p => p.suggestedQuantity > 0).reduce((s, p) => s + p.estimatedCost, 0);
-    return { semEstoque, critico, atencao, ok, totalUnidades, valorEstoque, custoReposicao };
+    const maxDemand = Math.max(...products.map(p => p.dailyDemand), 0);
+    return { semEstoque, critico, atencao, ok, totalUnidades, valorEstoque, custoReposicao, maxDemand };
+  }, [products]);
+
+  // Urgent restock: products with sales activity but low/no stock (prioritize by demand)
+  const urgentRestock = useMemo(() => {
+    return products
+      .filter(p => p.dailyDemand > 0 && (p.currentStock === 0 || (p.daysUntilStockout !== null && p.daysUntilStockout <= 7)))
+      .sort((a, b) => b.dailyDemand - a.dailyDemand)
+      .slice(0, 8);
   }, [products]);
 
   // Filtered and sorted products
@@ -256,6 +295,71 @@ export default function Restock() {
             )}
           </div>
 
+          {/* Urgent Restock - Products selling but low/no stock */}
+          {urgentRestock.length > 0 && (
+            <Card className="border-2 border-destructive/40 bg-destructive/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-destructive" />
+                  Reposição Urgente — Produtos com saída e estoque baixo
+                </CardTitle>
+                <CardDescription>
+                  Estes produtos estão vendendo mas acabando. Priorize a compra por velocidade de saída.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {urgentRestock.map(product => {
+                    const coverageDays = product.dailyDemand > 0
+                      ? Math.round(product.currentStock / product.dailyDemand)
+                      : 0;
+                    const totalSold30d = Math.round(product.dailyDemand * 30);
+                    return (
+                      <div
+                        key={product.productId}
+                        className="p-3 rounded-lg border bg-card"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <p className="font-medium text-sm truncate flex-1" title={product.productName}>
+                            {product.productName}
+                          </p>
+                          <VelocityBadge dailyDemand={product.dailyDemand} maxDemand={summary.maxDemand} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Estoque atual</span>
+                            <span className={cn("font-bold", product.currentStock === 0 ? "text-destructive" : "text-warning")}>
+                              {product.currentStock} un
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Vendas/30 dias</span>
+                            <span className="font-medium">{totalSold30d} un</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Acaba em</span>
+                            <span className={cn(
+                              "font-bold",
+                              coverageDays <= 3 ? "text-destructive" : "text-warning"
+                            )}>
+                              {product.currentStock === 0 ? 'Esgotado!' : `${coverageDays} dias`}
+                            </span>
+                          </div>
+                          {product.suggestedQuantity > 0 && (
+                            <div className="flex justify-between text-xs pt-1 border-t">
+                              <span className="text-muted-foreground">Repor</span>
+                              <span className="font-medium">{product.suggestedQuantity} un · {formatCurrency(product.estimatedCost)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -373,7 +477,10 @@ export default function Restock() {
                             </TableCell>
                             <TableCell className="text-center text-sm hidden sm:table-cell">
                               {product.dailyDemand > 0 ? (
-                                <span className="font-medium">{product.dailyDemand.toFixed(1)}</span>
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="font-medium">{product.dailyDemand.toFixed(1)}</span>
+                                  <VelocityBadge dailyDemand={product.dailyDemand} maxDemand={summary.maxDemand} />
+                                </div>
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
