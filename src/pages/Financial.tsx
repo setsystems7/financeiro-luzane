@@ -462,9 +462,7 @@ export default function Financial() {
                                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        if (confirm('Tem certeza que deseja estornar esta venda? O estoque será devolvido.')) {
-                                          cancelSale.mutate(item.sale_id!);
-                                        }
+                                        setConfirmCancelSaleId(item.sale_id!);
                                       }}
                                       disabled={cancelSale.isPending}
                                     >

@@ -7,6 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip
+} from 'recharts';
 import {
   BarChart3, FileSpreadsheet, Package, TrendingUp, TrendingDown,
   Download, DollarSign, ShoppingCart, AlertTriangle, Clock,
@@ -31,6 +35,16 @@ const periodOptions = [
   { value: 'month', label: 'Este mês' },
   { value: 'all', label: 'Todo período' },
 ];
+
+const PIE_COLORS = ['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+
+const paymentMethodLabels: Record<string, string> = {
+  dinheiro: 'Dinheiro',
+  pix: 'PIX',
+  cartao_debito: 'Débito',
+  cartao_credito: 'Crédito',
+  crediario: 'Crediário',
+};
 
 export default function Reports() {
   const [period, setPeriod] = useState<PeriodFilter>('30d');
@@ -95,6 +109,21 @@ export default function Reports() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
+    // Daily data for bar chart
+    const dailyData: Record<string, number> = {};
+    filteredSales.forEach(sale => {
+      const day = format(new Date(sale.created_at), 'dd/MM', { locale: ptBR });
+      dailyData[day] = (dailyData[day] || 0) + Number(sale.final_total);
+    });
+    const chartData = Object.entries(dailyData).map(([date, total]) => ({ date, total }));
+
+    // Pie chart data for payment methods
+    const pieData = Object.entries(byPaymentMethod).map(([method, data]) => ({
+      name: paymentMethodLabels[method] || method,
+      value: data.total,
+      count: data.count,
+    }));
+
     return {
       sales: filteredSales,
       totalRevenue,
@@ -103,6 +132,8 @@ export default function Reports() {
       count: filteredSales.length,
       byPaymentMethod,
       topProducts,
+      chartData,
+      pieData,
     };
   }, [sales, period]);
 
@@ -127,7 +158,6 @@ export default function Reports() {
       return total === 0;
     });
 
-    // Movements by type
     const filteredMovements = filterByPeriod(movements);
     const entries = filteredMovements.filter(m => m.type === 'entrada');
     const exits = filteredMovements.filter(m => m.type === 'saida');
@@ -169,10 +199,10 @@ export default function Reports() {
     const overdueExpenses = filteredExpenses
       .filter(e => e.status === 'vencido')
       .reduce((acc, e) => acc + Number(e.amount), 0);
+    const totalInterest = filteredExpenses.reduce((acc, e) => acc + Number(e.interest_amount || 0), 0);
 
     const netCashFlow = receivedAmount - paidExpenses;
 
-    // Calcular descontos das vendas no período
     const filteredSales = sales.filter(s => {
       if (!getDateRange()) return true;
       const range = getDateRange()!;
@@ -190,16 +220,15 @@ export default function Reports() {
       overdueExpenses,
       netCashFlow,
       totalDiscounts,
+      totalInterest,
       receivables: filteredReceivables,
       expenses: filteredExpenses,
     };
   }, [receivables, expenses, sales, period]);
 
-  // Aging Report (products with low exit/sales)
+  // Aging Report
   const agingReport = useMemo(() => {
     const now = new Date();
-
-    // Count total exits for each product
     const productExits: Record<string, number> = {};
     movements.forEach(m => {
       if (m.type === 'saida') {
@@ -208,7 +237,6 @@ export default function Reports() {
       }
     });
 
-    // Get last sale date for each product
     const productLastSale: Record<string, Date> = {};
     sales.forEach(sale => {
       sale.sale_items?.forEach((item: any) => {
@@ -228,21 +256,11 @@ export default function Reports() {
       const daysSinceLastSale = lastSale ? differenceInDays(now, lastSale) : 999;
       const totalExits = productExits[p.id] || 0;
 
-      return {
-        ...p,
-        totalStock,
-        stockValue,
-        lastSale,
-        daysSinceLastSale,
-        totalExits,
-      };
+      return { ...p, totalStock, stockValue, lastSale, daysSinceLastSale, totalExits };
     }).filter(p => p.totalStock > 0);
 
-    // Sort by least exits first, then by days since last sale
     const sortedProducts = [...agingProducts].sort((a, b) => {
-      if (a.totalExits === b.totalExits) {
-        return b.daysSinceLastSale - a.daysSinceLastSale;
-      }
+      if (a.totalExits === b.totalExits) return b.daysSinceLastSale - a.daysSinceLastSale;
       return a.totalExits - b.totalExits;
     });
 
@@ -251,9 +269,7 @@ export default function Reports() {
     const over90 = sortedProducts.filter(p => p.daysSinceLastSale >= 90);
 
     return {
-      over30,
-      over60,
-      over90,
+      over30, over60, over90,
       totalOver30Value: over30.reduce((acc, p) => acc + p.stockValue, 0),
       totalOver60Value: over60.reduce((acc, p) => acc + p.stockValue, 0),
       totalOver90Value: over90.reduce((acc, p) => acc + p.stockValue, 0),
@@ -272,7 +288,6 @@ export default function Reports() {
       'Total': Number(s.final_total).toFixed(2),
       'Parcelas': s.installments || 1,
     }));
-
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Vendas');
@@ -292,7 +307,6 @@ export default function Reports() {
       'Estoque Mínimo': p.min_stock,
       'Valor Estoque': (p.sizes.reduce((sum, s) => sum + s.quantity, 0) * p.cost_price).toFixed(2),
     }));
-
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Estoque');
@@ -301,7 +315,6 @@ export default function Reports() {
   };
 
   const exportFinancialReport = () => {
-    // Receivables sheet
     const receivablesData = financialReport.receivables.map(r => ({
       'Descrição': r.description,
       'Valor Bruto': Number(r.amount).toFixed(2),
@@ -311,16 +324,16 @@ export default function Reports() {
       'Status': r.is_received ? 'Recebido' : 'Pendente',
       'Data Recebimento': r.received_date ? format(new Date(r.received_date), 'dd/MM/yyyy') : '-',
     }));
-
     const expensesData = financialReport.expenses.map(e => ({
       'Descrição': e.description,
       'Categoria': e.category || '-',
       'Valor': Number(e.amount).toFixed(2),
+      'Juros': Number(e.interest_amount || 0).toFixed(2),
+      'Total Pago': e.amount_paid != null ? Number(e.amount_paid).toFixed(2) : '-',
       'Vencimento': format(new Date(e.due_date), 'dd/MM/yyyy'),
       'Status': e.status,
       'Data Pagamento': e.paid_date ? format(new Date(e.paid_date), 'dd/MM/yyyy') : '-',
     }));
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(receivablesData), 'A Receber');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expensesData), 'A Pagar');
@@ -340,7 +353,6 @@ export default function Reports() {
       'Classificação': p.daysSinceLastSale >= 90 ? 'Crítico (+90 dias)' :
                        p.daysSinceLastSale >= 60 ? 'Alto (+60 dias)' : 'Atenção (+30 dias)',
     }));
-
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Peças Paradas');
@@ -348,22 +360,18 @@ export default function Reports() {
     toast.success('Relatório de peças paradas exportado!');
   };
 
-  const paymentMethodLabels: Record<string, string> = {
-    dinheiro: 'Dinheiro',
-    pix: 'PIX',
-    cartao_debito: 'Débito',
-    cartao_credito: 'Crédito',
-    crediario: 'Crediário',
-  };
-
   const reportsSupportSections: SupportSection[] = [
     { title: 'O que é o módulo Relatórios', icon: HelpCircle, content: 'O módulo de Relatórios oferece análises detalhadas sobre vendas, estoque, financeiro e produtos parados. Use os filtros de período para visualizar dados de diferentes intervalos de tempo.' },
-    { title: 'Relatório de Vendas', icon: ShoppingCart, content: 'Mostra faturamento total, quantidade de vendas, ticket médio e descontos concedidos. Detalha os métodos de pagamento utilizados e os produtos mais vendidos no período.' },
+    { title: 'Relatório de Vendas', icon: ShoppingCart, content: 'Mostra faturamento total, quantidade de vendas, ticket médio e descontos concedidos. Inclui gráfico de barras com vendas por dia e gráfico de pizza com métodos de pagamento.' },
     { title: 'Relatório de Estoque', icon: Package, content: 'Apresenta a visão geral do estoque: total de produtos, unidades, valor em estoque, produtos com estoque baixo ou zerado. Também mostra o histórico de entradas e saídas.' },
-    { title: 'Relatório Financeiro', icon: DollarSign, content: 'Resume o fluxo financeiro: total a receber, valor já recebido, total de despesas, despesas pagas, pendentes e vencidas. Calcula o fluxo de caixa líquido do período.' },
+    { title: 'Relatório Financeiro', icon: DollarSign, content: 'Resume o fluxo financeiro: total a receber, valor já recebido, total de despesas, despesas pagas, pendentes e vencidas. Inclui dados de juros pagos. Calcula o fluxo de caixa líquido do período.' },
     { title: 'Relatório de Aging (Menos Saídas)', icon: Clock, content: 'Identifica produtos parados: sem vendas há mais de 30, 60 ou 90 dias. Mostra o valor de estoque parado para ajudar nas decisões de promoção ou liquidação.' },
-    { title: 'Como exportar para Excel', icon: Download, content: 'Cada aba possui um botão "Exportar Excel" que gera uma planilha com todos os dados do relatório atual. O arquivo é baixado automaticamente com a data no nome.' },
+    { title: 'Como exportar para Excel', icon: Download, content: 'Cada aba possui um botão "Exportar Excel" que gera uma planilha com todos os dados do relatório atual, incluindo juros no financeiro. O arquivo é baixado automaticamente com a data no nome.' },
   ];
+
+  const barChartConfig = {
+    total: { label: 'Vendas (R$)', color: 'hsl(var(--primary))' },
+  };
 
   return (
     <MainLayout title="Relatórios" subtitle="Análises detalhadas do seu negócio" supportContent={{ moduleName: 'Relatórios', sections: reportsSupportSections }}>
@@ -476,11 +484,79 @@ export default function Reports() {
                   </Card>
                 </div>
 
+                {/* Charts Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* By Payment Method */}
+                  {/* Bar Chart - Sales by Day */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Por Forma de Pagamento</CardTitle>
+                      <CardTitle className="text-base">Vendas por Dia</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {salesReport.chartData.length > 0 ? (
+                        <ChartContainer config={barChartConfig} className="h-[250px] w-full">
+                          <BarChart data={salesReport.chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis dataKey="date" axisLine={false} tickLine={false} className="text-xs fill-muted-foreground" />
+                            <YAxis axisLine={false} tickLine={false} className="text-xs fill-muted-foreground" tickFormatter={(v) => `R$${v}`} />
+                            <ChartTooltip
+                              content={<ChartTooltipContent />}
+                              formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Vendas']}
+                            />
+                            <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                          Nenhuma venda no período
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Pie Chart - Payment Methods */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Formas de Pagamento</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {salesReport.pieData.length > 0 ? (
+                        <div className="h-[250px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={salesReport.pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={50}
+                                outerRadius={80}
+                                paddingAngle={3}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              >
+                                {salesReport.pieData.map((_, index) => (
+                                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                          Nenhuma venda no período
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* By Payment Method - Table */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Detalhes por Forma de Pagamento</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
@@ -790,6 +866,12 @@ export default function Reports() {
                         <div className="flex justify-between p-2 rounded bg-red-500/10">
                           <span className="text-sm">Vencido</span>
                           <span className="font-bold text-red-500">R$ {financialReport.overdueExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+                      {financialReport.totalInterest > 0 && (
+                        <div className="flex justify-between p-2 rounded bg-orange-500/10">
+                          <span className="text-sm">Juros Pagos</span>
+                          <span className="font-medium text-orange-500">R$ {financialReport.totalInterest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         </div>
                       )}
                     </CardContent>
