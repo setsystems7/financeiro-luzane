@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type SupportSection } from '@/components/layout/SupportButton';
@@ -153,6 +153,36 @@ export default function Financial() {
   const filteredExpenses = expenses.filter(e =>
     e.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination
+  const ITEMS_PER_PAGE = 20;
+  const [receivablePage, setReceivablePage] = useState(1);
+  const [expensePage, setExpensePage] = useState(1);
+
+  const receivableTotalPages = Math.max(1, Math.ceil(filteredReceivables.length / ITEMS_PER_PAGE));
+  const expenseTotalPages = Math.max(1, Math.ceil(filteredExpenses.length / ITEMS_PER_PAGE));
+
+  const paginatedReceivables = filteredReceivables.slice(
+    (receivablePage - 1) * ITEMS_PER_PAGE,
+    receivablePage * ITEMS_PER_PAGE
+  );
+  const paginatedExpenses = filteredExpenses.slice(
+    (expensePage - 1) * ITEMS_PER_PAGE,
+    expensePage * ITEMS_PER_PAGE
+  );
+
+  // Totals
+  const receivableTotals = useMemo(() => ({
+    amount: filteredReceivables.reduce((acc, r) => acc + Number(r.amount || 0), 0),
+    fee: filteredReceivables.reduce((acc, r) => acc + Number(r.fee || 0), 0),
+    net: filteredReceivables.reduce((acc, r) => acc + Number(r.net_amount || 0), 0),
+  }), [filteredReceivables]);
+
+  const expenseTotals = useMemo(() => ({
+    amount: filteredExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0),
+    interest: filteredExpenses.reduce((acc, e) => acc + Number(e.interest_amount || 0), 0),
+    paid: filteredExpenses.reduce((acc, e) => acc + Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0)), 0),
+  }), [filteredExpenses]);
 
   const handleCreateExpense = (data: any) => {
     if (!data.description || !data.amount || !data.due_date) {
@@ -318,6 +348,7 @@ export default function Financial() {
                     Nenhuma conta a receber encontrada
                   </div>
                 ) : (
+                  <>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -336,7 +367,7 @@ export default function Financial() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredReceivables.map((item) => {
+                      {paginatedReceivables.map((item) => {
                         const sale = item.sales;
                         const paymentMethod = sale?.payment_method || '';
                         const isCardSale = paymentMethod === 'cartao_credito';
@@ -367,113 +398,46 @@ export default function Financial() {
                             >
                               <TableCell className="w-10">
                                 {saleItems.length > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleRow(item.id);
-                                    }}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); toggleRow(item.id); }}>
+                                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                   </Button>
                                 )}
                               </TableCell>
-                              <TableCell className="font-medium">
-                                {sale?.sale_number ? `#${sale.sale_number}` : item.description}
-                              </TableCell>
-                              <TableCell>
-                                {sale?.created_at
-                                  ? format(new Date(sale.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-                                  : format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={isCardSale ? 'pink' : 'secondary'}>
-                                  {paymentLabels[paymentMethod] || paymentMethod || '-'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="capitalize">
-                                {isCardSale && sale?.card_brand ? sale.card_brand : '-'}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {isCardSale ? (
-                                  <Badge variant="outline">{installments}x</Badge>
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
+                              <TableCell className="font-medium">{sale?.sale_number ? `#${sale.sale_number}` : item.description}</TableCell>
+                              <TableCell>{sale?.created_at ? format(new Date(sale.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : format(new Date(item.due_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                              <TableCell><Badge variant={isCardSale ? 'pink' : 'secondary'}>{paymentLabels[paymentMethod] || paymentMethod || '-'}</Badge></TableCell>
+                              <TableCell className="capitalize">{isCardSale && sale?.card_brand ? sale.card_brand : '-'}</TableCell>
+                              <TableCell className="text-center">{isCardSale ? <Badge variant="outline">{installments}x</Badge> : '-'}</TableCell>
                               <TableCell className="text-center">
                                 {discount > 0 ? (
                                   <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    <Percent className="w-3 h-3 mr-1" />
-                                    {discountPercent.toFixed(0)}% (-R$ {formatCurrency(discount)})
+                                    <Percent className="w-3 h-3 mr-1" />{discountPercent.toFixed(0)}% (-R$ {formatCurrency(discount)})
                                   </Badge>
-                                ) : (
-                                  '-'
-                                )}
+                                ) : '-'}
                               </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                R$ {formatCurrency(total)}
-                              </TableCell>
+                              <TableCell className="text-right font-semibold">R$ {formatCurrency(total)}</TableCell>
                               <TableCell className="text-right">
                                 {isCardSale && sale?.card_fee_percent != null && Number(sale.card_fee_percent) > 0 ? (
-                                  <span>
-                                    {Number(sale.card_fee_percent).toFixed(2)}% (+R$ {formatCurrency(fee)})
-                                  </span>
-                                ) : fee > 0 ? (
-                                  <span>+R$ {formatCurrency(fee)}</span>
-                                ) : (
-                                  '-'
-                                )}
+                                  <span>{Number(sale.card_fee_percent).toFixed(2)}% (+R$ {formatCurrency(fee)})</span>
+                                ) : fee > 0 ? <span>+R$ {formatCurrency(fee)}</span> : '-'}
                               </TableCell>
-                              <TableCell className="text-right font-semibold text-green-600 dark:text-green-400">
-                                R$ {formatCurrency(net)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant={item.is_received ? 'success' : 'warning'}>
-                                  {item.is_received ? 'Recebido' : 'Aguardando'}
-                                </Badge>
-                              </TableCell>
+                              <TableCell className="text-right font-semibold text-green-600 dark:text-green-400">R$ {formatCurrency(net)}</TableCell>
+                              <TableCell className="text-center"><Badge variant={item.is_received ? 'success' : 'warning'}>{item.is_received ? 'Recebido' : 'Aguardando'}</Badge></TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   {!item.is_received && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        markReceivableAsReceived.mutate(item.id);
-                                      }}
-                                      disabled={markReceivableAsReceived.isPending}
-                                    >
-                                      <Check className="w-4 h-4 mr-1" />
-                                      Receber
+                                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); markReceivableAsReceived.mutate(item.id); }} disabled={markReceivableAsReceived.isPending}>
+                                      <Check className="w-4 h-4 mr-1" />Receber
                                     </Button>
                                   )}
                                   {item.sale_id && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setConfirmCancelSaleId(item.sale_id!);
-                                      }}
-                                      disabled={cancelSale.isPending}
-                                    >
-                                      <Undo2 className="w-4 h-4 mr-1" />
-                                      Estornar
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setConfirmCancelSaleId(item.sale_id!); }} disabled={cancelSale.isPending}>
+                                      <Undo2 className="w-4 h-4 mr-1" />Estornar
                                     </Button>
                                   )}
                                 </div>
                               </TableCell>
                             </TableRow>
-                            {/* Linha expandida com itens da venda */}
                             {isExpanded && saleItems.length > 0 && (
                               <TableRow className="bg-muted/20 hover:bg-muted/30">
                                 <TableCell colSpan={12} className="p-0">
@@ -481,23 +445,14 @@ export default function Financial() {
                                     <p className="text-sm font-medium mb-2 text-muted-foreground">Itens da venda:</p>
                                     <div className="grid gap-2">
                                       {saleItems.map((saleItem: any) => (
-                                        <div
-                                          key={saleItem.id}
-                                          className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm"
-                                        >
+                                        <div key={saleItem.id} className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 text-sm">
                                           <div className="flex items-center gap-3">
                                             <span className="font-medium">{saleItem.product_name}</span>
-                                            {saleItem.size && (
-                                              <Badge variant="outline" className="text-xs">
-                                                {saleItem.size}
-                                              </Badge>
-                                            )}
+                                            {saleItem.size && <Badge variant="outline" className="text-xs">{saleItem.size}</Badge>}
                                           </div>
                                           <div className="flex items-center gap-4 text-muted-foreground">
                                             <span>{saleItem.quantity}x R$ {formatCurrency(saleItem.unit_price)}</span>
-                                            <span className="font-semibold text-foreground">
-                                              R$ {formatCurrency(saleItem.total)}
-                                            </span>
+                                            <span className="font-semibold text-foreground">R$ {formatCurrency(saleItem.total)}</span>
                                           </div>
                                         </div>
                                       ))}
@@ -510,7 +465,26 @@ export default function Financial() {
                         );
                       })}
                     </TableBody>
+                    <tfoot>
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={7} className="text-right">Totais:</TableCell>
+                        <TableCell className="text-right">R$ {formatCurrency(receivableTotals.amount)}</TableCell>
+                        <TableCell className="text-right">R$ {formatCurrency(receivableTotals.fee)}</TableCell>
+                        <TableCell className="text-right text-green-600 dark:text-green-400">R$ {formatCurrency(receivableTotals.net)}</TableCell>
+                        <TableCell colSpan={2} />
+                      </TableRow>
+                    </tfoot>
                   </Table>
+                  {receivableTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 px-2">
+                      <span className="text-sm text-muted-foreground">Página {receivablePage} de {receivableTotalPages} ({filteredReceivables.length} registros)</span>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setReceivablePage(p => Math.max(1, p - 1))} disabled={receivablePage === 1}>Anterior</Button>
+                        <Button variant="outline" size="sm" onClick={() => setReceivablePage(p => Math.min(receivableTotalPages, p + 1))} disabled={receivablePage === receivableTotalPages}>Próxima</Button>
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -694,6 +668,7 @@ export default function Financial() {
                     Nenhuma despesa encontrada
                   </div>
                 ) : (
+                  <>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -708,7 +683,7 @@ export default function Financial() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredExpenses.map((item) => (
+                      {paginatedExpenses.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
                             {editingDescriptionExpenseId === item.id ? (
@@ -906,7 +881,26 @@ export default function Financial() {
                         </TableRow>
                       ))}
                     </TableBody>
+                    <tfoot>
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell colSpan={3} className="text-right">Totais:</TableCell>
+                        <TableCell className="text-right">R$ {formatCurrency(expenseTotals.amount)}</TableCell>
+                        <TableCell className="text-right">{expenseTotals.interest > 0 ? `R$ ${formatCurrency(expenseTotals.interest)}` : '-'}</TableCell>
+                        <TableCell className="text-right">R$ {formatCurrency(expenseTotals.paid)}</TableCell>
+                        <TableCell colSpan={2} />
+                      </TableRow>
+                    </tfoot>
                   </Table>
+                  {expenseTotalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 px-2">
+                      <span className="text-sm text-muted-foreground">Página {expensePage} de {expenseTotalPages} ({filteredExpenses.length} registros)</span>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setExpensePage(p => Math.max(1, p - 1))} disabled={expensePage === 1}>Anterior</Button>
+                        <Button variant="outline" size="sm" onClick={() => setExpensePage(p => Math.min(expenseTotalPages, p + 1))} disabled={expensePage === expenseTotalPages}>Próxima</Button>
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
               </CardContent>
             </Card>
