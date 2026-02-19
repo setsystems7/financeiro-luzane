@@ -57,6 +57,8 @@ export interface Expense {
   recurrence_months: number | null;
   recurrence_index: number | null;
   parent_expense_id: string | null;
+  interest_amount: number | null;
+  amount_paid: number | null;
   suppliers?: { name: string } | null;
 }
 
@@ -302,14 +304,16 @@ export function useMarkExpenseAsPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (data: { id: string; interest_amount?: number; amount_paid?: number }) => {
       const { error } = await supabase
         .from('expenses')
         .update({
           status: 'pago',
           paid_date: new Date().toISOString().split('T')[0],
+          interest_amount: data.interest_amount || 0,
+          amount_paid: data.amount_paid || null,
         })
-        .eq('id', id);
+        .eq('id', data.id);
 
       if (error) throw error;
     },

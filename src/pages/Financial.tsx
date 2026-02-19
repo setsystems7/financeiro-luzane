@@ -62,6 +62,11 @@ export default function Financial() {
   const [editingCategoryExpenseId, setEditingCategoryExpenseId] = useState<string | null>(null);
   const [editingDescriptionExpenseId, setEditingDescriptionExpenseId] = useState<string | null>(null);
   const [editDescriptionValue, setEditDescriptionValue] = useState<string>('');
+  
+  // Payment dialog state
+  const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
+  const [paymentInterest, setPaymentInterest] = useState<string>('');
+  const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
@@ -681,6 +686,8 @@ export default function Financial() {
                         <TableHead>Categoria</TableHead>
                         <TableHead>Vencimento</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="text-right">Juros</TableHead>
+                        <TableHead className="text-right">Total Pago</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="text-center">Ações</TableHead>
                       </TableRow>
@@ -816,6 +823,22 @@ export default function Financial() {
                           <TableCell className="text-right font-semibold">
                             R$ {formatCurrency(item.amount)}
                           </TableCell>
+                          <TableCell className="text-right">
+                            {Number(item.interest_amount || 0) > 0 ? (
+                              <span className="text-destructive font-medium">R$ {formatCurrency(Number(item.interest_amount))}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.amount_paid != null ? (
+                              <span className="font-semibold">R$ {formatCurrency(Number(item.amount_paid))}</span>
+                            ) : item.status === 'pago' ? (
+                              <span className="font-semibold">R$ {formatCurrency(item.amount)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-center">
                             <Badge
                               variant={
@@ -835,7 +858,11 @@ export default function Financial() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => markExpenseAsPaid.mutate(item.id)}
+                                  onClick={() => {
+                                    setPayingExpense(item);
+                                    setPaymentInterest('0');
+                                    setPaymentAmountPaid(String(item.amount));
+                                  }}
                                   disabled={markExpenseAsPaid.isPending}
                                 >
                                   <Check className="w-4 h-4 mr-1" />
@@ -873,6 +900,84 @@ export default function Financial() {
           </TabsContent>
 
         </Tabs>
+
+        {/* Payment Dialog */}
+        <Dialog open={!!payingExpense} onOpenChange={(open) => { if (!open) setPayingExpense(null); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Registrar Pagamento</DialogTitle>
+            </DialogHeader>
+            {payingExpense && (
+              <div className="space-y-4">
+                <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                  <p className="text-sm font-medium">{payingExpense.description}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vencimento: {format(new Date(payingExpense.due_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Valor da Parcela</Label>
+                    <Input
+                      value={`R$ ${formatCurrency(payingExpense.amount)}`}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                  <div>
+                    <Label>Juros / Multa</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00"
+                      value={paymentInterest}
+                      onChange={(e) => {
+                        setPaymentInterest(e.target.value);
+                        const interest = parseFloat(e.target.value) || 0;
+                        setPaymentAmountPaid(String((payingExpense.amount + interest).toFixed(2)));
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Total Pago</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={paymentAmountPaid}
+                    onChange={(e) => setPaymentAmountPaid(e.target.value)}
+                    className="text-lg font-bold"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Parcela (R$ {formatCurrency(payingExpense.amount)}) + Juros (R$ {formatCurrency(parseFloat(paymentInterest) || 0)})
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setPayingExpense(null)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="pink"
+                    disabled={markExpenseAsPaid.isPending}
+                    onClick={() => {
+                      const interest = parseFloat(paymentInterest) || 0;
+                      const totalPaid = parseFloat(paymentAmountPaid) || payingExpense.amount;
+                      markExpenseAsPaid.mutate(
+                        { id: payingExpense.id, interest_amount: interest, amount_paid: totalPaid },
+                        { onSuccess: () => setPayingExpense(null) }
+                      );
+                    }}
+                  >
+                    {markExpenseAsPaid.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Confirmar Pagamento
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Import Financial Dialog */}
         <ImportFinancialDialog
