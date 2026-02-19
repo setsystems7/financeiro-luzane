@@ -12,13 +12,12 @@ import {
   XCircle,
   DollarSign,
   Eye,
-  Check,
   X,
   Pencil,
   Trash2,
   Calendar as CalendarIcon
 } from 'lucide-react';
-import { useFiadoSales, useApproveFiadoSale, useCancelFiadoSale, useDeleteFiadoSale } from '@/hooks/useFiado';
+import { useFiadoSales, useCancelFiadoSale, useDeleteFiadoSale } from '@/hooks/useFiado';
 import { FiadoDetailsDialog } from './FiadoDetailsDialog';
 import { FiadoEditDialog } from './FiadoEditDialog';
 import { format, isPast, isToday } from 'date-fns';
@@ -39,7 +38,6 @@ export function FiadoList() {
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
 
   const { data: fiadoSales, isLoading } = useFiadoSales();
-  const approveFiadoSale = useApproveFiadoSale();
   const cancelFiadoSale = useCancelFiadoSale();
   const deleteFiadoSale = useDeleteFiadoSale();
 
@@ -51,10 +49,6 @@ export function FiadoList() {
       sale.customer_cpf?.includes(searchTerm);
     return matchesStatus && matchesSearch;
   });
-
-  const handleApprove = async (saleId: string) => {
-    await approveFiadoSale.mutateAsync(saleId);
-  };
 
   const handleCancel = async (saleId: string) => {
     if (confirm('Tem certeza que deseja cancelar esta venda? O estoque será devolvido.')) {
@@ -258,38 +252,37 @@ export function FiadoList() {
                               </Button>
 
                               {sale.status !== 'cancelado' && sale.status !== 'pago' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setEditingSaleId(sale.id)}
-                                  className="text-xs md:text-sm"
-                                >
-                                  <Pencil className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                                  <span className="hidden sm:inline">Editar</span>
-                                </Button>
-                              )}
-
-                              {sale.status === 'pendente' && (
                                 <>
                                   <Button
-                                    variant="default"
+                                    variant="outline"
                                     size="sm"
-                                    onClick={() => handleApprove(sale.id)}
-                                    disabled={approveFiadoSale.isPending}
+                                    onClick={() => setEditingSaleId(sale.id)}
                                     className="text-xs md:text-sm"
                                   >
-                                    <Check className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                                    <span className="hidden sm:inline">Aprovar</span>
+                                    <Pencil className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                    <span className="hidden sm:inline">Editar</span>
                                   </Button>
+
+                                  {Number(sale.amount_pending) > 0 && (
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => setSelectedSaleId(sale.id)}
+                                      className="text-xs md:text-sm"
+                                    >
+                                      <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                      <span className="hidden sm:inline">Pagar</span>
+                                    </Button>
+                                  )}
+
                                   <Button
-                                    variant="destructive"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => handleCancel(sale.id)}
                                     disabled={cancelFiadoSale.isPending}
-                                    className="text-xs md:text-sm"
+                                    className="text-xs md:text-sm text-destructive hover:text-destructive"
                                   >
-                                    <X className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                                    <span className="hidden sm:inline">Cancelar</span>
+                                    <X className="w-3 h-3 md:w-4 md:h-4" />
                                   </Button>
                                 </>
                               )}
