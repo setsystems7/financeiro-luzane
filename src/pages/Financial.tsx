@@ -76,13 +76,78 @@ export default function Financial() {
   const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
 
   const financialSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Financeiro', icon: HelpCircle, content: 'O módulo Financeiro centraliza todo o controle de contas a receber (vendas realizadas) e contas a pagar (despesas). Aqui você acompanha o fluxo de caixa, identifica valores pendentes e mantém suas finanças organizadas.' },
-    { title: 'Como lançar uma despesa', icon: ReceiptIcon, content: 'Clique no botão "Nova Despesa" na aba "A Pagar". Preencha a descrição, valor, categoria, data de vencimento e fornecedor (opcional). Você também pode marcar como despesa recorrente informando o número de meses.' },
-    { title: 'Como registrar pagamento com juros', icon: DollarSupportIcon, content: 'Ao pagar uma despesa vencida, clique no botão "Pagar". No diálogo de pagamento, informe o valor de juros (se houver) e o valor efetivamente pago. O sistema registrará automaticamente os juros separadamente.' },
-    { title: 'Como usar os filtros', icon: FilterIcon, content: 'Use a barra de filtros no topo para buscar por descrição, filtrar por data inicial e final, e selecionar o status (todos, pendentes, pagos, vencidos). Clique em "Limpar" para resetar todos os filtros.' },
-    { title: 'Como importar planilha', icon: FileIcon, content: 'Clique em "Importar Histórico" para carregar um arquivo Excel com suas despesas e recebíveis. A planilha deve seguir o formato esperado com as colunas: descrição, valor, data de vencimento, categoria e status.' },
-    { title: 'Despesas recorrentes', icon: CalendarSupportIcon, content: 'Ao criar uma despesa, marque a opção "Despesa Recorrente" e informe quantos meses ela se repete. O sistema criará automaticamente uma despesa para cada mês. Despesas recorrentes só podem ser excluídas se forem a última parcela.' },
-    { title: 'Perguntas frequentes', icon: HelpCircle, content: '• Como estornar uma venda? Na aba "Recebidos", clique em "Estornar" ao lado da venda.\n• Posso editar uma despesa? Sim, clique nos campos de descrição, categoria ou data para editar diretamente na tabela.\n• O que significa "Valor do Caixa"? É o valor líquido que efetivamente entra no seu caixa, já descontadas as taxas de cartão.' },
+    {
+      title: 'O que é o módulo Financeiro',
+      icon: HelpCircle,
+      tag: 'essencial',
+      content: 'O módulo Financeiro centraliza todo o controle de dinheiro da loja. Ele tem duas abas principais: "A Receber" (dinheiro das vendas) e "A Pagar" (despesas e contas).',
+    },
+    {
+      title: 'Como lançar uma despesa',
+      icon: ReceiptIcon,
+      tag: 'essencial',
+      content: 'Para registrar uma conta a pagar:',
+      steps: [
+        { text: 'Vá na aba "A Pagar" (segunda aba).' },
+        { text: 'Clique no botão "Nova Despesa".' },
+        { text: 'Preencha: descrição (ex: "Aluguel da loja"), valor, data de vencimento e categoria.' },
+        { text: 'Opcionalmente, selecione o fornecedor e adicione observações.' },
+        { text: 'Para despesas que se repetem todo mês, marque "Despesa Recorrente" e informe quantos meses.', tip: 'O sistema criará uma despesa para cada mês automaticamente.' },
+        { text: 'Clique em "Criar Despesa" para salvar.' },
+      ],
+    },
+    {
+      title: 'Como pagar uma despesa',
+      icon: DollarSupportIcon,
+      tag: 'essencial',
+      content: 'Quando for pagar uma conta:',
+      steps: [
+        { text: 'Na aba "A Pagar", encontre a despesa na lista.' },
+        { text: 'Clique no botão "Pagar" (ícone de ✓) ao lado da despesa.' },
+        { text: 'Se a despesa tem juros (ex: paga com atraso), informe o valor dos juros.' },
+        { text: 'Informe o valor efetivamente pago.' },
+        { text: 'Confirme o pagamento. O status mudará para "Pago".' },
+      ],
+      tips: [
+        'Despesas vencidas aparecem destacadas em vermelho.',
+        'Juros são registrados separadamente para controle financeiro preciso.',
+      ],
+    },
+    {
+      title: 'Como usar os filtros',
+      icon: FilterIcon,
+      content: 'Encontre despesas e recebíveis específicos:',
+      steps: [
+        { text: 'Use a barra de busca para pesquisar por descrição.' },
+        { text: 'Defina data inicial e final para limitar o período.' },
+        { text: 'Selecione o status: Todos, Pendentes, Pagos ou Vencidos.' },
+        { text: 'Clique em "Limpar" para resetar todos os filtros.' },
+      ],
+    },
+    {
+      title: 'Como importar planilha',
+      icon: FileIcon,
+      tag: 'avançado',
+      content: 'Importe dados financeiros de planilha Excel:',
+      steps: [
+        { text: 'Clique em "Importar Histórico" na barra de ferramentas.' },
+        { text: 'Selecione o arquivo Excel (.xlsx) do seu computador.' },
+        { text: 'Confira os dados importados e confirme.' },
+      ],
+      warning: 'A planilha deve seguir o formato esperado com colunas: descrição, valor, data de vencimento, categoria e status.',
+    },
+    {
+      title: 'Perguntas frequentes',
+      icon: HelpCircle,
+      tag: 'dica',
+      content: 'Dúvidas comuns sobre o financeiro:',
+      tips: [
+        'Como estornar uma venda? Na aba "Recebidos", clique em "Estornar" ao lado da venda.',
+        'Posso editar uma despesa? Sim! Clique nos campos de descrição, categoria ou data para editar direto na tabela.',
+        'O que é "Valor do Caixa"? É o dinheiro líquido que entra no caixa, já descontadas as taxas de cartão.',
+        'Despesas recorrentes só podem ser excluídas se forem a última parcela da série.',
+      ],
+    },
   ];
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {

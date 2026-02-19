@@ -20,12 +20,81 @@ import * as XLSX from 'xlsx';
 import { type SupportSection } from '@/components/layout/SupportButton';
 
 const stockSupportSections: SupportSection[] = [
-  { title: 'O que é o módulo Estoque', icon: HelpCircle, content: 'O módulo de Estoque permite controlar a entrada e saída de produtos. Aqui você dá entrada rápida de mercadorias usando leitor de código de barras ou seleção manual, visualiza o estoque atual e acompanha o histórico de movimentações.' },
-  { title: 'Como dar entrada de estoque', icon: Plus, content: 'Na seção "Abastecimento Rápido", escaneie o código de barras ou selecione o produto e tamanho manualmente. Defina a quantidade e clique em "Adicionar ao Estoque". A movimentação será registrada automaticamente.' },
-  { title: 'Como registrar saída manual', icon: ArrowDownCircle, content: 'Na tabela "Estoque Atual", expanda o produto clicando nele para ver os tamanhos. Use o botão "Saída" para registrar uma saída manual ou "Ajustar" para definir uma nova quantidade exata de estoque.' },
-  { title: 'Como usar o leitor de código de barras', icon: ScanBarcode, content: 'O sistema detecta automaticamente leitores de código de barras. Basta escanear o produto com o leitor - o sistema identificará o produto e tamanho correspondente. Funciona mesmo sem o cursor no campo de busca.' },
-  { title: 'Como exportar estoque para Excel', icon: FileSpreadsheet, content: 'Clique no botão "Exportar" na seção "Estoque Atual". O sistema gerará uma planilha Excel com todos os produtos, tamanhos, quantidades, preços e status de estoque.' },
-  { title: 'Histórico de movimentações', icon: History, content: 'A seção "Histórico de Movimentações" mostra todas as entradas e saídas recentes. Use os filtros de produto e período para encontrar movimentações específicas.' },
+  {
+    title: 'O que é o módulo Estoque',
+    icon: HelpCircle,
+    tag: 'essencial',
+    content: 'O módulo de Estoque permite dar entrada e saída de mercadorias, visualizar o estoque atual de todos os produtos e acompanhar o histórico completo de movimentações.',
+  },
+  {
+    title: 'Como dar entrada de estoque (abastecer)',
+    icon: Plus,
+    tag: 'essencial',
+    content: 'Use o "Abastecimento Rápido" no topo da página para dar entrada de mercadorias:',
+    steps: [
+      { text: 'Na seção "Abastecimento Rápido", escaneie o código de barras do produto OU selecione manualmente o produto e tamanho nos campos abaixo.', tip: 'O leitor de código de barras funciona automaticamente — basta escanear com o cursor em qualquer lugar da página.' },
+      { text: 'Defina a quantidade que está entrando (ex: 5 unidades do tamanho M).' },
+      { text: 'Clique em "Adicionar ao Estoque" para confirmar a entrada.' },
+      { text: 'O sistema registra a movimentação automaticamente e atualiza o estoque do produto.' },
+    ],
+    tips: [
+      'Você pode dar entrada de vários tamanhos seguidos — o sistema limpa o formulário após cada entrada.',
+      'Toda entrada aparece no histórico de movimentações com data e hora.',
+    ],
+  },
+  {
+    title: 'Como registrar saída ou ajuste manual',
+    icon: ArrowDownCircle,
+    tag: 'essencial',
+    content: 'Para saídas (perdas, doações) ou corrigir o estoque:',
+    steps: [
+      { text: 'Na tabela "Estoque Atual", encontre o produto e clique nele para expandir os tamanhos.' },
+      { text: 'Clique no botão "Saída" para registrar uma saída manual (ex: peça danificada).' },
+      { text: 'Ou clique em "Ajustar" para definir uma nova quantidade exata de estoque (ex: contagem física).' },
+      { text: 'Informe a quantidade e uma observação opcional, depois confirme.' },
+    ],
+    warning: 'Saídas manuais descontam do estoque imediatamente. Use com cuidado.',
+  },
+  {
+    title: 'Como usar o leitor de código de barras',
+    icon: ScanBarcode,
+    content: 'O sistema detecta automaticamente leitores de código de barras USB:',
+    steps: [
+      { text: 'Conecte o leitor USB ao computador — ele funciona como um teclado.' },
+      { text: 'Escaneie o código de barras do produto em qualquer momento.' },
+      { text: 'O sistema identifica automaticamente o produto e tamanho correspondente ao código.' },
+    ],
+    tips: [
+      'Cada tamanho pode ter seu próprio código de barras — configure no cadastro do produto.',
+      'Se o código não for encontrado, verifique o cadastro em Produtos.',
+    ],
+  },
+  {
+    title: 'Como exportar estoque para Excel',
+    icon: FileSpreadsheet,
+    tag: 'avançado',
+    content: 'Exporte a planilha completa do estoque:',
+    steps: [
+      { text: 'Na seção "Estoque Atual", clique no botão "Exportar" no canto superior direito.' },
+      { text: 'Uma planilha Excel será gerada automaticamente com: produto, tamanhos, quantidades, preços e status de estoque.' },
+      { text: 'O arquivo é baixado para sua pasta de Downloads.' },
+    ],
+  },
+  {
+    title: 'Histórico de movimentações',
+    icon: History,
+    tag: 'dica',
+    content: 'Consulte todas as entradas e saídas do estoque:',
+    steps: [
+      { text: 'Role até a seção "Histórico de Movimentações" na parte inferior da página.' },
+      { text: 'Use o filtro de produto para ver movimentações de um item específico.' },
+      { text: 'Use o filtro de período (7, 30, 90 dias) para limitar o intervalo de tempo.' },
+    ],
+    tips: [
+      'Entradas aparecem em verde, saídas em vermelho e ajustes em azul.',
+      'O histórico mostra quem fez a movimentação e quando.',
+    ],
+  },
 ];
 
 export default function Stock() {

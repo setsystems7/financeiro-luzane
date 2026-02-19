@@ -218,12 +218,12 @@ export default function Settings() {
   };
 
   const settingsSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Configurações', icon: HelpCircle, content: 'O módulo de Configurações permite personalizar o sistema: dados da loja, gerenciamento de usuários, alteração de senha, backup de dados e preferências de notificação.' },
-    { title: 'Como alterar dados da loja', icon: Store, content: 'Na seção "Dados da Loja", preencha o nome da loja, CNPJ e endereço. Clique em "Salvar Alterações" para gravar. Esses dados são usados em etiquetas e relatórios.' },
-    { title: 'Como gerenciar usuários', icon: Users, content: 'Na seção "Gerenciar Usuários", veja a lista de todos os usuários do sistema. Clique em "Novo Usuário" para cadastrar. Use o botão de editar para alterar nome e função (Administrador ou Usuário).' },
-    { title: 'Como alterar senha', icon: Lock, content: 'Na seção "Alterar Minha Senha", insira a nova senha e confirme. A senha deve ter no mínimo 6 caracteres. Cada usuário só pode alterar a própria senha.' },
-    { title: 'Como fazer backup dos dados', icon: Database, content: 'Clique em "Exportar Backup" para baixar um arquivo Excel com todos os dados do sistema: produtos, vendas, despesas e recebíveis. Recomendamos fazer backup regularmente.' },
-    { title: 'Notificações', icon: Bell, content: 'Configure quais notificações você deseja receber: alerta de estoque baixo, resumo diário de vendas e alerta de contas a vencer. Ative ou desative cada uma com o toggle.' },
+    { title: 'O que é o módulo Configurações', icon: HelpCircle, tag: 'essencial', content: 'Personalize o sistema: dados da loja, usuários, senha, backup e notificações.' },
+    { title: 'Como alterar dados da loja', icon: Store, tag: 'essencial', content: 'Configure os dados da sua loja:', steps: [{ text: 'Na seção "Dados da Loja", preencha o nome, CNPJ e endereço.' }, { text: 'Clique em "Salvar Alterações" para gravar.' }], tips: ['Esses dados são usados em etiquetas e relatórios.'] },
+    { title: 'Como gerenciar usuários', icon: Users, content: 'Controle quem acessa o sistema:', steps: [{ text: 'Na seção "Gerenciar Usuários", veja todos os usuários cadastrados.' }, { text: 'Clique em "Novo Usuário" para cadastrar um novo acesso.' }, { text: 'Use o botão de editar (lápis) para alterar nome e função.' }], tips: ['Funções disponíveis: Administrador (acesso total) ou Usuário (acesso limitado).'] },
+    { title: 'Como alterar senha', icon: Lock, content: 'Troque sua senha de acesso:', steps: [{ text: 'Na seção "Alterar Minha Senha", digite a nova senha.' }, { text: 'Confirme a nova senha e clique em salvar.' }], warning: 'A senha deve ter no mínimo 6 caracteres. Cada usuário só altera a própria senha.' },
+    { title: 'Como fazer backup', icon: Database, tag: 'essencial', content: 'Proteja seus dados fazendo backup:', steps: [{ text: 'Clique em "Exportar Backup" na seção de backup.' }, { text: 'Um arquivo Excel será baixado com todos os dados: produtos, vendas, despesas e recebíveis.' }], tips: ['Faça backup pelo menos uma vez por semana.', 'Guarde os arquivos em local seguro (pen drive, nuvem, etc.).'] },
+    { title: 'Notificações', icon: Bell, tag: 'dica', content: 'Configure os alertas do sistema:', tips: ['Alerta de estoque baixo: avisa quando produtos estão acabando.', 'Resumo diário de vendas: receba um resumo ao final do dia.', 'Alerta de contas a vencer: lembra de despesas próximas do vencimento.', 'Ative ou desative cada notificação com o toggle.'] },
   ];
 
   return (

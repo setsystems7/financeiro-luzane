@@ -28,12 +28,67 @@ const periodOptions = [
 ];
 
 const dashboardSupportSections: SupportSection[] = [
-  { title: 'O que é o Dashboard', icon: HelpCircle, content: 'O Dashboard é a tela principal do sistema. Ele mostra um resumo geral do seu negócio: vendas do dia e do mês, lucro, alertas de estoque baixo, produtos mais vendidos e muito mais.' },
-  { title: 'Como interpretar os indicadores', icon: BarChart3, content: '• Vendas Hoje: valor total de vendas realizadas hoje.\n• Vendas do Mês: acumulado de vendas no mês atual.\n• Lucro do Mês: diferença entre receita e custos dos produtos vendidos.\n• Estoque Baixo: quantidade de produtos abaixo do estoque mínimo.' },
-  { title: 'Seletor de período', icon: Calendar, content: 'Use o seletor no topo para alterar o período dos indicadores: Hoje, 7 dias, 30 dias ou 90 dias. Os cards mostram a variação percentual comparando com o período anterior equivalente.' },
-  { title: 'Alertas de estoque baixo', icon: Package, content: 'O card "Estoque Baixo" mostra quantos produtos estão com estoque abaixo do mínimo configurado. Clique na seção de alertas para ver a lista completa e tomar ação.' },
-  { title: 'Alertas de despesas vencidas', icon: AlertTriangle, content: 'A seção de despesas vencidas mostra contas a pagar que já passaram do vencimento. É importante mantê-las em dia para um controle financeiro saudável.' },
-  { title: 'Resumo de vendas e trocas', icon: ShoppingBag, content: 'O gráfico de vendas mostra a evolução dos últimos dias. O resumo de trocas mostra quantas trocas foram feitas e o valor envolvido. Os produtos mais vendidos ajudam a identificar seus itens mais populares.' },
+  {
+    title: 'O que é o Dashboard',
+    icon: HelpCircle,
+    tag: 'essencial',
+    content: 'O Dashboard é o painel principal do sistema. Ele mostra um resumo de tudo que está acontecendo no seu negócio: vendas, estoque, despesas e alertas importantes.',
+  },
+  {
+    title: 'Como usar o seletor de período',
+    icon: Calendar,
+    tag: 'essencial',
+    content: 'No topo da página há um seletor de período que muda os dados dos cards:',
+    steps: [
+      { text: 'Clique no seletor de período no topo esquerdo (ao lado do ícone de calendário).' },
+      { text: 'Escolha o período desejado: Hoje, 7 dias, 30 dias ou 90 dias.' },
+      { text: 'Os cards de "Vendas no Período", "Qtd. Vendas" e "Ticket Médio" serão atualizados automaticamente.' },
+    ],
+  },
+  {
+    title: 'Como interpretar os indicadores',
+    icon: BarChart3,
+    content: 'Entenda o que cada card mostra:',
+    tips: [
+      'Vendas no Período: valor total de todas as vendas finalizadas no período selecionado.',
+      'Qtd. Vendas: número de vendas concluídas no período.',
+      'Ticket Médio: valor médio de cada venda (total ÷ quantidade).',
+      'Estoque Baixo: quantidade de produtos com estoque abaixo do mínimo — clique para ver quais são.',
+    ],
+  },
+  {
+    title: 'Alertas de estoque baixo',
+    icon: Package,
+    tag: 'essencial',
+    content: 'O card "Estoque Baixo" mostra quantos produtos estão com estoque abaixo do mínimo configurado.',
+    tips: [
+      'O estoque mínimo é definido no cadastro de cada produto.',
+      'A seção inferior "Estoque Baixo" mostra a lista completa com nomes e quantidades.',
+      'Vá até Produtos para ajustar o estoque mínimo de cada item.',
+    ],
+  },
+  {
+    title: 'Despesas vencidas',
+    icon: AlertTriangle,
+    tag: 'dica',
+    content: 'A seção de despesas vencidas mostra contas a pagar que já passaram do vencimento.',
+    tips: [
+      'Despesas vencidas aparecem destacadas em vermelho.',
+      'Clique para ir ao módulo Financeiro e quitar as pendências.',
+      'Manter despesas em dia é essencial para um controle financeiro saudável.',
+    ],
+  },
+  {
+    title: 'Gráficos e produtos mais vendidos',
+    icon: ShoppingBag,
+    content: 'O dashboard inclui gráficos e listas para análise rápida:',
+    tips: [
+      'O gráfico de vendas mostra a evolução dos últimos dias em barras.',
+      'A lista de produtos mais vendidos ajuda a identificar os itens mais populares.',
+      'Os produtos menos vendidos indicam o que pode precisar de promoção.',
+      'O resumo de trocas mostra quantas trocas foram feitas e o valor envolvido.',
+    ],
+  },
 ];
 
 export default function Dashboard() {

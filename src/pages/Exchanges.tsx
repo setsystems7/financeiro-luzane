@@ -385,11 +385,54 @@ export default function Exchanges() {
   };
 
   const exchangesSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Trocas', content: 'O módulo de Trocas e Devoluções permite registrar trocas de produtos vendidos. Você seleciona a venda original, escolhe os itens a devolver e pode adicionar novos produtos no lugar.' },
-    { title: 'Como fazer uma troca', content: 'Na aba "Nova Troca", busque a venda original pelo número ou nome do cliente. Selecione os itens que serão devolvidos e, opcionalmente, adicione novos produtos. O sistema calcula automaticamente a diferença de valor.' },
-    { title: 'Como funciona a diferença de valor', content: 'Se os novos produtos custam mais que os devolvidos, o cliente paga a diferença. Se custam menos, o crédito fica registrado. Você pode editar o valor manualmente se necessário.' },
-    { title: 'Histórico de trocas', content: 'Na aba "Histórico", veja todas as trocas realizadas com filtros por período. Clique em uma troca para expandir e ver os detalhes dos produtos devolvidos e dos novos.' },
-    { title: 'Perguntas frequentes', content: '• O estoque é atualizado automaticamente? Sim, os itens devolvidos voltam ao estoque e os novos são descontados.\n• Posso trocar sem venda original? Não, toda troca precisa ser vinculada a uma venda existente.\n• Posso usar código de barras? Sim, há campos de código de barras tanto para devolução quanto para novos itens.' },
+    {
+      title: 'O que é o módulo Trocas',
+      tag: 'essencial',
+      content: 'O módulo de Trocas permite registrar devoluções e trocas de produtos vendidos. O cliente traz o produto de volta, e você pode trocar por outro ou gerar um crédito.',
+    },
+    {
+      title: 'Como fazer uma troca passo a passo',
+      tag: 'essencial',
+      content: 'Siga os passos para registrar uma troca:',
+      steps: [
+        { text: 'Vá na aba "Nova Troca".' },
+        { text: 'Busque a venda original pelo número da venda ou nome do cliente.', tip: 'O número da venda aparece no comprovante. Se o cliente não tiver, busque pelo nome.' },
+        { text: 'Selecione os itens que o cliente está devolvendo marcando as caixas de seleção.' },
+        { text: 'Opcionalmente, adicione novos produtos que o cliente deseja levar no lugar.' },
+        { text: 'O sistema calcula automaticamente a diferença de valor entre o que está devolvendo e o que está levando.' },
+        { text: 'Confirme a troca. O estoque será atualizado automaticamente.' },
+      ],
+    },
+    {
+      title: 'Como funciona a diferença de valor',
+      content: 'O sistema calcula a diferença entre os itens devolvidos e os novos:',
+      tips: [
+        'Se os novos produtos custam MAIS que os devolvidos → o cliente paga a diferença.',
+        'Se os novos custam MENOS que os devolvidos → o crédito fica registrado para uso futuro.',
+        'Se não houver novos produtos → todo o valor fica como crédito para o cliente.',
+        'Você pode editar o valor manualmente se necessário.',
+      ],
+    },
+    {
+      title: 'Histórico de trocas',
+      tag: 'dica',
+      content: 'Consulte todas as trocas realizadas:',
+      steps: [
+        { text: 'Vá na aba "Histórico".' },
+        { text: 'Use os filtros de período para buscar trocas específicas.' },
+        { text: 'Clique em uma troca para expandir e ver os detalhes: itens devolvidos, novos itens e valores.' },
+      ],
+    },
+    {
+      title: 'Perguntas frequentes',
+      tag: 'dica',
+      content: 'Dúvidas comuns sobre trocas:',
+      tips: [
+        'O estoque é atualizado automaticamente? Sim! Itens devolvidos voltam ao estoque e novos são descontados.',
+        'Posso trocar sem venda original? Não — toda troca precisa estar vinculada a uma venda existente.',
+        'Posso usar código de barras? Sim! Há campos de código de barras tanto para devolução quanto para novos itens.',
+      ],
+    },
   ];
 
   return (

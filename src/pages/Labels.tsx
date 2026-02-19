@@ -12,11 +12,48 @@ import { toast } from 'sonner';
 import { type SupportSection } from '@/components/layout/SupportButton';
 
 const labelsSupportSections: SupportSection[] = [
-  { title: 'O que é o módulo Etiquetas', content: 'O módulo de Etiquetas permite imprimir etiquetas com código de barras para seus produtos. É otimizado para impressoras térmicas Elgin L42 Pro, mas funciona com qualquer impressora.' },
-  { title: 'Como selecionar produtos', content: 'Busque os produtos pelo nome, categoria ou cor. Clique no tamanho desejado para selecioná-lo. Use "Selecionar Todos" para marcar todos os tamanhos de um produto de uma vez. Defina a quantidade de etiquetas para cada item.' },
-  { title: 'Como imprimir etiquetas', content: 'Após selecionar os produtos e quantidades, clique em "Imprimir Etiquetas". Uma nova janela será aberta com a visualização. Na janela de impressão, selecione a impressora e ajuste as configurações conforme necessário.' },
-  { title: 'Calibração da impressora', content: 'Se as etiquetas não estiverem alinhadas, use os controles de calibração: Escala (%), Deslocamento Horizontal (mm) e Deslocamento Vertical (mm). Os valores são salvos automaticamente para uso futuro.' },
-  { title: 'Impressão USB direta', content: 'Para impressoras conectadas via USB, o sistema pode tentar enviar comandos diretamente. Se a impressão normal não funcionar, verifique se a impressora está configurada como impressora padrão no sistema operacional.' },
+  {
+    title: 'O que é o módulo Etiquetas',
+    tag: 'essencial',
+    content: 'O módulo de Etiquetas permite imprimir etiquetas com código de barras para seus produtos. É otimizado para impressoras térmicas Elgin L42 Pro, mas funciona com qualquer impressora.',
+  },
+  {
+    title: 'Como selecionar e imprimir etiquetas',
+    tag: 'essencial',
+    content: 'Siga os passos para gerar etiquetas:',
+    steps: [
+      { text: 'Busque os produtos pelo nome, categoria ou cor na barra de busca.' },
+      { text: 'Clique no tamanho desejado para selecioná-lo (ex: tamanho M do produto "Calça Lisa").', tip: 'Use "Selecionar Todos" para marcar todos os tamanhos de um produto de uma vez.' },
+      { text: 'Defina a quantidade de etiquetas para cada item selecionado (ex: 3 etiquetas do tamanho M).' },
+      { text: 'Confira a lista de itens selecionados no painel da direita.' },
+      { text: 'Clique em "Imprimir Etiquetas". Uma nova janela será aberta com a visualização.' },
+      { text: 'Na janela de impressão do navegador, selecione a impressora e ajuste as configurações se necessário.' },
+    ],
+  },
+  {
+    title: 'Como calibrar a impressora',
+    tag: 'avançado',
+    content: 'Se as etiquetas não estiverem alinhadas corretamente:',
+    steps: [
+      { text: 'Use o controle "Escala (%)" para aumentar ou diminuir o tamanho geral da etiqueta.' },
+      { text: 'Ajuste o "Deslocamento Horizontal (mm)" para mover a etiqueta para esquerda ou direita.' },
+      { text: 'Ajuste o "Deslocamento Vertical (mm)" para mover para cima ou baixo.' },
+    ],
+    tips: [
+      'Os valores de calibração são salvos automaticamente para uso futuro.',
+      'Imprima uma folha de teste antes de fazer lotes grandes.',
+      'Para impressoras Elgin L42 Pro, as configurações padrão já são otimizadas.',
+    ],
+  },
+  {
+    title: 'Impressão USB direta',
+    tag: 'avançado',
+    content: 'Para impressoras conectadas via USB, o sistema pode enviar comandos diretamente.',
+    tips: [
+      'Se a impressão normal não funcionar, verifique se a impressora está configurada como padrão no sistema operacional.',
+      'Impressoras térmicas USB geralmente precisam do driver do fabricante instalado.',
+    ],
+  },
 ];
 import JsBarcode from 'jsbarcode';
 import {

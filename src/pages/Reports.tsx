@@ -361,12 +361,12 @@ export default function Reports() {
   };
 
   const reportsSupportSections: SupportSection[] = [
-    { title: 'O que é o módulo Relatórios', icon: HelpCircle, content: 'O módulo de Relatórios oferece análises detalhadas sobre vendas, estoque, financeiro e produtos parados. Use os filtros de período para visualizar dados de diferentes intervalos de tempo.' },
-    { title: 'Relatório de Vendas', icon: ShoppingCart, content: 'Mostra faturamento total, quantidade de vendas, ticket médio e descontos concedidos. Inclui gráfico de barras com vendas por dia e gráfico de pizza com métodos de pagamento.' },
-    { title: 'Relatório de Estoque', icon: Package, content: 'Apresenta a visão geral do estoque: total de produtos, unidades, valor em estoque, produtos com estoque baixo ou zerado. Também mostra o histórico de entradas e saídas.' },
-    { title: 'Relatório Financeiro', icon: DollarSign, content: 'Resume o fluxo financeiro: total a receber, valor já recebido, total de despesas, despesas pagas, pendentes e vencidas. Inclui dados de juros pagos. Calcula o fluxo de caixa líquido do período.' },
-    { title: 'Relatório de Aging (Menos Saídas)', icon: Clock, content: 'Identifica produtos parados: sem vendas há mais de 30, 60 ou 90 dias. Mostra o valor de estoque parado para ajudar nas decisões de promoção ou liquidação.' },
-    { title: 'Como exportar para Excel', icon: Download, content: 'Cada aba possui um botão "Exportar Excel" que gera uma planilha com todos os dados do relatório atual, incluindo juros no financeiro. O arquivo é baixado automaticamente com a data no nome.' },
+    { title: 'O que é o módulo Relatórios', icon: HelpCircle, tag: 'essencial', content: 'Análises detalhadas sobre vendas, estoque, financeiro e produtos parados. Use o filtro de período no topo para ajustar o intervalo.' },
+    { title: 'Relatório de Vendas', icon: ShoppingCart, content: 'Mostra faturamento total, quantidade de vendas, ticket médio e descontos.', tips: ['Gráfico de barras mostra vendas por dia.', 'Gráfico de pizza mostra métodos de pagamento mais usados.', 'Use "Exportar Excel" para baixar os dados.'] },
+    { title: 'Relatório de Estoque', icon: Package, content: 'Visão geral: total de produtos, unidades, valor em estoque e alertas.', tips: ['Identifique produtos com estoque zerado ou abaixo do mínimo.', 'Veja o histórico de entradas e saídas do período.'] },
+    { title: 'Relatório Financeiro', icon: DollarSign, content: 'Fluxo financeiro: a receber, recebido, despesas pagas/pendentes/vencidas e juros.', tips: ['O fluxo de caixa líquido mostra o resultado final (receitas - despesas).', 'Inclui detalhamento de juros pagos no período.'] },
+    { title: 'Peças Paradas (Aging)', icon: Clock, tag: 'dica', content: 'Identifica produtos sem vendas há 30, 60 ou 90+ dias.', tips: ['Produtos parados ocupam capital — considere promoções ou liquidação.', 'O valor de estoque parado ajuda a priorizar ações.'] },
+    { title: 'Como exportar para Excel', icon: Download, tag: 'essencial', content: 'Cada aba tem um botão "Exportar Excel":', steps: [{ text: 'Selecione a aba desejada (Vendas, Estoque, Financeiro ou Aging).' }, { text: 'Ajuste o período no filtro do topo.' }, { text: 'Clique em "Exportar Excel" — o arquivo será baixado automaticamente.' }] },
   ];
 
   const barChartConfig = {
