@@ -268,11 +268,13 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          amount_paid: number | null
           category: string | null
           created_at: string
           description: string
           due_date: string
           id: string
+          interest_amount: number | null
           is_recurring: boolean | null
           notes: string | null
           paid_date: string | null
@@ -286,11 +288,13 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_paid?: number | null
           category?: string | null
           created_at?: string
           description: string
           due_date: string
           id?: string
+          interest_amount?: number | null
           is_recurring?: boolean | null
           notes?: string | null
           paid_date?: string | null
@@ -304,11 +308,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_paid?: number | null
           category?: string | null
           created_at?: string
           description?: string
           due_date?: string
           id?: string
+          interest_amount?: number | null
           is_recurring?: boolean | null
           notes?: string | null
           paid_date?: string | null
