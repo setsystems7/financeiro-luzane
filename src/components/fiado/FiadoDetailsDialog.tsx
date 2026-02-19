@@ -89,6 +89,76 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
 
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6">
+            {/* Payment Form - TOP for easy access */}
+            {canReceivePayment && (
+              <div className="space-y-3">
+                {!showPaymentForm ? (
+                  <Button
+                    onClick={() => setShowPaymentForm(true)}
+                    className="w-full h-12 text-base font-semibold"
+                    size="lg"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Registrar Pagamento — Pendente: R$ {Number(sale.amount_pending).toFixed(2)}
+                  </Button>
+                ) : (
+                  <div className="space-y-4 p-3 md:p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                    <h4 className="font-semibold text-sm md:text-base">Novo Pagamento</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                      <div>
+                        <Label className="text-xs md:text-sm">Valor</Label>
+                        <Input
+                          type="number"
+                          placeholder={`Máx: R$ ${Number(sale.amount_pending).toFixed(2)}`}
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          max={Number(sale.amount_pending)}
+                          step="0.01"
+                          className="text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs md:text-sm">Forma de Pagamento</Label>
+                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                          <SelectTrigger className="text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                            <SelectItem value="pix">PIX</SelectItem>
+                            <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
+                            <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        onClick={handlePayment}
+                        disabled={registerPayment.isPending}
+                        className="flex-1 text-sm"
+                      >
+                        {registerPayment.isPending ? 'Registrando...' : 'Confirmar Pagamento'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowPaymentForm(false);
+                          setPaymentAmount('');
+                        }}
+                        className="text-sm"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Separator />
+
             {/* Customer Info */}
             <div className="space-y-3">
               <h3 className="font-semibold flex items-center gap-2 text-sm md:text-base">
@@ -223,74 +293,7 @@ export function FiadoDetailsDialog({ saleId, open, onClose }: FiadoDetailsDialog
               </>
             )}
 
-            {/* Payment Form */}
-            {canReceivePayment && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  {!showPaymentForm ? (
-                    <Button
-                      onClick={() => setShowPaymentForm(true)}
-                      className="w-full"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Registrar Pagamento
-                    </Button>
-                  ) : (
-                    <div className="space-y-4 p-3 md:p-4 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold text-sm md:text-base">Novo Pagamento</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                        <div>
-                          <Label className="text-xs md:text-sm">Valor</Label>
-                          <Input
-                            type="number"
-                            placeholder={`Máx: R$ ${Number(sale.amount_pending).toFixed(2)}`}
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(e.target.value)}
-                            max={Number(sale.amount_pending)}
-                            step="0.01"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs md:text-sm">Forma de Pagamento</Label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger className="text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                              <SelectItem value="pix">PIX</SelectItem>
-                              <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
-                              <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                          onClick={handlePayment}
-                          disabled={registerPayment.isPending}
-                          className="flex-1 text-sm"
-                        >
-                          {registerPayment.isPending ? 'Registrando...' : 'Confirmar Pagamento'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowPaymentForm(false);
-                            setPaymentAmount('');
-                          }}
-                          className="text-sm"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+            {/* Payment form moved to top */}
 
             {/* Notes */}
             {sale.notes && (
