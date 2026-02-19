@@ -7,9 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   useProducts,
   useCategories,
+  useColors,
+  useSuppliers,
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
@@ -17,12 +20,15 @@ import {
   ProductFormData
 } from '@/hooks/useProducts';
 import { useImportProducts, generateTemplateExcel, parseExcel } from '@/hooks/useImportProducts';
-import { Plus, Search, Filter, Grid, List, Upload, Download, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Filter, Grid, List, Upload, Download, Loader2, FileSpreadsheet, Palette, Truck, HelpCircle, Package, Pencil, Trash2, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
+import { type SupportSection } from '@/components/layout/SupportButton';
 
 export default function Products() {
   const { data: products = [], isLoading } = useProducts();
   const { data: categories = [] } = useCategories();
+  const { data: colors = [] } = useColors();
+  const { data: suppliers = [] } = useSuppliers();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -31,16 +37,30 @@ export default function Products() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [colorFilter, setColorFilter] = useState('all');
+  const [supplierFilter, setSupplierFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const productsSupportSections: SupportSection[] = [
+    { title: 'O que é o módulo Produtos', icon: HelpCircle, content: 'O módulo Produtos é onde você cadastra, edita e organiza todo o catálogo da sua loja. Cada produto pode ter múltiplos tamanhos, códigos de barras, categoria, cor e fornecedor.' },
+    { title: 'Como cadastrar um produto', icon: Plus, content: 'Clique em "Novo Produto" no canto superior direito. Preencha o nome, preço de custo, preço de venda e adicione os tamanhos com suas quantidades. Opcionalmente, defina categoria, cor, fornecedor e estoque mínimo.' },
+    { title: 'Como editar ou excluir', icon: Pencil, content: 'Para editar, clique no ícone de lápis no card do produto. Para excluir, clique no ícone de lixeira. A exclusão pedirá confirmação antes de prosseguir.' },
+    { title: 'Como gerenciar tamanhos e códigos de barras', icon: Package, content: 'No formulário do produto, adicione tamanhos (PP, P, M, G, GG, etc.) com a quantidade em estoque e um código de barras opcional para cada. Os tamanhos são ordenados automaticamente.' },
+    { title: 'Como importar produtos por planilha', icon: Upload, content: 'Clique em "Importar" para abrir o assistente. Primeiro baixe a planilha modelo, preencha com seus produtos e quantidades por tamanho, depois selecione o arquivo para importação automática.' },
+    { title: 'Como usar os filtros', icon: Filter, content: 'Use a barra de busca para encontrar por nome ou descrição. Filtre por categoria, cor ou fornecedor usando os seletores. Alterne entre visualização em grid ou lista.' },
+  ];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || product.category_id === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesColor = colorFilter === 'all' || product.color_id === colorFilter;
+    const matchesSupplier = supplierFilter === 'all' || product.supplier_id === supplierFilter;
+    return matchesSearch && matchesCategory && matchesColor && matchesSupplier;
   });
 
   const handleEdit = (product: any) => {
@@ -52,7 +72,7 @@ export default function Products() {
   };
 
   const handleDelete = (productId: string) => {
-    deleteProduct.mutate(productId);
+    setConfirmDeleteId(productId);
   };
 
   const handleSave = (productData: ProductFormData) => {
@@ -133,7 +153,7 @@ export default function Products() {
   });
 
   return (
-    <MainLayout title="Produtos" subtitle="Gerencie seu catálogo de produtos">
+    <MainLayout title="Produtos" subtitle="Gerencie seu catálogo de produtos" supportContent={{ moduleName: 'Produtos', sections: productsSupportSections }}>
       <div className="space-y-6">
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between opacity-0 animate-fade-in-down">
@@ -156,6 +176,30 @@ export default function Products() {
                 <SelectItem value="all">Todas</SelectItem>
                 {categories.map(cat => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={colorFilter} onValueChange={setColorFilter}>
+              <SelectTrigger className="w-36 transition-all duration-200 hover:border-primary/50">
+                <Palette className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Cor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Cores</SelectItem>
+                {colors.map(color => (
+                  <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+              <SelectTrigger className="w-40 transition-all duration-200 hover:border-primary/50">
+                <Truck className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Fornecedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {suppliers.map(sup => (
+                  <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -341,6 +385,21 @@ export default function Products() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            deleteProduct.mutate(confirmDeleteId);
+            setConfirmDeleteId(null);
+          }
+        }}
+        title="Excluir produto"
+        description="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        variant="destructive"
+      />
     </MainLayout>
   );
 }

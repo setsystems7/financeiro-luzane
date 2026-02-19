@@ -10,11 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useStockMovements, useAddStock } from '@/hooks/useStock';
-import { Barcode, Plus, Minus, Package, History, Search, Loader2, Download } from 'lucide-react';
+import { Barcode, Plus, Minus, Package, History, Search, Loader2, Download, HelpCircle, ScanBarcode, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { type SupportSection } from '@/components/layout/SupportButton';
+
+const stockSupportSections: SupportSection[] = [
+  { title: 'O que é o módulo Estoque', icon: HelpCircle, content: 'O módulo de Estoque permite controlar a entrada e saída de produtos. Aqui você dá entrada rápida de mercadorias usando leitor de código de barras ou seleção manual, visualiza o estoque atual e acompanha o histórico de movimentações.' },
+  { title: 'Como dar entrada de estoque', icon: Plus, content: 'Na seção "Abastecimento Rápido", escaneie o código de barras ou selecione o produto e tamanho manualmente. Defina a quantidade e clique em "Adicionar ao Estoque". A movimentação será registrada automaticamente.' },
+  { title: 'Como usar o leitor de código de barras', icon: ScanBarcode, content: 'O sistema detecta automaticamente leitores de código de barras. Basta escanear o produto com o leitor - o sistema identificará o produto e tamanho correspondente. Funciona mesmo sem o cursor no campo de busca.' },
+  { title: 'Como exportar estoque para Excel', icon: FileSpreadsheet, content: 'Clique no botão "Exportar" na seção "Estoque Atual". O sistema gerará uma planilha Excel com todos os produtos, tamanhos, quantidades, preços e status de estoque.' },
+  { title: 'Histórico de movimentações', icon: History, content: 'A seção "Histórico de Movimentações" mostra todas as entradas e saídas recentes. Cada registro inclui o produto, tamanho, quantidade, tipo (entrada/saída) e data/hora.' },
+];
 
 export default function Stock() {
   const { data: products = [], isLoading: productsLoading } = useProducts();
@@ -180,7 +189,7 @@ export default function Stock() {
   };
 
   return (
-    <MainLayout title="Gestão de Estoque" subtitle="Controle entradas e saídas de produtos">
+    <MainLayout title="Gestão de Estoque" subtitle="Controle entradas e saídas de produtos" supportContent={{ moduleName: 'Estoque', sections: stockSupportSections }}>
       <div className="space-y-6 animate-fade-in">
         {/* Quick Entry Section */}
         <Card variant="pink">

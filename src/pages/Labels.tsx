@@ -9,6 +9,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { Printer, Tag, Search, Plus, Minus, X, Package, Check, FileDown, Usb, AlertTriangle, HelpCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { type SupportSection } from '@/components/layout/SupportButton';
+
+const labelsSupportSections: SupportSection[] = [
+  { title: 'O que é o módulo Etiquetas', content: 'O módulo de Etiquetas permite imprimir etiquetas com código de barras para seus produtos. É otimizado para impressoras térmicas Elgin L42 Pro, mas funciona com qualquer impressora.' },
+  { title: 'Como selecionar produtos', content: 'Busque os produtos pelo nome, categoria ou cor. Clique no tamanho desejado para selecioná-lo. Use "Selecionar Todos" para marcar todos os tamanhos de um produto de uma vez. Defina a quantidade de etiquetas para cada item.' },
+  { title: 'Como imprimir etiquetas', content: 'Após selecionar os produtos e quantidades, clique em "Imprimir Etiquetas". Uma nova janela será aberta com a visualização. Na janela de impressão, selecione a impressora e ajuste as configurações conforme necessário.' },
+  { title: 'Calibração da impressora', content: 'Se as etiquetas não estiverem alinhadas, use os controles de calibração: Escala (%), Deslocamento Horizontal (mm) e Deslocamento Vertical (mm). Os valores são salvos automaticamente para uso futuro.' },
+  { title: 'Impressão USB direta', content: 'Para impressoras conectadas via USB, o sistema pode tentar enviar comandos diretamente. Se a impressão normal não funcionar, verifique se a impressora está configurada como impressora padrão no sistema operacional.' },
+];
 import JsBarcode from 'jsbarcode';
 import {
   AlertDialog,
@@ -1024,7 +1033,7 @@ export default function Labels() {
   };
 
   return (
-    <MainLayout title="Etiquetas" subtitle="Elgin L42 Pro - 110x30mm">
+    <MainLayout title="Etiquetas" subtitle="Elgin L42 Pro - 110x30mm" supportContent={{ moduleName: 'Etiquetas', sections: labelsSupportSections }}>
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 animate-fade-in h-[calc(100vh-140px)] lg:h-[calc(100vh-160px)]">
 
         {/* Mobile: Resumo fixo no topo */}

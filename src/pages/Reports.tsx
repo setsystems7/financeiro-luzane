@@ -10,8 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   BarChart3, FileSpreadsheet, Package, TrendingUp, TrendingDown,
   Download, DollarSign, ShoppingCart, AlertTriangle, Clock,
-  Calendar, ArrowUp, ArrowDown, Minus
+  Calendar, ArrowUp, ArrowDown, Minus, HelpCircle
 } from 'lucide-react';
+import { type SupportSection } from '@/components/layout/SupportButton';
 import { toast } from 'sonner';
 import { useProducts } from '@/hooks/useProducts';
 import { useSales } from '@/hooks/useSales';
@@ -355,8 +356,17 @@ export default function Reports() {
     crediario: 'Crediário',
   };
 
+  const reportsSupportSections: SupportSection[] = [
+    { title: 'O que é o módulo Relatórios', icon: HelpCircle, content: 'O módulo de Relatórios oferece análises detalhadas sobre vendas, estoque, financeiro e produtos parados. Use os filtros de período para visualizar dados de diferentes intervalos de tempo.' },
+    { title: 'Relatório de Vendas', icon: ShoppingCart, content: 'Mostra faturamento total, quantidade de vendas, ticket médio e descontos concedidos. Detalha os métodos de pagamento utilizados e os produtos mais vendidos no período.' },
+    { title: 'Relatório de Estoque', icon: Package, content: 'Apresenta a visão geral do estoque: total de produtos, unidades, valor em estoque, produtos com estoque baixo ou zerado. Também mostra o histórico de entradas e saídas.' },
+    { title: 'Relatório Financeiro', icon: DollarSign, content: 'Resume o fluxo financeiro: total a receber, valor já recebido, total de despesas, despesas pagas, pendentes e vencidas. Calcula o fluxo de caixa líquido do período.' },
+    { title: 'Relatório de Aging (Menos Saídas)', icon: Clock, content: 'Identifica produtos parados: sem vendas há mais de 30, 60 ou 90 dias. Mostra o valor de estoque parado para ajudar nas decisões de promoção ou liquidação.' },
+    { title: 'Como exportar para Excel', icon: Download, content: 'Cada aba possui um botão "Exportar Excel" que gera uma planilha com todos os dados do relatório atual. O arquivo é baixado automaticamente com a data no nome.' },
+  ];
+
   return (
-    <MainLayout title="Relatórios" subtitle="Análises detalhadas do seu negócio">
+    <MainLayout title="Relatórios" subtitle="Análises detalhadas do seu negócio" supportContent={{ moduleName: 'Relatórios', sections: reportsSupportSections }}>
       <div className="space-y-6 animate-fade-in">
         {/* Period Filter */}
         <div className="flex items-center justify-between">

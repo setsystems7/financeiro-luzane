@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { type SupportSection } from '@/components/layout/SupportButton';
+import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,6 +70,20 @@ export default function Financial() {
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
   const [paymentInterest, setPaymentInterest] = useState<string>('');
   const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
+
+  // Confirm dialog states
+  const [confirmCancelSaleId, setConfirmCancelSaleId] = useState<string | null>(null);
+  const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
+
+  const financialSupportSections: SupportSection[] = [
+    { title: 'O que é o módulo Financeiro', icon: HelpCircle, content: 'O módulo Financeiro centraliza todo o controle de contas a receber (vendas realizadas) e contas a pagar (despesas). Aqui você acompanha o fluxo de caixa, identifica valores pendentes e mantém suas finanças organizadas.' },
+    { title: 'Como lançar uma despesa', icon: ReceiptIcon, content: 'Clique no botão "Nova Despesa" na aba "A Pagar". Preencha a descrição, valor, categoria, data de vencimento e fornecedor (opcional). Você também pode marcar como despesa recorrente informando o número de meses.' },
+    { title: 'Como registrar pagamento com juros', icon: DollarSupportIcon, content: 'Ao pagar uma despesa vencida, clique no botão "Pagar". No diálogo de pagamento, informe o valor de juros (se houver) e o valor efetivamente pago. O sistema registrará automaticamente os juros separadamente.' },
+    { title: 'Como usar os filtros', icon: FilterIcon, content: 'Use a barra de filtros no topo para buscar por descrição, filtrar por data inicial e final, e selecionar o status (todos, pendentes, pagos, vencidos). Clique em "Limpar" para resetar todos os filtros.' },
+    { title: 'Como importar planilha', icon: FileIcon, content: 'Clique em "Importar Histórico" para carregar um arquivo Excel com suas despesas e recebíveis. A planilha deve seguir o formato esperado com as colunas: descrição, valor, data de vencimento, categoria e status.' },
+    { title: 'Despesas recorrentes', icon: CalendarSupportIcon, content: 'Ao criar uma despesa, marque a opção "Despesa Recorrente" e informe quantos meses ela se repete. O sistema criará automaticamente uma despesa para cada mês. Despesas recorrentes só podem ser excluídas se forem a última parcela.' },
+    { title: 'Perguntas frequentes', icon: HelpCircle, content: '• Como estornar uma venda? Na aba "Recebidos", clique em "Estornar" ao lado da venda.\n• Posso editar uma despesa? Sim, clique nos campos de descrição, categoria ou data para editar diretamente na tabela.\n• O que significa "Valor do Caixa"? É o valor líquido que efetivamente entra no seu caixa, já descontadas as taxas de cartão.' },
+  ];
   const toggleRow = (id: string) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
@@ -173,7 +190,7 @@ export default function Financial() {
   };
 
   return (
-    <MainLayout title="Financeiro" subtitle="Controle de contas a pagar e receber">
+    <MainLayout title="Financeiro" subtitle="Controle de contas a pagar e receber" supportContent={{ moduleName: 'Financeiro', sections: financialSupportSections }}>
       <main className="space-y-6 animate-fade-in">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -880,9 +897,7 @@ export default function Financial() {
                                     toast.error(result.reason || 'Não é possível excluir esta despesa.');
                                     return;
                                   }
-                                  if (confirm('Tem certeza que deseja excluir esta despesa?')) {
-                                    deleteExpense.mutate(item.id);
-                                  }
+                                  setConfirmDeleteExpenseId(item.id);
                                 }}
                                 disabled={deleteExpense.isPending}
                               >
@@ -997,6 +1012,36 @@ export default function Financial() {
             setSelectedCategoryId(categoryId);
             setValue('category', categoryName);
           }}
+        />
+
+        <ConfirmDialog
+          open={!!confirmCancelSaleId}
+          onOpenChange={(open) => !open && setConfirmCancelSaleId(null)}
+          onConfirm={() => {
+            if (confirmCancelSaleId) {
+              cancelSale.mutate(confirmCancelSaleId);
+              setConfirmCancelSaleId(null);
+            }
+          }}
+          title="Estornar venda"
+          description="Tem certeza que deseja estornar esta venda? O estoque será devolvido."
+          confirmText="Estornar"
+          variant="destructive"
+        />
+
+        <ConfirmDialog
+          open={!!confirmDeleteExpenseId}
+          onOpenChange={(open) => !open && setConfirmDeleteExpenseId(null)}
+          onConfirm={() => {
+            if (confirmDeleteExpenseId) {
+              deleteExpense.mutate(confirmDeleteExpenseId);
+              setConfirmDeleteExpenseId(null);
+            }
+          }}
+          title="Excluir despesa"
+          description="Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita."
+          confirmText="Excluir"
+          variant="destructive"
         />
       </main>
     </MainLayout>
