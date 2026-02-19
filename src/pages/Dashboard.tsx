@@ -120,7 +120,7 @@ export default function Dashboard() {
               value={`R$ ${periodStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               icon={<ShoppingBag className="w-6 h-6 text-pink-dark" />}
               variant="pink"
-              trend={periodStats.revenueTrend}
+              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-2">
@@ -128,7 +128,7 @@ export default function Dashboard() {
               title="Qtd. Vendas"
               value={periodStats.count}
               icon={<DollarSign className="w-6 h-6 text-primary-foreground" />}
-              trend={periodStats.countTrend}
+              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-3">
@@ -136,7 +136,7 @@ export default function Dashboard() {
               title="Ticket Médio"
               value={`R$ ${periodStats.ticket.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               icon={<TrendingUp className="w-6 h-6 text-success" />}
-              trend={periodStats.ticketTrend}
+              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-4">
