@@ -241,15 +241,18 @@ export function FiadoList() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedSaleId(sale.id)}
-                                className="text-xs md:text-sm"
-                              >
-                                <Eye className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                                <span className="hidden sm:inline">Detalhes</span>
-                              </Button>
+                              {Number(sale.amount_pending) > 0 && sale.status !== 'cancelado' && sale.status !== 'pago' && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => setSelectedSaleId(sale.id)}
+                                  className="text-xs md:text-sm"
+                                >
+                                  <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                  <span className="hidden sm:inline">Registrar Pagamento</span>
+                                  <span className="sm:hidden">Pagar</span>
+                                </Button>
+                              )}
 
                               {sale.status !== 'cancelado' && sale.status !== 'pago' && (
                                 <>
@@ -262,18 +265,6 @@ export function FiadoList() {
                                     <Pencil className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                                     <span className="hidden sm:inline">Editar</span>
                                   </Button>
-
-                                  {Number(sale.amount_pending) > 0 && (
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      onClick={() => setSelectedSaleId(sale.id)}
-                                      className="text-xs md:text-sm"
-                                    >
-                                      <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                                      <span className="hidden sm:inline">Pagar</span>
-                                    </Button>
-                                  )}
 
                                   <Button
                                     variant="ghost"
