@@ -37,6 +37,7 @@ import {
   ScanBarcode,
   Check
 } from 'lucide-react';
+import { type SupportSection } from '@/components/layout/SupportButton';
 import { useExchanges, useCreateExchange, useMonthExchanges, ExchangeItem } from '@/hooks/useExchanges';
 import { useSales } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
@@ -383,8 +384,16 @@ export default function Exchanges() {
     });
   };
 
+  const exchangesSupportSections: SupportSection[] = [
+    { title: 'O que é o módulo Trocas', content: 'O módulo de Trocas e Devoluções permite registrar trocas de produtos vendidos. Você seleciona a venda original, escolhe os itens a devolver e pode adicionar novos produtos no lugar.' },
+    { title: 'Como fazer uma troca', content: 'Na aba "Nova Troca", busque a venda original pelo número ou nome do cliente. Selecione os itens que serão devolvidos e, opcionalmente, adicione novos produtos. O sistema calcula automaticamente a diferença de valor.' },
+    { title: 'Como funciona a diferença de valor', content: 'Se os novos produtos custam mais que os devolvidos, o cliente paga a diferença. Se custam menos, o crédito fica registrado. Você pode editar o valor manualmente se necessário.' },
+    { title: 'Histórico de trocas', content: 'Na aba "Histórico", veja todas as trocas realizadas com filtros por período. Clique em uma troca para expandir e ver os detalhes dos produtos devolvidos e dos novos.' },
+    { title: 'Perguntas frequentes', content: '• O estoque é atualizado automaticamente? Sim, os itens devolvidos voltam ao estoque e os novos são descontados.\n• Posso trocar sem venda original? Não, toda troca precisa ser vinculada a uma venda existente.\n• Posso usar código de barras? Sim, há campos de código de barras tanto para devolução quanto para novos itens.' },
+  ];
+
   return (
-    <MainLayout title="Trocas e Devoluções" subtitle="Gerencie trocas de produtos e controle financeiro">
+    <MainLayout title="Trocas e Devoluções" subtitle="Gerencie trocas de produtos e controle financeiro" supportContent={{ moduleName: 'Trocas', sections: exchangesSupportSections }}>
       <div className="space-y-4">
         {/* Stats Cards - Compact */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

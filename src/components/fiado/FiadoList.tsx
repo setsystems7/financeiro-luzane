@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Search,
   Clock,
@@ -16,12 +17,13 @@ import {
   Trash2,
   Calendar as CalendarIcon,
   AlertTriangle,
-  CircleDot
+  CircleDot,
+  MessageCircle
 } from 'lucide-react';
 import { useFiadoSales, useCancelFiadoSale, useDeleteFiadoSale } from '@/hooks/useFiado';
 import { FiadoDetailsDialog } from './FiadoDetailsDialog';
 import { FiadoEditDialog } from './FiadoEditDialog';
-import { format, isPast, isToday } from 'date-fns';
+import { format, isPast, isToday, addDays, isAfter, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type FilterType = 'all' | 'pendente' | 'parcial' | 'atrasado' | 'pago' | 'cancelado';
@@ -61,6 +63,8 @@ export function FiadoList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const { data: fiadoSales, isLoading } = useFiadoSales();
   const cancelFiadoSale = useCancelFiadoSale();
@@ -82,16 +86,22 @@ export function FiadoList() {
   });
 
   const handleCancel = async (saleId: string) => {
-    if (confirm('Tem certeza que deseja cancelar esta venda? O estoque será devolvido.')) {
-      await cancelFiadoSale.mutateAsync(saleId);
-    }
+    setConfirmCancelId(saleId);
   };
 
   const handleDelete = async (saleId: string) => {
-    if (confirm('Tem certeza que deseja EXCLUIR esta venda? Esta ação não pode ser desfeita.')) {
-      await deleteFiadoSale.mutateAsync(saleId);
-    }
+    setConfirmDeleteId(saleId);
   };
+
+  // Alert: fiados vencendo nos próximos 3 dias
+  const expiringFiados = enrichedSales?.filter(sale => {
+    if (sale.effectiveStatus === 'pago' || sale.effectiveStatus === 'cancelado') return false;
+    if (!sale.due_date) return false;
+    const dueDate = new Date(sale.due_date + 'T12:00:00');
+    const now = new Date();
+    const threeDaysFromNow = addDays(now, 3);
+    return isAfter(dueDate, now) && isBefore(dueDate, threeDaysFromNow);
+  }) || [];
 
   // Calculate summary stats
   const stats = {
@@ -107,6 +117,48 @@ export function FiadoList() {
   return (
     <>
       <div className="space-y-6">
+        {/* Alerta de fiados vencendo nos próximos 3 dias */}
+        {expiringFiados.length > 0 && (
+          <Card className="border-warning bg-warning/5">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-warning" />
+                <h3 className="font-semibold text-warning">Fiados vencendo nos próximos 3 dias</h3>
+              </div>
+              <div className="space-y-2">
+                {expiringFiados.map(sale => (
+                  <div key={sale.id} className="flex items-center justify-between text-sm p-2 bg-card rounded-lg">
+                    <div>
+                      <span className="font-medium">{sale.customer_name}</span>
+                      <span className="text-muted-foreground ml-2">
+                        Vence: {format(new Date(sale.due_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                      </span>
+                      <span className="text-primary ml-2 font-semibold">
+                        R$ {Number(sale.amount_pending).toFixed(2)}
+                      </span>
+                    </div>
+                    {sale.customer_phone && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => {
+                          const phone = sale.customer_phone!.replace(/\D/g, '');
+                          const message = encodeURIComponent(`Olá ${sale.customer_name}, tudo bem? Passando para lembrar que seu fiado no valor de R$ ${Number(sale.amount_pending).toFixed(2)} vence em ${format(new Date(sale.due_date + 'T12:00:00'), 'dd/MM/yyyy')}. Aguardamos seu pagamento!`);
+                          window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                        }}
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        WhatsApp
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
           <Card className="cursor-pointer hover:ring-2 hover:ring-yellow-500/50 transition-all" onClick={() => setStatusFilter('pendente')}>
@@ -186,7 +238,7 @@ export function FiadoList() {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar cliente..."
+                  placeholder="Buscar por nome, telefone ou CPF..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -325,6 +377,23 @@ export function FiadoList() {
                               >
                                 <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                               </Button>
+
+                              {/* WhatsApp button */}
+                              {sale.customer_phone && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs md:text-sm gap-1"
+                                  onClick={() => {
+                                    const phone = sale.customer_phone!.replace(/\D/g, '');
+                                    const message = encodeURIComponent(`Olá ${sale.customer_name}, tudo bem? Passando para falar sobre o seu fiado no valor de R$ ${Number(sale.amount_pending).toFixed(2)}.`);
+                                    window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                                  }}
+                                >
+                                  <MessageCircle className="w-3 h-3 md:w-4 md:h-4" />
+                                  <span className="hidden sm:inline">WhatsApp</span>
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -355,6 +424,38 @@ export function FiadoList() {
           onClose={() => setEditingSaleId(null)}
         />
       )}
+
+      {/* Confirm Cancel */}
+      <ConfirmDialog
+        open={!!confirmCancelId}
+        onOpenChange={(open) => !open && setConfirmCancelId(null)}
+        onConfirm={async () => {
+          if (confirmCancelId) {
+            await cancelFiadoSale.mutateAsync(confirmCancelId);
+            setConfirmCancelId(null);
+          }
+        }}
+        title="Cancelar venda fiado"
+        description="Tem certeza que deseja cancelar esta venda? O estoque será devolvido."
+        confirmText="Cancelar Venda"
+        variant="destructive"
+      />
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+        onConfirm={async () => {
+          if (confirmDeleteId) {
+            await deleteFiadoSale.mutateAsync(confirmDeleteId);
+            setConfirmDeleteId(null);
+          }
+        }}
+        title="Excluir venda fiado"
+        description="Tem certeza que deseja EXCLUIR esta venda? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        variant="destructive"
+      />
     </>
   );
 }

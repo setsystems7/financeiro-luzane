@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Store, Bell, Plus, Edit, Loader2, Users, Lock, Eye, EyeOff } from 'lucide-react';
+import { Store, Bell, Plus, Edit, Loader2, Users, Lock, Eye, EyeOff, HelpCircle, Save, Download } from 'lucide-react';
+import { type SupportSection } from '@/components/layout/SupportButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfiles, useCreateUser, useUpdateProfile, useUpdatePassword } from '@/hooks/useUsers';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
@@ -159,8 +160,16 @@ export default function Settings() {
     updateSettings({ [key]: value } as any);
   };
 
+  const settingsSupportSections: SupportSection[] = [
+    { title: 'O que é o módulo Configurações', icon: HelpCircle, content: 'O módulo de Configurações permite personalizar o sistema: dados da loja, gerenciamento de usuários, alteração de senha e preferências de notificação.' },
+    { title: 'Como alterar dados da loja', icon: Store, content: 'Na seção "Dados da Loja", preencha o nome da loja, CNPJ e endereço. Clique em "Salvar Alterações" para gravar. Esses dados são usados em etiquetas e relatórios.' },
+    { title: 'Como gerenciar usuários', icon: Users, content: 'Na seção "Gerenciar Usuários", veja a lista de todos os usuários do sistema. Clique em "Novo Usuário" para cadastrar. Use o botão de editar para alterar nome e função (Administrador ou Usuário).' },
+    { title: 'Como alterar senha', icon: Lock, content: 'Na seção "Alterar Minha Senha", insira a nova senha e confirme. A senha deve ter no mínimo 6 caracteres. Cada usuário só pode alterar a própria senha.' },
+    { title: 'Notificações', icon: Bell, content: 'Configure quais notificações você deseja receber: alerta de estoque baixo, resumo diário de vendas e alerta de contas a vencer. Ative ou desative cada uma com o toggle.' },
+  ];
+
   return (
-    <MainLayout title="Configurações" subtitle="Personalize seu sistema">
+    <MainLayout title="Configurações" subtitle="Personalize seu sistema" supportContent={{ moduleName: 'Configurações', sections: settingsSupportSections }}>
       <div className="space-y-6 max-w-4xl animate-fade-in">
         {/* Store Info */}
         <Card variant="elevated">

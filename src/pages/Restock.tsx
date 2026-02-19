@@ -12,9 +12,17 @@ import {
   TrendingDown,
   ShoppingCart,
   Boxes,
-  Info
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { type SupportSection } from '@/components/layout/SupportButton';
+
+const restockSupportSections: SupportSection[] = [
+  { title: 'O que é o módulo Reposição', icon: HelpCircle, content: 'O módulo de Reposição analisa automaticamente seu estoque e vendas para indicar quais produtos precisam ser comprados. Ele classifica os produtos por urgência para facilitar suas decisões de compra.' },
+  { title: 'Como interpretar os níveis de urgência', icon: AlertTriangle, content: '• Sem Estoque (vermelho): produtos com 0 unidades - compre imediatamente!\n• Comprar Esta Semana (amarelo): estoque crítico, próximo de acabar.\n• Ficar de Olho (azul): estoque abaixo do ideal, planeje a compra.\n• Estoque OK (verde): produtos com estoque suficiente.' },
+  { title: 'Estoque mínimo', icon: Package, content: 'O estoque mínimo é definido no cadastro de cada produto. Quando o estoque total fica abaixo desse valor, o produto aparece nos alertas. Ajuste o estoque mínimo de acordo com a velocidade de venda de cada produto.' },
+];
 
 export default function Restock() {
   const { data: restockData, isLoading } = useRestockCalculations();
@@ -41,7 +49,7 @@ export default function Restock() {
   const totalValue = restockData?.summary.totalStockValue || 0;
 
   return (
-    <MainLayout title="Controle de Estoque" subtitle="Veja o que precisa comprar">
+    <MainLayout title="Controle de Estoque" subtitle="Veja o que precisa comprar" supportContent={{ moduleName: 'Reposição', sections: restockSupportSections }}>
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />

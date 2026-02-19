@@ -28,6 +28,16 @@ import {
   Info
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { type SupportSection } from '@/components/layout/SupportButton';
+
+const posSupportSections: SupportSection[] = [
+  { title: 'O que é o PDV', content: 'O PDV (Ponto de Venda) é onde você registra as vendas da loja. Adicione produtos ao carrinho por busca, seleção ou leitura de código de barras, aplique descontos, escolha o método de pagamento e finalize a venda.' },
+  { title: 'Como adicionar produtos ao carrinho', content: 'Use o campo de busca à direita para pesquisar por nome ou escanear o código de barras. Selecione o produto e tamanho desejado. O sistema verifica o estoque automaticamente e impede venda sem estoque.' },
+  { title: 'Como usar o leitor de código de barras', content: 'Com o cursor no campo de busca, escaneie o produto com o leitor. Se o código for EAN-13 (13 dígitos), o produto é adicionado automaticamente ao carrinho. Se não encontrado, uma mensagem de erro será exibida.' },
+  { title: 'Métodos de pagamento', content: 'Escolha entre: Dinheiro, PIX, Débito ou Crédito. Para crédito, selecione a bandeira do cartão e o número de parcelas. As taxas são calculadas automaticamente e somadas ao valor da venda.' },
+  { title: 'Como aplicar desconto', content: 'No campo "Desconto", informe o percentual (0 a 100%). O desconto é aplicado sobre o subtotal de todos os produtos do carrinho. O valor com desconto é exibido em tempo real.' },
+  { title: 'Taxas de cartão', content: 'Ao pagar com cartão de crédito, o sistema calcula a taxa baseada na bandeira e número de parcelas. A taxa é somada ao valor que o cliente paga, garantindo que a loja receba o valor integral da venda.' },
+];
 
 interface CartItem extends SaleItem {
   product_size_id: string | null;
@@ -284,7 +294,7 @@ export default function POS() {
   };
 
   return (
-    <MainLayout title="PDV" subtitle="Ponto de venda">
+    <MainLayout title="PDV" subtitle="Ponto de venda" supportContent={{ moduleName: 'PDV', sections: posSupportSections }}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-110px)]">
         {/* Carrinho e Pagamento - Área Principal à Esquerda */}
         <Card variant="elevated" className="lg:col-span-2 flex flex-col overflow-hidden opacity-0 animate-fade-in-left">

@@ -12,7 +12,16 @@ import { OverdueExpensesAlert } from '@/components/dashboard/OverdueExpensesAler
 import { useTodaySales, useMonthSales, useMonthProfit } from '@/hooks/useSales';
 import { useLowStockProducts } from '@/hooks/useStock';
 import { useFinancialSummary } from '@/hooks/useFinancial';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, BarChart3, HelpCircle, Package } from 'lucide-react';
+import { type SupportSection } from '@/components/layout/SupportButton';
+
+const dashboardSupportSections: SupportSection[] = [
+  { title: 'O que é o Dashboard', icon: HelpCircle, content: 'O Dashboard é a tela principal do sistema. Ele mostra um resumo geral do seu negócio: vendas do dia e do mês, lucro, alertas de estoque baixo, produtos mais vendidos e muito mais.' },
+  { title: 'Como interpretar os indicadores', icon: BarChart3, content: '• Vendas Hoje: valor total de vendas realizadas hoje.\n• Vendas do Mês: acumulado de vendas no mês atual.\n• Lucro do Mês: diferença entre receita e custos dos produtos vendidos.\n• Estoque Baixo: quantidade de produtos abaixo do estoque mínimo.' },
+  { title: 'Alertas de estoque baixo', icon: Package, content: 'O card "Estoque Baixo" mostra quantos produtos estão com estoque abaixo do mínimo configurado. Clique na seção de alertas para ver a lista completa e tomar ação.' },
+  { title: 'Alertas de despesas vencidas', icon: AlertTriangle, content: 'A seção de despesas vencidas mostra contas a pagar que já passaram do vencimento. É importante mantê-las em dia para um controle financeiro saudável.' },
+  { title: 'Resumo de vendas e trocas', icon: ShoppingBag, content: 'O gráfico de vendas mostra a evolução dos últimos dias. O resumo de trocas mostra quantas trocas foram feitas e o valor envolvido. Os produtos mais vendidos ajudam a identificar seus itens mais populares.' },
+];
 
 export default function Dashboard() {
   const { data: todaySales } = useTodaySales();
@@ -22,7 +31,7 @@ export default function Dashboard() {
   const { data: financialSummary } = useFinancialSummary();
 
   return (
-    <MainLayout title="Dashboard" subtitle="Visão geral do seu negócio">
+    <MainLayout title="Dashboard" subtitle="Visão geral do seu negócio" supportContent={{ moduleName: 'Dashboard', sections: dashboardSupportSections }}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
