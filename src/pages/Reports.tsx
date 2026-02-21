@@ -147,6 +147,10 @@ export default function Reports() {
       const productStock = p.sizes.reduce((sum, s) => sum + s.quantity, 0);
       return acc + (productStock * p.cost_price);
     }, 0);
+    const stockSaleValue = products.reduce((acc, p) => {
+      const productStock = p.sizes.reduce((sum, s) => sum + s.quantity, 0);
+      return acc + (productStock * p.sale_price);
+    }, 0);
 
     const lowStockProducts = products.filter(p => {
       const total = p.sizes.reduce((sum, s) => sum + s.quantity, 0);
@@ -167,6 +171,8 @@ export default function Reports() {
       totalProducts,
       totalStock,
       stockValue,
+      stockSaleValue,
+      potentialProfit: stockSaleValue - stockValue,
       lowStockProducts,
       outOfStockProducts,
       movements: filteredMovements,
@@ -623,7 +629,7 @@ export default function Reports() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   <Card>
                     <CardContent className="pt-4">
                       <div className="flex items-center justify-between">
@@ -650,12 +656,38 @@ export default function Reports() {
                     <CardContent className="pt-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-muted-foreground">Valor em Estoque</p>
+                          <p className="text-xs text-muted-foreground">Valor em Estoque (Custo)</p>
                           <p className="text-xl font-bold text-foreground">
                             R$ {stockReport.stockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                         <DollarSign className="w-8 h-8 text-amber-500 opacity-50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Projeção de Vendas</p>
+                          <p className="text-xl font-bold text-green-600">
+                            R$ {stockReport.stockSaleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <TrendingUp className="w-8 h-8 text-green-500 opacity-50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Lucro Potencial</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            R$ {stockReport.potentialProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <DollarSign className="w-8 h-8 text-blue-500 opacity-50" />
                       </div>
                     </CardContent>
                   </Card>
