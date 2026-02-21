@@ -50,10 +50,16 @@ export default function Financial() {
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'pending' | 'received'>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  // Start with no date filters to show all expenses by default
+  // Default to 30 days period
   const [expenseStatus, setExpenseStatus] = useState<'all' | 'pendente' | 'pago' | 'vencido'>('all');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const defaultStartDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [startDate, setStartDate] = useState<string>(defaultStartDate);
+  const [endDate, setEndDate] = useState<string>(defaultEndDate);
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -278,8 +284,8 @@ export default function Financial() {
   };
 
   const clearFilters = () => {
-    setStartDate('');
-    setEndDate('');
+    setStartDate(defaultStartDate);
+    setEndDate(defaultEndDate);
     setSearchTerm('');
     setExpenseStatus('all');
   };
