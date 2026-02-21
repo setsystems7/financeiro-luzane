@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -13,49 +13,9 @@ interface CurrencyInputProps {
 }
 
 /**
- * Formats a raw numeric string (in cents) to Brazilian currency display.
- * E.g. "1500" -> "15,00", "100" -> "1,00"
+ * Simple currency input that accepts comma as decimal separator (Brazilian format).
+ * Stores value as a standard decimal string (e.g. "15.00").
  */
-function formatCentsToDisplay(cents: string): string {
-  const num = parseInt(cents || '0', 10);
-  const reais = Math.floor(num / 100);
-  const centavos = (num % 100).toString().padStart(2, '0');
-  
-  // Format with thousands separator
-  const reaisFormatted = reais.toLocaleString('pt-BR');
-  return `${reaisFormatted},${centavos}`;
-}
-
-/**
- * Converts a decimal string (e.g. "15.00", "15", "1500") to cents string.
- */
-function decimalToCents(value: string): string {
-  if (!value || value === '0') return '0';
-  
-  // Remove everything except digits, comma and dot
-  const cleaned = value.replace(/[^\d.,]/g, '');
-  
-  // If it has comma, treat as Brazilian format
-  if (cleaned.includes(',')) {
-    const parts = cleaned.split(',');
-    const intPart = parts[0].replace(/\./g, ''); // remove thousands separator
-    const decPart = (parts[1] || '00').padEnd(2, '0').substring(0, 2);
-    return String(parseInt(intPart || '0', 10) * 100 + parseInt(decPart, 10));
-  }
-  
-  // If it has a dot, treat as decimal
-  if (cleaned.includes('.')) {
-    const parts = cleaned.split('.');
-    const intPart = parts[0];
-    const decPart = (parts[1] || '00').padEnd(2, '0').substring(0, 2);
-    return String(parseInt(intPart || '0', 10) * 100 + parseInt(decPart, 10));
-  }
-  
-  // Pure integer - could be cents or reais. If the value looks like it was
-  // already stored as a decimal (e.g. "15" meaning R$15.00), treat as reais.
-  return String(parseInt(cleaned, 10) * 100);
-}
-
 export function CurrencyInput({
   value,
   onChange,
@@ -66,49 +26,66 @@ export function CurrencyInput({
   disabled,
 }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync display from external value (decimal string like "15.00")
+  // Sync display from external value (decimal string like "15" or "15.00")
   useEffect(() => {
-    const cents = decimalToCents(value);
-    setDisplayValue(formatCentsToDisplay(cents));
+    if (value === '' || value === undefined || value === null) {
+      setDisplayValue('');
+      return;
+    }
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      setDisplayValue('');
+      return;
+    }
+    // Show with comma as decimal separator
+    setDisplayValue(num.toFixed(2).replace('.', ','));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawInput = e.target.value;
+    let raw = e.target.value;
     
-    // Extract only digits
-    const digits = rawInput.replace(/\D/g, '');
+    // Allow only digits, comma, and dot
+    raw = raw.replace(/[^\d.,]/g, '');
     
-    // Update display
-    const formatted = formatCentsToDisplay(digits);
-    setDisplayValue(formatted);
-    
-    // Convert to decimal string for parent (e.g. "1500" cents -> "15.00")
-    const numericValue = parseInt(digits || '0', 10);
-    const decimalValue = (numericValue / 100).toFixed(2);
-    onChange(decimalValue);
+    // Replace comma with dot for internal handling, but keep display with comma
+    setDisplayValue(raw);
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Select all on focus for easy editing
-    setTimeout(() => {
-      e.target.select();
-    }, 0);
+  const handleBlur = () => {
+    if (!displayValue || displayValue.trim() === '') {
+      onChange('0');
+      setDisplayValue('0,00');
+      return;
+    }
+
+    // Convert comma to dot for parsing
+    const normalized = displayValue.replace(',', '.');
+    const num = parseFloat(normalized);
+    
+    if (isNaN(num)) {
+      onChange('0');
+      setDisplayValue('0,00');
+      return;
+    }
+
+    // Store as decimal string
+    onChange(num.toFixed(2));
+    // Display formatted with comma
+    setDisplayValue(num.toFixed(2).replace('.', ','));
   };
 
   return (
     <div className="relative">
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
       <Input
-        ref={inputRef}
         id={id}
         type="text"
-        inputMode="numeric"
+        inputMode="decimal"
         value={displayValue}
         onChange={handleChange}
-        onFocus={handleFocus}
-        className={cn('pl-10 text-right', className)}
+        onBlur={handleBlur}
+        className={cn('pl-10', className)}
         placeholder={placeholder}
         required={required}
         disabled={disabled}
