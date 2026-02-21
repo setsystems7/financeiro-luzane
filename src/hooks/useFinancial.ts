@@ -559,6 +559,7 @@ export function useFinancialSummary(filters?: {
   return useQuery({
     queryKey: ['financial-summary', filters],
     queryFn: async () => {
+      // Period-filtered receivables (for Entrada de Vendas and Taxas)
       let receivablesQuery = supabase
         .from('receivables')
         .select('amount, fee, net_amount, is_received, due_date');
@@ -579,6 +580,13 @@ export function useFinancialSummary(filters?: {
       const { data: receivables, error: recError } = await receivablesQuery;
       if (recError) throw recError;
 
+      // All-time receivables for Valor do Caixa (independent of period)
+      const { data: allReceivables, error: allRecError } = await supabase
+        .from('receivables')
+        .select('net_amount');
+      if (allRecError) throw allRecError;
+
+      // Period-filtered expenses (for Contas a Pagar)
       let expensesQuery = supabase
         .from('expenses')
         .select('amount, status, due_date');
@@ -599,15 +607,15 @@ export function useFinancialSummary(filters?: {
 
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
-      const totalReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalCaixa = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
       const totalPayable = (expenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
 
       return {
         totalGrossReceivable,
         totalFees,
-        totalReceivable,
+        totalReceivable: totalCaixa,
         totalPayable,
-        balance: totalReceivable - totalPayable,
+        balance: totalCaixa - totalPayable,
         receivablesCount: receivables?.length || 0,
         expensesCount: expenses?.length || 0,
       };
