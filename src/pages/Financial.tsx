@@ -50,14 +50,16 @@ export default function Financial() {
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'pending' | 'received'>('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  // Default to 30 days period
+  // Default to current month period
   const [expenseStatus, setExpenseStatus] = useState<'all' | 'pendente' | 'pago' | 'vencido'>('all');
   const defaultStartDate = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
   }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const defaultEndDate = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+  }, []);
   const [startDate, setStartDate] = useState<string>(defaultStartDate);
   const [endDate, setEndDate] = useState<string>(defaultEndDate);
   const [searchTerm, setSearchTerm] = useState('');
@@ -317,6 +319,12 @@ export default function Financial() {
             title="Contas a Pagar"
             value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
             icon={<TrendingDown className="w-6 h-6 text-red-500" />}
+            description={
+              summaryLoading ? '' : 
+              summary?.totalOverdue && summary.totalOverdue > 0 
+                ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
+                : `Despesas do período`
+            }
           />
           <StatsCard
             title="Saldo Previsto"

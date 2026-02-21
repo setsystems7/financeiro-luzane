@@ -586,38 +586,55 @@ export function useFinancialSummary(filters?: {
         .select('net_amount');
       if (allRecError) throw allRecError;
 
-      // Period-filtered expenses (for Contas a Pagar)
-      let expensesQuery = supabase
+      // Current month expenses (based on filter period)
+      const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
+      const periodEnd = filters?.endDate ? filters.endDate.toISOString().split('T')[0] : null;
+
+      let monthExpensesQuery = supabase
         .from('expenses')
-        .select('amount, status, due_date');
+        .select('amount, status, due_date')
+        .neq('status', 'pago');
 
-      if (filters?.expenseStatus && filters.expenseStatus !== 'all') {
-        expensesQuery = expensesQuery.eq('status', filters.expenseStatus);
+      if (periodStart) {
+        monthExpensesQuery = monthExpensesQuery.gte('due_date', periodStart);
+      }
+      if (periodEnd) {
+        monthExpensesQuery = monthExpensesQuery.lte('due_date', periodEnd);
       }
 
-      if (filters?.startDate) {
-        expensesQuery = expensesQuery.gte('due_date', filters.startDate.toISOString().split('T')[0]);
-      }
-      if (filters?.endDate) {
-        expensesQuery = expensesQuery.lte('due_date', filters.endDate.toISOString().split('T')[0]);
+      const { data: monthExpenses, error: monthExpErr } = await monthExpensesQuery;
+      if (monthExpErr) throw monthExpErr;
+
+      // Overdue expenses from BEFORE the period start (vencido status)
+      let overdueQuery = supabase
+        .from('expenses')
+        .select('amount, status, due_date')
+        .eq('status', 'vencido');
+
+      if (periodStart) {
+        overdueQuery = overdueQuery.lt('due_date', periodStart);
       }
 
-      const { data: expenses, error: expError } = await expensesQuery;
-      if (expError) throw expError;
+      const { data: overdueExpenses, error: overdueErr } = await overdueQuery;
+      if (overdueErr) throw overdueErr;
 
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
       const totalCaixa = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
-      const totalPayable = (expenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalPayable = totalMonthPayable + totalOverdue;
 
       return {
         totalGrossReceivable,
         totalFees,
         totalReceivable: totalCaixa,
         totalPayable,
+        totalMonthPayable,
+        totalOverdue,
         balance: totalCaixa - totalPayable,
         receivablesCount: receivables?.length || 0,
-        expensesCount: expenses?.length || 0,
+        expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
       };
     },
     staleTime: 0,
