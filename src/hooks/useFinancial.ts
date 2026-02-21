@@ -632,7 +632,7 @@ export function useFinancialSummary(filters?: {
         totalPayable,
         totalMonthPayable,
         totalOverdue,
-        balance: totalCaixa - totalPayable,
+        balance: totalGrossReceivable - totalFees - totalPayable,
         receivablesCount: receivables?.length || 0,
         expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
       };
