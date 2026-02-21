@@ -327,7 +327,7 @@ export default function Financial() {
             }
           />
           <StatsCard
-            title="Saldo Previsto"
+            title="Saldo Previsto do Mês"
             value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
             icon={<Wallet className="w-6 h-6 text-pink-500" />}
             variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
