@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Product as DBProduct, ProductFormData, useCategories, useColors, useSuppliers, SIZE_ORDER, sortSizesByOrder } from '@/hooks/useProducts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -434,38 +435,22 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="costPrice">Preço de Custo *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input
-                      id="costPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.cost_price}
-                      onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
-                      className="pl-10"
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
+                  <CurrencyInput
+                    id="costPrice"
+                    value={formData.cost_price}
+                    onChange={(value) => setFormData({ ...formData, cost_price: value })}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="salePrice">Preço de Venda *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input
-                      id="salePrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.sale_price}
-                      onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                      className="pl-10"
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
+                  <CurrencyInput
+                    id="salePrice"
+                    value={formData.sale_price}
+                    onChange={(value) => setFormData({ ...formData, sale_price: value })}
+                    required
+                  />
                 </div>
               </div>
 
