@@ -1,0 +1,1 @@
+UPDATE products SET cost_price = 15.00 WHERE id = 'a441d94f-41f3-4edf-8ab1-8aa1d207e7cd' AND cost_price = 1500;
