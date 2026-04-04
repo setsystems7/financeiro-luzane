@@ -333,12 +333,13 @@ export default function POS() {
     setSplitPayments([]);
   };
 
-  // Calculate split total with fees
+  // Calculate split total with fees (crédito + débito)
   const getSplitGrossTotal = () => {
     let gross = 0;
     for (const p of splitPayments) {
-      if (p.payment_method === 'cartao_credito' && p.card_brand) {
-        const fee = getCardFee('cartao_credito', p.card_brand, p.installments);
+      const isCard = (p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && p.card_brand;
+      if (isCard) {
+        const fee = getCardFee(p.payment_method, p.card_brand, p.installments);
         const bps = Math.round(fee * 100);
         const amtCents = Math.round(p.amount * 100);
         gross += bps > 0 ? Math.ceil((amtCents * 10000) / (10000 - bps)) / 100 : p.amount;
