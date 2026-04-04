@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,8 +109,8 @@ export default function Stock() {
   const [selectedSizeId, setSelectedSizeId] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
-
-  // Movement filters
+  const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [activeStockTab, setActiveStockTab] = useState<'stock' | 'history'>('stock');
   const [movementProductFilter, setMovementProductFilter] = useState<string>('all');
   const [movementPeriod, setMovementPeriod] = useState<string>('all');
   const [movementPage, setMovementPage] = useState(1);
@@ -212,6 +213,17 @@ export default function Stock() {
   };
 
   const selectedSize = selectedProduct?.sizes.find(s => s.id === selectedSizeId);
+
+  // Filter stock products by search
+  const filteredStockProducts = useMemo(() => {
+    if (!stockSearchTerm) return products;
+    const term = stockSearchTerm.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.category_name?.toLowerCase().includes(term) ||
+      p.sizes.some(s => s.barcode?.includes(stockSearchTerm))
+    );
+  }, [products, stockSearchTerm]);
 
   // Filtered movements
   const filteredMovements = useMemo(() => {
@@ -335,13 +347,28 @@ export default function Stock() {
           </CardContent>
         </Card>
 
-        {/* Stock Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Current Stock with expandable sizes */}
+        <Tabs value={activeStockTab} onValueChange={(v) => setActiveStockTab(v as 'stock' | 'history')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+            <TabsTrigger value="stock" className="gap-2"><Package className="w-4 h-4" />Estoque Atual</TabsTrigger>
+            <TabsTrigger value="history" className="gap-2"><History className="w-4 h-4" />Histórico</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stock">
           <Card variant="elevated">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
-              <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar produto..." 
+                    value={stockSearchTerm} 
+                    onChange={(e) => setStockSearchTerm(e.target.value)} 
+                    className="pl-8 w-48 h-8 text-sm"
+                  />
+                </div>
+                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+              </div>
             </CardHeader>
             <CardContent>
               {productsLoading ? (
@@ -360,7 +387,7 @@ export default function Stock() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {products.map((product) => {
+                    {filteredStockProducts.map((product) => {
                       const totalStock = product.sizes.reduce((acc, s) => acc + s.quantity, 0);
                       const isLow = totalStock <= product.min_stock;
                       const isExpanded = expandedProducts.has(product.id);
@@ -415,8 +442,9 @@ export default function Stock() {
               )}
             </CardContent>
           </Card>
+          </TabsContent>
 
-          {/* Movement History with filters and pagination */}
+          <TabsContent value="history">
           <Card variant="elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" />Histórico de Movimentações</CardTitle>
@@ -484,7 +512,8 @@ export default function Stock() {
               )}
             </CardContent>
           </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Manual Out/Adjust Dialog */}
         <Dialog open={!!outDialog} onOpenChange={(open) => { if (!open) setOutDialog(null); }}>

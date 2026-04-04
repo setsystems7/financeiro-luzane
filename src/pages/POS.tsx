@@ -10,6 +10,7 @@ import { useProducts, Product } from '@/hooks/useProducts';
 import { useCreateSale, SaleItem, PaymentEntry } from '@/hooks/useSales';
 import { CARD_BRANDS, getCardFee } from '@/data/cardFees';
 import { CardBrandIcon } from '@/components/pos/CardBrandLogos';
+import { SaleConfirmationModal } from '@/components/pos/SaleConfirmationModal';
 import { formatCurrency } from '@/lib/utils';
 import {
   Barcode,
@@ -25,7 +26,8 @@ import {
   QrCode,
   CreditCard,
   Wallet,
-  Info
+  Info,
+  Keyboard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { type SupportSection } from '@/components/layout/SupportButton';
@@ -112,6 +114,8 @@ export default function POS() {
     installments: number;
   }>>([]);
   const [splitCounter, setSplitCounter] = useState(0);
+  const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
+  const [lastSaleData, setLastSaleData] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -168,6 +172,29 @@ export default function POS() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Keyboard shortcuts: F2 = finalizar, Esc = limpar carrinho
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (cartItems.length > 0 && !createSale.isPending) {
+          handleFinalizeSale();
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showSuggestions) {
+          setShowSuggestions(false);
+        } else if (cartItems.length > 0) {
+          clearCart();
+          toast.info('Carrinho limpo');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cartItems, createSale.isPending, showSuggestions]);
 
   // Filtrar produtos para autocomplete
   const filteredProducts = searchInput.length >= 2
@@ -410,6 +437,15 @@ export default function POS() {
         },
         {
           onSuccess: () => {
+            setLastSaleData({
+              items: cartItems.map(item => ({ product_name: item.product_name, size: item.size, quantity: item.quantity, total: item.total })),
+              subtotal: cartSubtotal,
+              discount: discountAmount,
+              total: cartTotal,
+              paymentMethod: 'multiplo',
+              customerTotal: grossTotal,
+            });
+            setShowSaleConfirmation(true);
             resetAll();
           },
         }
@@ -445,6 +481,19 @@ export default function POS() {
         },
         {
           onSuccess: () => {
+            const pm = finalPaymentMethod;
+            setLastSaleData({
+              items: cartItems.map(item => ({ product_name: item.product_name, size: item.size, quantity: item.quantity, total: item.total })),
+              subtotal: cartSubtotal,
+              discount: discountAmount,
+              total: cartTotal,
+              paymentMethod: pm,
+              cardBrand: cardBrand || undefined,
+              installments: pm === 'cartao_credito' ? installments : undefined,
+              feeAmount: pm === 'cartao_credito' ? cardFeeAmount : undefined,
+              customerTotal: pm === 'cartao_credito' ? totalWithFee : cartTotal,
+            });
+            setShowSaleConfirmation(true);
             resetAll();
           },
         }
@@ -977,14 +1026,26 @@ export default function POS() {
             </CardContent>
           </Card>
 
-          {/* Dica de uso */}
-          <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
-            <p className="text-xs text-muted-foreground">
-              💡 O leitor de código de barras adiciona automaticamente ao carrinho
-            </p>
+          {/* Atalhos de teclado */}
+          <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-1">
+            <div className="flex items-center gap-1.5 justify-center">
+              <Keyboard className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs font-medium text-muted-foreground">Atalhos</p>
+            </div>
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <span><kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">F2</kbd> Finalizar</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">Esc</kbd> Limpar</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Sale Confirmation Modal */}
+      <SaleConfirmationModal
+        open={showSaleConfirmation}
+        onClose={() => setShowSaleConfirmation(false)}
+        saleData={lastSaleData}
+      />
     </MainLayout>
   );
 }

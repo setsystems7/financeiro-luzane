@@ -4,6 +4,7 @@ import { ProductCard } from '@/components/products/ProductCard';
 import { ProductForm } from '@/components/products/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,6 +45,9 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 24;
 
   const productsSupportSections: SupportSection[] = [
     {
@@ -118,6 +122,19 @@ export default function Products() {
     const matchesSupplier = supplierFilter === 'all' || product.supplier_id === supplierFilter;
     return matchesSearch && matchesCategory && matchesColor && matchesSupplier;
   });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => { setSearchTerm(value); setCurrentPage(1); };
+  const handleCategoryChange = (value: string) => { setCategoryFilter(value); setCurrentPage(1); };
+  const handleColorChange = (value: string) => { setColorFilter(value); setCurrentPage(1); };
+  const handleSupplierChange = (value: string) => { setSupplierFilter(value); setCurrentPage(1); };
 
   const handleEdit = (product: any) => {
     const dbProduct = products.find(p => p.id === product.id);
@@ -213,52 +230,25 @@ export default function Products() {
       <div className="space-y-6">
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between opacity-0 animate-fade-in-down">
-          <div className="flex flex-1 gap-3">
-            <div className="relative flex-1 max-w-md group">
+          <div className="flex flex-1 gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-md group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Buscar produtos..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 transition-all duration-300 focus:shadow-md focus:shadow-primary/10"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40 transition-all duration-200 hover:border-primary/50">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={colorFilter} onValueChange={setColorFilter}>
-              <SelectTrigger className="w-36 transition-all duration-200 hover:border-primary/50">
-                <Palette className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Cor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Cores</SelectItem>
-                {colors.map(color => (
-                  <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-              <SelectTrigger className="w-40 transition-all duration-200 hover:border-primary/50">
-                <Truck className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Fornecedor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {suppliers.map(sup => (
-                  <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtros
+              {(categoryFilter !== 'all' || colorFilter !== 'all' || supplierFilter !== 'all') && (
+                <Badge variant="pink" className="ml-1 text-xs px-1.5">
+                  {[categoryFilter !== 'all', colorFilter !== 'all', supplierFilter !== 'all'].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
           </div>
 
           <div className="flex gap-2">
@@ -291,9 +281,57 @@ export default function Products() {
           </div>
         </div>
 
+        {/* Collapsible Filters */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-3 p-3 rounded-lg border border-border bg-muted/30 animate-fade-in-down">
+            <Select value={categoryFilter} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-40">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={colorFilter} onValueChange={handleColorChange}>
+              <SelectTrigger className="w-36">
+                <Palette className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Cor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Cores</SelectItem>
+                {colors.map(color => (
+                  <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={supplierFilter} onValueChange={handleSupplierChange}>
+              <SelectTrigger className="w-40">
+                <Truck className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Fornecedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {suppliers.map(sup => (
+                  <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(categoryFilter !== 'all' || colorFilter !== 'all' || supplierFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={() => { setCategoryFilter('all'); setColorFilter('all'); setSupplierFilter('all'); setCurrentPage(1); }}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Products Count */}
         <div className="text-sm text-muted-foreground">
-          Exibindo {filteredProducts.length} de {products.length} produtos
+          Exibindo {paginatedProducts.length} de {filteredProducts.length} produtos
+          {filteredProducts.length !== products.length && ` (${products.length} total)`}
         </div>
 
         {/* Products Grid */}
@@ -303,13 +341,13 @@ export default function Products() {
             : "space-y-4"
           }>
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full rounded-xl" />
+              <Skeleton key={i} className="h-48 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <FileSpreadsheet className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground mb-4">Nenhum produto cadastrado.</p>
+            <p className="text-muted-foreground mb-4">Nenhum produto encontrado.</p>
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
@@ -322,24 +360,39 @@ export default function Products() {
             </div>
           </div>
         ) : (
-          <div className={viewMode === 'grid'
-            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-            : "space-y-4"
-          }>
-            {filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="opacity-0 animate-fade-in-up"
-                style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
-              >
-                <ProductCard
-                  product={convertToLegacyFormat(product)}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+          <>
+            <div className={viewMode === 'grid'
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              : "space-y-4"
+            }>
+              {paginatedProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="opacity-0 animate-fade-in-up"
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                >
+                  <ProductCard
+                    product={convertToLegacyFormat(product)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Próxima</Button>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
         {/* Form Dialog */}

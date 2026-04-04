@@ -14,7 +14,8 @@ import {
   LogOut,
   Menu,
   X,
-  RefreshCcw,
+  PackagePlus,
+  Repeat2,
   FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,8 +32,8 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Package, label: 'Produtos', path: '/produtos' },
   { icon: ArrowLeftRight, label: 'Estoque', path: '/estoque' },
-  { icon: RefreshCcw, label: 'Reposição', path: '/reposicao' },
-  { icon: RefreshCcw, label: 'Trocas', path: '/trocas' },
+  { icon: PackagePlus, label: 'Reposição', path: '/reposicao' },
+  { icon: Repeat2, label: 'Trocas', path: '/trocas' },
   { icon: Tag, label: 'Etiquetas', path: '/etiquetas' },
   { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
