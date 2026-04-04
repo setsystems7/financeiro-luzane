@@ -425,29 +425,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                 </div>
               )}
 
-              {/* Link existing expense */}
-              {wantsExpense === 'existing' && (
-                <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
-                  <Label className="text-xs">Selecione a despesa existente</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    O vínculo será registrado nas observações da despesa (sem alterar valores).
-                  </p>
-                  <Select value={linkedExpenseId} onValueChange={handleSelectExistingExpense}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Selecione a despesa..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groupedExpenses.map((exp) => (
-                        <SelectItem key={exp.id} value={exp.id}>
-                          {exp.description} - R$ {exp.totalAmount.toFixed(2).replace('.', ',')}
-                          {exp.installments > 1 && ` (${exp.installments}x)`}
-                          {` - ${exp.pendingCount} pendente${exp.pendingCount > 1 ? 's' : ''}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           )}
 
