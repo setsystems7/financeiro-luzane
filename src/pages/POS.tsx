@@ -1026,14 +1026,26 @@ export default function POS() {
             </CardContent>
           </Card>
 
-          {/* Dica de uso */}
-          <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
-            <p className="text-xs text-muted-foreground">
-              💡 O leitor de código de barras adiciona automaticamente ao carrinho
-            </p>
+          {/* Atalhos de teclado */}
+          <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-1">
+            <div className="flex items-center gap-1.5 justify-center">
+              <Keyboard className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs font-medium text-muted-foreground">Atalhos</p>
+            </div>
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <span><kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">F2</kbd> Finalizar</span>
+              <span><kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">Esc</kbd> Limpar</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Sale Confirmation Modal */}
+      <SaleConfirmationModal
+        open={showSaleConfirmation}
+        onClose={() => setShowSaleConfirmation(false)}
+        saleData={lastSaleData}
+      />
     </MainLayout>
   );
 }
