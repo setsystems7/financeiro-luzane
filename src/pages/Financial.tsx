@@ -1166,6 +1166,13 @@ export default function Financial() {
         />
 
         <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
+
+        <KpiDetailDialog
+          open={!!kpiDetailType}
+          onOpenChange={(open) => { if (!open) setKpiDetailType(null); }}
+          type={kpiDetailType}
+          summary={summary}
+        />
       </main>
     </MainLayout>
   );
