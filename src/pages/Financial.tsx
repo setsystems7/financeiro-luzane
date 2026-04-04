@@ -387,6 +387,11 @@ export default function Financial() {
                 <Upload className="w-4 h-4 mr-2" />
                 Importar Histórico
               </Button>
+
+              <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                <Landmark className="w-4 h-4 mr-2" />
+                Inserir no Caixa
+              </Button>
             </div>
           </CardContent>
         </Card>
