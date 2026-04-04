@@ -213,6 +213,17 @@ export default function Stock() {
 
   const selectedSize = selectedProduct?.sizes.find(s => s.id === selectedSizeId);
 
+  // Filter stock products by search
+  const filteredStockProducts = useMemo(() => {
+    if (!stockSearchTerm) return products;
+    const term = stockSearchTerm.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      p.category_name?.toLowerCase().includes(term) ||
+      p.sizes.some(s => s.barcode?.includes(stockSearchTerm))
+    );
+  }, [products, stockSearchTerm]);
+
   // Filtered movements
   const filteredMovements = useMemo(() => {
     let filtered = movements;
