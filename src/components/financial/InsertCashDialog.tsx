@@ -230,28 +230,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
             ? `Valor inserido no caixa e ${numInstallments} parcelas registradas!`
             : 'Valor inserido no caixa e conta a pagar registrada!'
         );
-      } else if (isLoan && wantsExpense === 'existing') {
-        if (linkedExpenseId) {
-          const { data: existingExp } = await supabase
-            .from('expenses')
-            .select('notes')
-            .eq('id', linkedExpenseId)
-            .single();
-
-          const currentNotes = existingExp?.notes || '';
-          const updatedNotes = currentNotes
-            ? `${currentNotes}\n[Vinculado] Entrada no caixa: R$ ${numAmount.toFixed(2)} em ${today}`
-            : `[Vinculado] Entrada no caixa: R$ ${numAmount.toFixed(2)} em ${today}`;
-
-          await supabase
-            .from('expenses')
-            .update({ notes: updatedNotes })
-            .eq('id', linkedExpenseId);
-
-          toast.success('Valor inserido no caixa e vinculado à despesa existente!');
-        } else {
-          toast.success('Valor inserido no caixa!');
-        }
       } else {
         toast.success('Valor inserido no caixa com sucesso!');
       }
