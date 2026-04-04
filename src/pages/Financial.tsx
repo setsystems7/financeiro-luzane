@@ -622,7 +622,7 @@ export default function Financial() {
             <Card variant="elevated">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
                 <CardTitle className="text-lg md:text-2xl">Contas a Pagar</CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <Select value={expenseStatus} onValueChange={(v: any) => setExpenseStatus(v)}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Status" />
