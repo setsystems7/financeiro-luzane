@@ -10,6 +10,7 @@ import { useProducts, Product } from '@/hooks/useProducts';
 import { useCreateSale, SaleItem, PaymentEntry } from '@/hooks/useSales';
 import { CARD_BRANDS, getCardFee } from '@/data/cardFees';
 import { CardBrandIcon } from '@/components/pos/CardBrandLogos';
+import { SaleConfirmationModal } from '@/components/pos/SaleConfirmationModal';
 import { formatCurrency } from '@/lib/utils';
 import {
   Barcode,
@@ -25,7 +26,8 @@ import {
   QrCode,
   CreditCard,
   Wallet,
-  Info
+  Info,
+  Keyboard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { type SupportSection } from '@/components/layout/SupportButton';
