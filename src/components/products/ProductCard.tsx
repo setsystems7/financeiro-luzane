@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Package } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 interface Product {
@@ -29,57 +29,43 @@ interface ProductCardProps {
 export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
   const totalStock = product.sizes.reduce((acc, size) => acc + size.quantity, 0);
   const isLowStock = totalStock <= product.minStock;
+  const sizesWithStock = product.sizes.filter(s => s.quantity > 0);
 
   return (
     <Card variant="elevated" className="card-interactive group overflow-hidden">
-      <div className="aspect-square bg-muted relative overflow-hidden">
-        {product.photo ? (
-          <img
-            src={product.photo}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-16 h-16 text-muted-foreground/50 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
-          </div>
-        )}
-        <div className="absolute top-2 right-2 flex gap-1">
-          <Badge variant={isLowStock ? 'destructive' : 'success'} className="transition-transform duration-200 group-hover:scale-105">
-            {totalStock} un.
-          </Badge>
+      {/* Compact header with stock badge */}
+      <div className="px-4 pt-4 pb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-foreground truncate text-sm leading-tight">{product.name}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{product.category}{product.color ? ` • ${product.color}` : ''}</p>
         </div>
+        <Badge variant={isLowStock ? 'destructive' : 'success'} className="shrink-0 text-xs">
+          {totalStock} un.
+        </Badge>
       </div>
-      <CardContent className="p-4 space-y-3">
-        <div>
-          <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
-          <p className="text-sm text-muted-foreground">{product.category}</p>
+
+      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+        {/* Sizes */}
+        <div className="flex flex-wrap gap-1.5">
+          {product.sizes.map((size, index) => (
+            <div
+              key={size.size}
+              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all duration-200 hover:scale-105 ${
+                size.quantity > 0
+                  ? 'bg-muted border-border'
+                  : 'bg-orange-50 border-orange-200 text-orange-600 dark:bg-orange-950 dark:border-orange-800'
+              }`}
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <span className="font-medium">{size.size}</span>
+              <span className={`${size.quantity > 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'} font-bold`}>
+                ({size.quantity})
+              </span>
+            </div>
+          ))}
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{product.color}</Badge>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {product.sizes.map((size, index) => (
-              <div
-                key={size.size}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all duration-200 hover:scale-105 ${
-                  size.quantity > 0
-                    ? 'bg-muted border-border'
-                    : 'bg-orange-50 border-orange-200 text-orange-600 dark:bg-orange-950 dark:border-orange-800'
-                }`}
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <span className="font-medium">{size.size}</span>
-                <span className={`${size.quantity > 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'} font-bold`}>
-                  ({size.quantity})
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+        {/* Price & Actions */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">Preço de venda</p>
