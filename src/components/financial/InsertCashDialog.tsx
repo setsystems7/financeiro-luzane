@@ -476,7 +476,7 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                   <p className="text-xs text-muted-foreground mb-2">
                     O vínculo será registrado nas observações da despesa (sem alterar valores).
                   </p>
-                  <Select value={linkedExpenseId} onValueChange={setLinkedExpenseId}>
+                  <Select value={linkedExpenseId} onValueChange={handleSelectExistingExpense}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Selecione a despesa..." />
                     </SelectTrigger>
