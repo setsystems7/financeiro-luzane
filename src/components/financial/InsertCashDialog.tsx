@@ -24,57 +24,7 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const queryClient = useQueryClient();
   const { data: expenseCategories = [] } = useExpenseCategories();
   const { data: suppliers = [] } = useSuppliersList();
-
-  // Fetch ALL expenses (including paid) to group by parent and show total
-  const { data: allExpenses = [] } = useQuery({
-    queryKey: ['all-expenses-for-link'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('id, description, amount, due_date, status, parent_expense_id, recurrence_months, recurrence_index, is_recurring')
-        .order('due_date', { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: open,
-  });
-
-  // Group expenses: show parent/standalone with total amount across all installments
-  const groupedExpenses = useMemo(() => {
-    // Find root expenses (no parent) that have pending/overdue installments
-    const parentMap = new Map<string, { total: number; count: number; pendingCount: number; description: string; rootId: string }>();
-
-    // Group by parent_expense_id or self
-    allExpenses.forEach((exp: any) => {
-      const rootId = exp.parent_expense_id || exp.id;
-      if (!parentMap.has(rootId)) {
-        parentMap.set(rootId, { total: 0, count: 0, pendingCount: 0, description: '', rootId });
-      }
-      const group = parentMap.get(rootId)!;
-      group.total += Number(exp.amount);
-      group.count += 1;
-      if (exp.status === 'pendente' || exp.status === 'vencido') {
-        group.pendingCount += 1;
-      }
-      // Use the base description (without index suffix) from the first item
-      if (!group.description || (exp.recurrence_index === 1 || !exp.parent_expense_id)) {
-        // Clean description: remove (1/N) suffix
-        group.description = exp.description.replace(/\s*\(\d+\/\d+\)$/, '');
-      }
-    });
-
-    // Only show groups that have at least one pending/overdue installment
-    return Array.from(parentMap.values())
-      .filter(g => g.pendingCount > 0)
-      .map(g => ({
-        id: g.rootId,
-        description: g.description,
-        totalAmount: g.total,
-        installments: g.count,
-        pendingCount: g.pendingCount,
-      }));
-  }, [allExpenses]);
+  const createExpense = useCreateExpense();
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
