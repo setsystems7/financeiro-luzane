@@ -814,10 +814,15 @@ export default function POS() {
                               </Select>
                             )}
 
-                            {spFee > 0 && (
-                              <span className="text-xs text-amber-500 font-medium">
-                                +{spFee.toFixed(1)}% (R$ {formatCurrency(spFeeAmount)})
-                              </span>
+                            {spFee > 0 && sp.amount > 0 && (
+                              <div className="flex flex-col text-xs">
+                                <span className="text-amber-500 font-medium">
+                                  +{spFee.toFixed(1)}% (R$ {formatCurrency(spFeeAmount)})
+                                </span>
+                                <span className="text-foreground font-semibold">
+                                  Cliente: R$ {formatCurrency(spGross)}
+                                </span>
+                              </div>
                             )}
                           </div>
                         )}

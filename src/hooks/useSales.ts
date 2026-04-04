@@ -246,26 +246,29 @@ export function useCreateSale() {
           const pFeePercent = p.card_fee_percent || 0;
           const feeBps = Math.round(pFeePercent * 100);
           const amountCents = Math.round(p.amount * 100);
-          const pCardFeeAmount = feeBps > 0 
-            ? (amountCents - Math.round((amountCents * 10000) / (10000 + feeBps))) / 100 
-            : 0;
-          const pNetAmount = p.amount - pCardFeeAmount;
+          // Gross = valor que o cliente paga (com taxa embutida)
+          // Fórmula da maquininha: gross = amount / (1 - fee%)
+          const grossCents = feeBps > 0
+            ? Math.ceil((amountCents * 10000) / (10000 - feeBps))
+            : amountCents;
+          const pCardFeeAmount = (grossCents - amountCents) / 100;
+          const grossAmount = grossCents / 100;
 
           return {
             sale_id: sale.id,
             payment_method: p.payment_method,
-            amount: p.amount,
+            amount: grossAmount,
             card_brand: p.card_brand || null,
             installments: p.installments || 1,
             card_fee_percent: pFeePercent,
             card_fee_amount: pCardFeeAmount,
-            net_amount: pNetAmount,
+            net_amount: p.amount,
           };
         });
 
         await (supabase as any).from('sale_payments').insert(paymentRecords);
 
-        // Create one receivable per payment
+        // Create one receivable per payment with full detail
         for (const pr of paymentRecords) {
           const dueDate = new Date();
           if (pr.payment_method === 'cartao_debito') {
@@ -284,12 +287,16 @@ export function useCreateSale() {
             cartao_credito: 'Crédito', crediario: 'Crediário',
           }[pr.payment_method] || pr.payment_method;
 
+          const brandLabel = pr.card_brand ? ` ${pr.card_brand.charAt(0).toUpperCase() + pr.card_brand.slice(1)}` : '';
+          const installLabel = pr.installments > 1 ? ` ${pr.installments}x` : '';
+          const feeLabel = pr.card_fee_percent > 0 ? ` (${pr.card_fee_percent.toFixed(1)}%)` : '';
+
           await supabase.from('receivables').insert({
             sale_id: sale.id,
-            description: `Venda #${sale.sale_number} - ${methodLabel}`,
-            amount: pr.amount,
-            fee: pr.card_fee_amount,
-            net_amount: pr.net_amount,
+            description: `Venda #${sale.sale_number} - ${methodLabel}${brandLabel}${installLabel}${feeLabel}`,
+            amount: pr.amount,        // gross (what customer pays)
+            fee: pr.card_fee_amount,   // fee amount
+            net_amount: pr.net_amount, // what the store receives
             due_date: dueDate.toISOString().split('T')[0],
             is_received: isImmediate,
             received_date: isImmediate ? dueDate.toISOString().split('T')[0] : null,
