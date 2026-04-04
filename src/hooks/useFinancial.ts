@@ -586,6 +586,13 @@ export function useFinancialSummary(filters?: {
         .select('net_amount');
       if (allRecError) throw allRecError;
 
+      // All-time paid expenses to subtract from Valor do Caixa
+      const { data: allPaidExpenses, error: paidExpErr } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('status', 'pago');
+      if (paidExpErr) throw paidExpErr;
+
       // Current month expenses (based on filter period)
       const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
       const periodEnd = filters?.endDate ? filters.endDate.toISOString().split('T')[0] : null;
@@ -620,7 +627,9 @@ export function useFinancialSummary(filters?: {
 
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
-      const totalCaixa = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalAllReceivables = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalPaidExpenses = (allPaidExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalCaixa = totalAllReceivables - totalPaidExpenses;
       const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalPayable = totalMonthPayable + totalOverdue;
