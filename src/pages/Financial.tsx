@@ -785,7 +785,7 @@ export default function Financial() {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6 pt-0">
                 {expensesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -796,6 +796,7 @@ export default function Financial() {
                   </div>
                 ) : (
                   <>
+                  <div className="overflow-x-auto -mx-2 md:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
