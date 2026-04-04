@@ -586,6 +586,13 @@ export function useFinancialSummary(filters?: {
         .select('net_amount');
       if (allRecError) throw allRecError;
 
+      // All-time paid expenses to subtract from Valor do Caixa
+      const { data: allPaidExpenses, error: paidExpErr } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('status', 'pago');
+      if (paidExpErr) throw paidExpErr;
+
       // Current month expenses (based on filter period)
       const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
       const periodEnd = filters?.endDate ? filters.endDate.toISOString().split('T')[0] : null;
