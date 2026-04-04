@@ -108,8 +108,8 @@ export default function Stock() {
   const [selectedSizeId, setSelectedSizeId] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
-
-  // Movement filters
+  const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [activeStockTab, setActiveStockTab] = useState<'stock' | 'history'>('stock');
   const [movementProductFilter, setMovementProductFilter] = useState<string>('all');
   const [movementPeriod, setMovementPeriod] = useState<string>('all');
   const [movementPage, setMovementPage] = useState(1);
