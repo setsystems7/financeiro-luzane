@@ -102,6 +102,16 @@ export default function POS() {
   const [installments, setInstallments] = useState<number>(1);
   const [cardBrand, setCardBrand] = useState<string>('');
 
+  // Split payment state
+  const [isSplitMode, setIsSplitMode] = useState(false);
+  const [splitPayments, setSplitPayments] = useState<Array<{
+    id: number;
+    payment_method: string;
+    amount: number;
+    card_brand: string;
+    installments: number;
+  }>>([]);
+  const [splitCounter, setSplitCounter] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
