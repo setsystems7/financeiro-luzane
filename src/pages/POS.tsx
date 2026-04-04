@@ -808,13 +808,6 @@ export default function POS() {
                     );
                   })}
 
-                  {/* Botão adicionar mais */}
-                  <button
-                    onClick={addSplitPayment}
-                    className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg border border-dashed border-muted-foreground/30 hover:border-pink-primary/50 hover:bg-pink-glow/20 transition-all text-xs text-muted-foreground"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Adicionar forma de pagamento
-                  </button>
                 </div>
               )}
 
