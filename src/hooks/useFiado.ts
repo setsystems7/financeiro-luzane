@@ -324,7 +324,8 @@ export function useRegisterFiadoPayment() {
 
       if (updateError) throw updateError;
 
-      // Create receivable entry for the payment received
+      // Create receivable entry for the payment actually received
+      const today = new Date().toISOString().split('T')[0];
       await supabase
         .from('receivables')
         .insert({
@@ -333,10 +334,10 @@ export function useRegisterFiadoPayment() {
           amount: data.amount,
           fee: 0,
           net_amount: data.amount,
-          due_date: new Date().toISOString().split('T')[0],
+          due_date: today,
           is_received: true,
-          received_date: new Date().toISOString().split('T')[0],
-          notes: `Pagamento ${newAmountPending <= 0 ? 'total' : 'parcial'} - ${data.payment_method}`,
+          received_date: today,
+          notes: `Pagamento ${newAmountPending <= 0 ? 'total' : 'parcial'} - ${data.payment_method} - Fiado ID: ${data.fiado_sale_id}`,
         });
 
       return { newAmountPaid, newAmountPending };
