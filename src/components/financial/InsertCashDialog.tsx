@@ -333,16 +333,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                   <input
                     type="radio"
                     name="expense-option"
-                    checked={wantsExpense === 'existing'}
-                    onChange={() => setWantsExpense('existing')}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm">Já está registrada (vincular)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="expense-option"
                     checked={wantsExpense === 'none'}
                     onChange={() => setWantsExpense('none')}
                     className="accent-primary"
