@@ -433,6 +433,8 @@ export function useCancelFiadoSale() {
       queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       toast.success('Venda fiado cancelada e estoque devolvido.');
     },
     onError: (error: any) => {
