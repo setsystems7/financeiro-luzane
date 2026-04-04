@@ -114,6 +114,8 @@ export default function POS() {
     installments: number;
   }>>([]);
   const [splitCounter, setSplitCounter] = useState(0);
+  const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
+  const [lastSaleData, setLastSaleData] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
