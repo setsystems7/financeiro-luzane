@@ -223,19 +223,8 @@ export function useCreateFiadoSale() {
         }
       }
 
-      // Create receivable entry for the fiado sale
-      await supabase
-        .from('receivables')
-        .insert({
-          sale_id: null,
-          description: `Fiado - ${data.customer_name}`,
-          amount: data.total,
-          fee: 0,
-          net_amount: data.total,
-          due_date: data.due_date || new Date().toISOString().split('T')[0],
-          is_received: false,
-          notes: `Venda fiado - ${data.installments}x - ID: ${fiadoSale.id}`,
-        });
+      // NOTE: Receivable is NOT created here. It will be created when payment is received
+      // to avoid double-counting in Valor do Caixa.
 
       return fiadoSale;
     },
@@ -335,7 +324,8 @@ export function useRegisterFiadoPayment() {
 
       if (updateError) throw updateError;
 
-      // Create receivable entry for the payment received
+      // Create receivable entry for the payment actually received
+      const today = new Date().toISOString().split('T')[0];
       await supabase
         .from('receivables')
         .insert({
@@ -344,10 +334,10 @@ export function useRegisterFiadoPayment() {
           amount: data.amount,
           fee: 0,
           net_amount: data.amount,
-          due_date: new Date().toISOString().split('T')[0],
+          due_date: today,
           is_received: true,
-          received_date: new Date().toISOString().split('T')[0],
-          notes: `Pagamento ${newAmountPending <= 0 ? 'total' : 'parcial'} - ${data.payment_method}`,
+          received_date: today,
+          notes: `Pagamento ${newAmountPending <= 0 ? 'total' : 'parcial'} - ${data.payment_method} - Fiado ID: ${data.fiado_sale_id}`,
         });
 
       return { newAmountPaid, newAmountPending };
@@ -417,6 +407,19 @@ export function useCancelFiadoSale() {
         }
       }
 
+      // Delete any receivables linked to this fiado sale
+      const { data: linkedReceivables } = await supabase
+        .from('receivables')
+        .select('id')
+        .ilike('notes', `%Fiado ID: ${fiadoSaleId}%`);
+
+      if (linkedReceivables && linkedReceivables.length > 0) {
+        await supabase
+          .from('receivables')
+          .delete()
+          .in('id', linkedReceivables.map(r => r.id));
+      }
+
       const { error: updateError } = await supabase
         .from('fiado_sales')
         .update({ status: 'cancelado' })
@@ -430,6 +433,8 @@ export function useCancelFiadoSale() {
       queryClient.invalidateQueries({ queryKey: ['fiado-sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       toast.success('Venda fiado cancelada e estoque devolvido.');
     },
     onError: (error: any) => {
@@ -521,6 +526,19 @@ export function useDeleteFiadoSale() {
             }
           }
         }
+      }
+
+      // Delete any receivables linked to this fiado sale
+      const { data: linkedReceivables } = await supabase
+        .from('receivables')
+        .select('id')
+        .ilike('notes', `%Fiado ID: ${fiadoSaleId}%`);
+
+      if (linkedReceivables && linkedReceivables.length > 0) {
+        await supabase
+          .from('receivables')
+          .delete()
+          .in('id', linkedReceivables.map(r => r.id));
       }
 
       // Delete payments first (cascade should handle but being safe)

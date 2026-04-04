@@ -88,7 +88,7 @@ export function ProductForm({ product, onSave, onCancel, isLoading }: ProductFor
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const barcodeInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const scanBufferRef = useRef<string>('');
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Listener global para capturar leitura de código de barras
   useEffect(() => {
