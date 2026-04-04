@@ -40,6 +40,8 @@ import {
   useUpdateExpenseDescription,
   useCanDeleteRecurringExpense,
   useDeleteExpense,
+  useDeleteReceivable,
+  useUpdateReceivable,
   type Expense
 } from '@/hooks/useFinancial';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
@@ -88,6 +90,10 @@ export default function Financial() {
   // Confirm dialog states
   const [confirmCancelSaleId, setConfirmCancelSaleId] = useState<string | null>(null);
   const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
+  const [confirmDeleteReceivableId, setConfirmDeleteReceivableId] = useState<string | null>(null);
+
+  // Edit manual entry state
+  const [editingReceivable, setEditingReceivable] = useState<{ id: string; amount: string; description: string; notes: string } | null>(null);
 
   const financialSupportSections: SupportSection[] = [
     {
@@ -209,6 +215,8 @@ export default function Financial() {
   const updateExpenseDescription = useUpdateExpenseDescription();
   const canDeleteRecurringExpense = useCanDeleteRecurringExpense();
   const deleteExpense = useDeleteExpense();
+  const deleteReceivable = useDeleteReceivable();
+  const updateReceivable = useUpdateReceivable();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
@@ -560,6 +568,16 @@ export default function Financial() {
                                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setConfirmCancelSaleId(item.sale_id!); }} disabled={cancelSale.isPending}>
                                       <Undo2 className="w-4 h-4 mr-1" />Estornar
                                     </Button>
+                                  )}
+                                  {!item.sale_id && (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingReceivable({ id: item.id, amount: String(item.amount || 0), description: item.description, notes: item.notes || '' }); }}>
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setConfirmDeleteReceivableId(item.id); }}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </TableCell>
@@ -1164,6 +1182,77 @@ export default function Financial() {
           confirmText="Excluir"
           variant="destructive"
         />
+
+        <ConfirmDialog
+          open={!!confirmDeleteReceivableId}
+          onOpenChange={(open) => !open && setConfirmDeleteReceivableId(null)}
+          onConfirm={() => {
+            if (confirmDeleteReceivableId) {
+              deleteReceivable.mutate(confirmDeleteReceivableId);
+              setConfirmDeleteReceivableId(null);
+            }
+          }}
+          title="Excluir entrada"
+          description="Tem certeza que deseja excluir esta entrada do caixa? Esta ação não pode ser desfeita."
+          confirmText="Excluir"
+          variant="destructive"
+        />
+
+        {/* Edit manual entry dialog */}
+        <Dialog open={!!editingReceivable} onOpenChange={(open) => { if (!open) setEditingReceivable(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Entrada Manual</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingReceivable?.amount || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, amount: e.target.value } : null)}
+                />
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Input
+                  value={editingReceivable?.description || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, description: e.target.value } : null)}
+                />
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Input
+                  value={editingReceivable?.notes || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingReceivable(null)}>Cancelar</Button>
+                <Button onClick={() => {
+                  if (editingReceivable) {
+                    const amt = parseFloat(editingReceivable.amount);
+                    updateReceivable.mutate({
+                      id: editingReceivable.id,
+                      data: {
+                        amount: amt,
+                        net_amount: amt,
+                        description: editingReceivable.description,
+                        notes: editingReceivable.notes || undefined,
+                      }
+                    }, {
+                      onSuccess: () => setEditingReceivable(null),
+                    });
+                  }
+                }} disabled={updateReceivable.isPending}>
+                  {updateReceivable.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
 
