@@ -122,7 +122,7 @@ export default function Stock() {
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const scanBufferRef = useRef<string>('');
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Barcode scanner listener
   useEffect(() => {

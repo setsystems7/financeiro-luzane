@@ -136,15 +136,16 @@ export default function POS() {
   const cardFeeAmount = fromCents(grossCents - cartTotalCents);
   const netAmount = cartTotal; // Loja recebe: valor da peça (sem a taxa)
 
-  // Atualizar preços com desconto
+  // Atualizar preços com desconto — usa functional updater para evitar dependência de cartItems
   useEffect(() => {
-    if (cartItems.length > 0) {
-      setCartItems(items => items.map(item => ({
+    setCartItems(prevItems => {
+      if (prevItems.length === 0) return prevItems;
+      return prevItems.map(item => ({
         ...item,
         unit_price: item.original_price * (1 - discount / 100),
         total: item.original_price * item.quantity * (1 - discount / 100),
-      })));
-    }
+      }));
+    });
   }, [discount]);
 
   // Fechar sugestões ao clicar fora
