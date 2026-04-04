@@ -600,8 +600,8 @@ export default function Financial() {
                         <TableCell colSpan={2} />
                       </TableRow>
                     </tfoot>
-                  </div>
                   </Table>
+                  </div>
                   {receivableTotalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 px-2">
                       <span className="text-sm text-muted-foreground">Página {receivablePage} de {receivableTotalPages} ({filteredReceivables.length} registros)</span>
