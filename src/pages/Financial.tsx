@@ -215,6 +215,8 @@ export default function Financial() {
   const updateExpenseDescription = useUpdateExpenseDescription();
   const canDeleteRecurringExpense = useCanDeleteRecurringExpense();
   const deleteExpense = useDeleteExpense();
+  const deleteReceivable = useDeleteReceivable();
+  const updateReceivable = useUpdateReceivable();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
