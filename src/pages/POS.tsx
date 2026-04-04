@@ -437,6 +437,15 @@ export default function POS() {
         },
         {
           onSuccess: () => {
+            setLastSaleData({
+              items: cartItems.map(item => ({ product_name: item.product_name, size: item.size, quantity: item.quantity, total: item.total })),
+              subtotal: cartSubtotal,
+              discount: discountAmount,
+              total: cartTotal,
+              paymentMethod: 'multiplo',
+              customerTotal: grossTotal,
+            });
+            setShowSaleConfirmation(true);
             resetAll();
           },
         }
