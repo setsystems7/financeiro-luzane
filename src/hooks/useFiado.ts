@@ -528,6 +528,19 @@ export function useDeleteFiadoSale() {
         }
       }
 
+      // Delete any receivables linked to this fiado sale
+      const { data: linkedReceivables } = await supabase
+        .from('receivables')
+        .select('id')
+        .ilike('notes', `%Fiado ID: ${fiadoSaleId}%`);
+
+      if (linkedReceivables && linkedReceivables.length > 0) {
+        await supabase
+          .from('receivables')
+          .delete()
+          .in('id', linkedReceivables.map(r => r.id));
+      }
+
       // Delete payments first (cascade should handle but being safe)
       await supabase
         .from('fiado_payments')
