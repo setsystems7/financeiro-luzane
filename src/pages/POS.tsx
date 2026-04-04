@@ -297,32 +297,24 @@ export default function POS() {
     ));
   };
 
-  // Split payment helpers
+  // Split payment helpers — fixo em 2 pagamentos
   const splitTotal = splitPayments.reduce((acc, p) => acc + p.amount, 0);
   const splitRemaining = Math.max(0, Math.round((cartTotal - splitTotal) * 100) / 100);
 
-  const addSplitPayment = () => {
-    const newId = splitCounter + 1;
-    setSplitCounter(newId);
-    setSplitPayments(prev => [...prev, {
-      id: newId,
-      payment_method: '',
-      amount: splitRemaining,
-      card_brand: '',
-      installments: 1,
-    }]);
-  };
-
   const updateSplitPayment = (id: number, field: string, value: any) => {
-    setSplitPayments(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
-
-  const removeSplitPayment = (id: number) => {
-    setSplitPayments(prev => prev.filter(p => p.id !== id));
-    if (splitPayments.length <= 1) {
-      setIsSplitMode(false);
-      setSplitPayments([]);
-    }
+    setSplitPayments(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, [field]: value } : p);
+      // Se alterou o valor do pagamento 1, auto-preencher pagamento 2
+      if (field === 'amount' && updated.length === 2) {
+        const first = updated.find(p => p.id === id);
+        const second = updated.find(p => p.id !== id);
+        if (first && second) {
+          const remaining = Math.max(0, Math.round((cartTotal - (value as number)) * 100) / 100);
+          return updated.map(p => p.id === second.id ? { ...p, amount: remaining } : p);
+        }
+      }
+      return updated;
+    });
   };
 
   const enterSplitMode = () => {
@@ -330,7 +322,7 @@ export default function POS() {
     setPaymentMethod('');
     setCardBrand('');
     setSplitPayments([
-      { id: 1, payment_method: '', amount: 0, card_brand: '', installments: 1 },
+      { id: 1, payment_method: '', amount: cartTotal, card_brand: '', installments: 1 },
       { id: 2, payment_method: '', amount: 0, card_brand: '', installments: 1 },
     ]);
     setSplitCounter(2);
@@ -341,12 +333,13 @@ export default function POS() {
     setSplitPayments([]);
   };
 
-  // Calculate split total with fees
+  // Calculate split total with fees (crédito + débito)
   const getSplitGrossTotal = () => {
     let gross = 0;
     for (const p of splitPayments) {
-      if (p.payment_method === 'cartao_credito' && p.card_brand) {
-        const fee = getCardFee('cartao_credito', p.card_brand, p.installments);
+      const isCard = (p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && p.card_brand;
+      if (isCard) {
+        const fee = getCardFee(p.payment_method, p.card_brand, p.installments);
         const bps = Math.round(fee * 100);
         const amtCents = Math.round(p.amount * 100);
         gross += bps > 0 ? Math.ceil((amtCents * 10000) / (10000 - bps)) / 100 : p.amount;
@@ -374,8 +367,8 @@ export default function POS() {
           toast.error('Todos os valores devem ser maiores que zero');
           return;
         }
-        if (p.payment_method === 'cartao_credito' && !p.card_brand) {
-          toast.error('Selecione a bandeira do cartão para pagamentos em crédito');
+        if ((p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && !p.card_brand) {
+          toast.error('Selecione a bandeira do cartão para pagamentos com cartão');
           return;
         }
       }
@@ -390,8 +383,8 @@ export default function POS() {
         amount: p.amount,
         card_brand: p.card_brand || undefined,
         installments: p.installments,
-        card_fee_percent: p.payment_method === 'cartao_credito' && p.card_brand
-          ? getCardFee('cartao_credito', p.card_brand, p.installments)
+        card_fee_percent: (p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && p.card_brand
+          ? getCardFee(p.payment_method, p.card_brand, p.installments)
           : 0,
       }));
 
@@ -734,8 +727,9 @@ export default function POS() {
                   </div>
 
                   {splitPayments.map((sp, idx) => {
-                    const spFee = sp.payment_method === 'cartao_credito' && sp.card_brand
-                      ? getCardFee('cartao_credito', sp.card_brand, sp.installments)
+                    const isCardPayment = sp.payment_method === 'cartao_credito' || sp.payment_method === 'cartao_debito';
+                    const spFee = isCardPayment && sp.card_brand
+                      ? getCardFee(sp.payment_method, sp.card_brand, sp.installments)
                       : 0;
                     const spFeeBps = Math.round(spFee * 100);
                     const spAmtCents = Math.round(sp.amount * 100);
@@ -743,46 +737,59 @@ export default function POS() {
                       ? Math.ceil((spAmtCents * 10000) / (10000 - spFeeBps)) / 100
                       : sp.amount;
                     const spFeeAmount = spGross - sp.amount;
+                    const isSecond = idx === 1;
 
                     return (
-                      <div key={sp.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border">
-                        <span className="text-xs font-bold text-muted-foreground w-5">{idx + 1}.</span>
+                      <div key={sp.id} className="space-y-2 p-3 rounded-lg bg-background border border-border">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-bold text-muted-foreground w-5">{idx + 1}.</span>
 
-                        {/* Valor */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground">R$</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={sp.amount || ''}
-                            onChange={(e) => updateSplitPayment(sp.id, 'amount', Math.max(0, parseFloat(e.target.value) || 0))}
-                            className="w-24 h-8 text-sm text-center border-border"
-                          />
+                          {/* Valor */}
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">R$</span>
+                            {isSecond ? (
+                              <div className="w-24 h-8 flex items-center justify-center text-sm font-medium bg-muted/50 rounded-md border border-border text-foreground">
+                                {sp.amount > 0 ? sp.amount.toFixed(2).replace('.', ',') : '0,00'}
+                              </div>
+                            ) : (
+                              <Input
+                                type="number"
+                                min="0"
+                                max={cartTotal}
+                                step="0.01"
+                                value={sp.amount || ''}
+                                onChange={(e) => {
+                                  const val = Math.max(0, Math.min(cartTotal, parseFloat(e.target.value) || 0));
+                                  updateSplitPayment(sp.id, 'amount', val);
+                                }}
+                                className="w-24 h-8 text-sm text-center border-border"
+                              />
+                            )}
+                          </div>
+
+                          {/* Método */}
+                          <Select value={sp.payment_method} onValueChange={(v) => {
+                            updateSplitPayment(sp.id, 'payment_method', v);
+                            if (v !== 'cartao_credito' && v !== 'cartao_debito') {
+                              updateSplitPayment(sp.id, 'card_brand', '');
+                              updateSplitPayment(sp.id, 'installments', 1);
+                            }
+                          }}>
+                            <SelectTrigger className="w-32 h-8 text-xs bg-background border-border">
+                              <SelectValue placeholder="Método" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-border">
+                              <SelectItem value="dinheiro"><span className="flex items-center gap-1.5"><Banknote className="w-3.5 h-3.5" /> Dinheiro</span></SelectItem>
+                              <SelectItem value="pix"><span className="flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> PIX</span></SelectItem>
+                              <SelectItem value="cartao_debito"><span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Débito</span></SelectItem>
+                              <SelectItem value="cartao_credito"><span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Crédito</span></SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
-                        {/* Método */}
-                        <Select value={sp.payment_method} onValueChange={(v) => {
-                          updateSplitPayment(sp.id, 'payment_method', v);
-                          if (v !== 'cartao_credito') {
-                            updateSplitPayment(sp.id, 'card_brand', '');
-                            updateSplitPayment(sp.id, 'installments', 1);
-                          }
-                        }}>
-                          <SelectTrigger className="w-32 h-8 text-xs bg-background border-border">
-                            <SelectValue placeholder="Método" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border">
-                            <SelectItem value="dinheiro"><span className="flex items-center gap-1.5"><Banknote className="w-3.5 h-3.5" /> Dinheiro</span></SelectItem>
-                            <SelectItem value="pix"><span className="flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> PIX</span></SelectItem>
-                            <SelectItem value="cartao_debito"><span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Débito</span></SelectItem>
-                            <SelectItem value="cartao_credito"><span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Crédito</span></SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {/* Bandeira + Parcelas (se crédito) */}
-                        {sp.payment_method === 'cartao_credito' && (
-                          <>
+                        {/* Bandeira + Parcelas (se cartão) */}
+                        {isCardPayment && (
+                          <div className="flex flex-wrap items-center gap-2 ml-7">
                             <Select value={sp.card_brand} onValueChange={(v) => updateSplitPayment(sp.id, 'card_brand', v)}>
                               <SelectTrigger className="w-28 h-8 text-xs bg-background border-border">
                                 <SelectValue placeholder="Bandeira" />
@@ -794,42 +801,30 @@ export default function POS() {
                               </SelectContent>
                             </Select>
 
-                            <Select value={sp.installments.toString()} onValueChange={(v) => updateSplitPayment(sp.id, 'installments', parseInt(v))}>
-                              <SelectTrigger className="w-20 h-8 text-xs bg-background border-border">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border-border">
-                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                                  <SelectItem key={n} value={n.toString()}>{n}x</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {sp.payment_method === 'cartao_credito' && (
+                              <Select value={sp.installments.toString()} onValueChange={(v) => updateSplitPayment(sp.id, 'installments', parseInt(v))}>
+                                <SelectTrigger className="w-20 h-8 text-xs bg-background border-border">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border">
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                                    <SelectItem key={n} value={n.toString()}>{n}x</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
 
                             {spFee > 0 && (
                               <span className="text-xs text-amber-500 font-medium">
                                 +{spFee.toFixed(1)}% (R$ {formatCurrency(spFeeAmount)})
                               </span>
                             )}
-                          </>
-                        )}
-
-                        {/* Remover */}
-                        {splitPayments.length > 2 && (
-                          <button onClick={() => removeSplitPayment(sp.id)} className="ml-auto p-1 hover:bg-destructive/10 rounded">
-                            <X className="w-4 h-4 text-destructive" />
-                          </button>
+                          </div>
                         )}
                       </div>
                     );
                   })}
 
-                  {/* Botão adicionar mais */}
-                  <button
-                    onClick={addSplitPayment}
-                    className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg border border-dashed border-muted-foreground/30 hover:border-pink-primary/50 hover:bg-pink-glow/20 transition-all text-xs text-muted-foreground"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Adicionar forma de pagamento
-                  </button>
                 </div>
               )}
 
