@@ -82,6 +82,9 @@ export default function Financial() {
   const [paymentInterest, setPaymentInterest] = useState<string>('');
   const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
 
+  // KPI detail dialog
+  const [kpiDetailType, setKpiDetailType] = useState<'entrada' | 'taxas' | 'caixa' | 'pagar' | 'saldo' | null>(null);
+
   // Confirm dialog states
   const [confirmCancelSaleId, setConfirmCancelSaleId] = useState<string | null>(null);
   const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
