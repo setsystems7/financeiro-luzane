@@ -588,61 +588,61 @@ export default function POS() {
                 {!isSplitMode ? (
                   <>
                     {/* Métodos de Pagamento — modo normal */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         onClick={() => { setPaymentMethod(paymentMethod === 'dinheiro' ? '' : 'dinheiro'); setCardBrand(''); }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 ${
                           paymentMethod === 'dinheiro'
                             ? 'border-pink-primary bg-pink-glow shadow-md'
                             : 'border-border bg-background hover:border-pink-primary/50'
                         }`}
                       >
-                        <Banknote className={`w-5 h-5 ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <Banknote className={`w-4 h-4 ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
                         <span className={`text-sm font-medium ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-foreground'}`}>Dinheiro</span>
                       </button>
 
                       <button
                         onClick={() => { setPaymentMethod(paymentMethod === 'pix' ? '' : 'pix'); setCardBrand(''); }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 ${
                           paymentMethod === 'pix'
                             ? 'border-pink-primary bg-pink-glow shadow-md'
                             : 'border-border bg-background hover:border-pink-primary/50'
                         }`}
                       >
-                        <QrCode className={`w-5 h-5 ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <QrCode className={`w-4 h-4 ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
                         <span className={`text-sm font-medium ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-foreground'}`}>PIX</span>
                       </button>
 
                       <button
                         onClick={() => { setPaymentMethod(paymentMethod === 'cartao_debito' ? '' : 'cartao_debito'); setCardBrand(''); }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 ${
                           paymentMethod === 'cartao_debito'
                             ? 'border-pink-primary bg-pink-glow shadow-md'
                             : 'border-border bg-background hover:border-pink-primary/50'
                         }`}
                       >
-                        <Wallet className={`w-5 h-5 ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <Wallet className={`w-4 h-4 ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
                         <span className={`text-sm font-medium ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-foreground'}`}>Débito</span>
                       </button>
 
                       <button
                         onClick={() => setPaymentMethod(paymentMethod === 'cartao_credito' ? '' : 'cartao_credito')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border-2 transition-all duration-200 ${
                           paymentMethod === 'cartao_credito'
                             ? 'border-pink-primary bg-pink-glow shadow-md'
                             : 'border-border bg-background hover:border-pink-primary/50'
                         }`}
                       >
-                        <CreditCard className={`w-5 h-5 ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <CreditCard className={`w-4 h-4 ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
                         <span className={`text-sm font-medium ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-foreground'}`}>Crédito</span>
                       </button>
                     </div>
 
-                    {/* Botão Dividir */}
+                    {/* Botão Múltipla Forma */}
                     {cartItems.length > 0 && (
                       <button
                         onClick={enterSplitMode}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-background hover:border-pink-primary/50 hover:bg-pink-glow/30 transition-all duration-200"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-background hover:border-pink-primary/50 hover:bg-pink-glow/30 transition-all duration-200"
                       >
                         <Wallet className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium text-muted-foreground">Múltipla Forma de Pagamento</span>
