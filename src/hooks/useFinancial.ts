@@ -654,6 +654,10 @@ export function useFinancialSummary(filters?: {
         balance: totalGrossReceivable - totalFees - totalPayable,
         receivablesCount: receivables?.length || 0,
         expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
+        totalManualCash,
+        totalSalesNet,
+        totalPaidExpenses,
+        manualEntriesCount: manualEntries.length,
       };
     },
     staleTime: 0,

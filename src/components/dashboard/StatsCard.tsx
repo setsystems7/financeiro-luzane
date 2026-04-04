@@ -25,7 +25,7 @@ export function StatsCard({ title, value, icon, trend, description, variant = 'd
             <p className="text-[11px] md:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
             <p className="text-base md:text-2xl font-bold text-foreground break-words leading-tight">{value}</p>
             {description && (
-              <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">{description}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground leading-tight break-words">{description}</p>
             )}
             {trend && (
               <div className={cn(
