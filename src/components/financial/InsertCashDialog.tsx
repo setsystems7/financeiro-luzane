@@ -9,9 +9,10 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Loader2, Landmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useSuppliersList } from '@/hooks/useSuppliers';
+import { useCreateExpense } from '@/hooks/useFinancial';
 import { toast } from 'sonner';
 
 interface InsertCashDialogProps {
