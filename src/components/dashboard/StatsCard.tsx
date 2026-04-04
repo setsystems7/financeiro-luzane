@@ -18,14 +18,14 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon, trend, description, variant = 'default', className }: StatsCardProps) {
   return (
-    <Card className={cn("group", className)}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold text-foreground">{value}</p>
+    <Card className={cn("group hover:shadow-md transition-shadow", className)}>
+      <CardContent className="p-3 md:p-6">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1 md:space-y-2 min-w-0 flex-1">
+            <p className="text-xs md:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
+            <p className="text-lg md:text-2xl font-bold text-foreground truncate">{value}</p>
             {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">{description}</p>
             )}
             {trend && (
               <div className={cn(
@@ -42,7 +42,7 @@ export function StatsCard({ title, value, icon, trend, description, variant = 'd
             )}
           </div>
           <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110",
+            "w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shrink-0",
             variant === 'pink' ? "bg-pink-100 dark:bg-pink-900/30" : "bg-primary/10"
           )}>
             {icon}
