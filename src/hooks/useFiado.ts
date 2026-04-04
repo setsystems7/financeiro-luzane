@@ -223,19 +223,8 @@ export function useCreateFiadoSale() {
         }
       }
 
-      // Create receivable entry for the fiado sale
-      await supabase
-        .from('receivables')
-        .insert({
-          sale_id: null,
-          description: `Fiado - ${data.customer_name}`,
-          amount: data.total,
-          fee: 0,
-          net_amount: data.total,
-          due_date: data.due_date || new Date().toISOString().split('T')[0],
-          is_received: false,
-          notes: `Venda fiado - ${data.installments}x - ID: ${fiadoSale.id}`,
-        });
+      // NOTE: Receivable is NOT created here. It will be created when payment is received
+      // to avoid double-counting in Valor do Caixa.
 
       return fiadoSale;
     },
