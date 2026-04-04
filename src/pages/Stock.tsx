@@ -386,7 +386,7 @@ export default function Stock() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {products.map((product) => {
+                    {filteredStockProducts.map((product) => {
                       const totalStock = product.sizes.reduce((acc, s) => acc + s.quantity, 0);
                       const isLow = totalStock <= product.min_stock;
                       const isExpanded = expandedProducts.has(product.id);
@@ -441,8 +441,9 @@ export default function Stock() {
               )}
             </CardContent>
           </Card>
+          </TabsContent>
 
-          {/* Movement History with filters and pagination */}
+          <TabsContent value="history">
           <Card variant="elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" />Histórico de Movimentações</CardTitle>
@@ -510,7 +511,8 @@ export default function Stock() {
               )}
             </CardContent>
           </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Manual Out/Adjust Dialog */}
         <Dialog open={!!outDialog} onOpenChange={(open) => { if (!open) setOutDialog(null); }}>
