@@ -346,13 +346,28 @@ export default function Stock() {
           </CardContent>
         </Card>
 
-        {/* Stock Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Current Stock with expandable sizes */}
+        <Tabs value={activeStockTab} onValueChange={(v) => setActiveStockTab(v as 'stock' | 'history')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+            <TabsTrigger value="stock" className="gap-2"><Package className="w-4 h-4" />Estoque Atual</TabsTrigger>
+            <TabsTrigger value="history" className="gap-2"><History className="w-4 h-4" />Histórico</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stock">
           <Card variant="elevated">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
-              <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar produto..." 
+                    value={stockSearchTerm} 
+                    onChange={(e) => setStockSearchTerm(e.target.value)} 
+                    className="pl-8 w-48 h-8 text-sm"
+                  />
+                </div>
+                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+              </div>
             </CardHeader>
             <CardContent>
               {productsLoading ? (
