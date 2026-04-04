@@ -4,6 +4,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type SupportSection } from '@/components/layout/SupportButton';
 import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon, Landmark } from 'lucide-react';
 import { InsertCashDialog } from '@/components/financial/InsertCashDialog';
+import { KpiDetailDialog } from '@/components/financial/KpiDetailDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
