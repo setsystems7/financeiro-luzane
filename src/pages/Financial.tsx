@@ -436,10 +436,10 @@ export default function Financial() {
           {/* Receivables */}
           <TabsContent value="receivable">
             <Card variant="elevated">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Contas a Receber</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
+                <CardTitle className="text-lg md:text-2xl">Contas a Receber</CardTitle>
                 <Select value={receivableStatus} onValueChange={(v: any) => setReceivableStatus(v)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -449,7 +449,7 @@ export default function Financial() {
                   </SelectContent>
                 </Select>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6 pt-0">
                 {receivablesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
