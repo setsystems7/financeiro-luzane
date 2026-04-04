@@ -103,78 +103,22 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
 
       if (recError) throw recError;
 
-      // 2. If loan + create expense (with installments)
+      // 2. If loan + create expense, use shared hook
       if (isLoan && wantsExpense === 'create') {
         const numInstallments = parseInt(expenseInstallments) || 1;
         const installmentAmount = parseFloat(effectiveInstallmentValue) || numAmount;
-        const baseDate = new Date(expenseDueDate);
         const baseDescription = expenseDescription || `Pagamento: ${description}`;
 
-        if (numInstallments === 1) {
-          // Single expense
-          const { error: expError } = await supabase.from('expenses').insert({
-            description: baseDescription,
-            amount: installmentAmount,
-            category: expenseCategory || null,
-            due_date: expenseDueDate,
-            supplier_id: expenseSupplierId || null,
-            notes: `Ref. empréstimo: ${description}`,
-            status: 'pendente',
-          });
-          if (expError) throw expError;
-        } else {
-          // Create first installment
-          const { data: firstExp, error: firstError } = await supabase
-            .from('expenses')
-            .insert({
-              description: `${baseDescription} (1/${numInstallments})`,
-              amount: installmentAmount,
-              category: expenseCategory || null,
-              due_date: expenseDueDate,
-              supplier_id: expenseSupplierId || null,
-              notes: `Ref. empréstimo: ${description}`,
-              status: 'pendente',
-              is_recurring: true,
-              recurrence_months: numInstallments,
-              recurrence_index: 1,
-            })
-            .select()
-            .single();
-
-          if (firstError) throw firstError;
-
-          // Create remaining installments
-          const originalDay = baseDate.getDate();
-          const remaining = [];
-          for (let i = 1; i < numInstallments; i++) {
-            const futureDate = new Date(baseDate);
-            futureDate.setMonth(futureDate.getMonth() + i);
-            const targetMonth = futureDate.getMonth();
-            futureDate.setDate(originalDay);
-            if (futureDate.getMonth() !== targetMonth) {
-              futureDate.setDate(0);
-            }
-
-            remaining.push({
-              description: `${baseDescription} (${i + 1}/${numInstallments})`,
-              amount: installmentAmount,
-              category: expenseCategory || null,
-              due_date: futureDate.toISOString().split('T')[0],
-              supplier_id: expenseSupplierId || null,
-              notes: `Ref. empréstimo: ${description}`,
-              status: 'pendente' as const,
-              is_recurring: true,
-              recurrence_months: numInstallments,
-              parent_expense_id: firstExp.id,
-              recurrence_index: i + 1,
-            });
-          }
-
-          if (remaining.length > 0) {
-            const { error: remError } = await supabase.from('expenses').insert(remaining);
-            if (remError) throw remError;
-          }
-        }
+        await createExpense.mutateAsync({
+          description: baseDescription,
+          amount: installmentAmount,
+          category: expenseCategory || undefined,
+          due_date: expenseDueDate,
+          supplier_id: expenseSupplierId || undefined,
+          notes: `Ref. empréstimo: ${description}`,
+          is_recurring: numInstallments > 1,
+          recurrence_months: numInstallments > 1 ? numInstallments : undefined,
+        });
 
         toast.success(
           numInstallments > 1
