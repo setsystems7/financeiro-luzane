@@ -79,7 +79,7 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoan, setIsLoan] = useState(false);
-  const [wantsExpense, setWantsExpense] = useState<'none' | 'create' | 'existing'>('none');
+  const [wantsExpense, setWantsExpense] = useState<'none' | 'create'>('none');
   const [loading, setLoading] = useState(false);
 
   // Expense fields (when creating new)
@@ -90,17 +90,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const [expenseInstallments, setExpenseInstallments] = useState('1');
   const [expenseInstallmentValue, setExpenseInstallmentValue] = useState('');
 
-  // Link existing expense
-  const [linkedExpenseId, setLinkedExpenseId] = useState('');
-
-  const handleSelectExistingExpense = (expId: string) => {
-    setLinkedExpenseId(expId);
-    const selected = groupedExpenses.find(e => e.id === expId);
-    if (selected) {
-      setAmount(selected.totalAmount.toFixed(2));
-      setDescription(selected.description);
-    }
-  };
 
   // Auto-calculate installment value when amount or installments change
   const computedInstallmentValue = useMemo(() => {
@@ -125,7 +114,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
     setExpenseSupplierId('');
     setExpenseInstallments('1');
     setExpenseInstallmentValue('');
-    setLinkedExpenseId('');
   };
 
   const handleSubmit = async () => {
@@ -242,28 +230,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
             ? `Valor inserido no caixa e ${numInstallments} parcelas registradas!`
             : 'Valor inserido no caixa e conta a pagar registrada!'
         );
-      } else if (isLoan && wantsExpense === 'existing') {
-        if (linkedExpenseId) {
-          const { data: existingExp } = await supabase
-            .from('expenses')
-            .select('notes')
-            .eq('id', linkedExpenseId)
-            .single();
-
-          const currentNotes = existingExp?.notes || '';
-          const updatedNotes = currentNotes
-            ? `${currentNotes}\n[Vinculado] Entrada no caixa: R$ ${numAmount.toFixed(2)} em ${today}`
-            : `[Vinculado] Entrada no caixa: R$ ${numAmount.toFixed(2)} em ${today}`;
-
-          await supabase
-            .from('expenses')
-            .update({ notes: updatedNotes })
-            .eq('id', linkedExpenseId);
-
-          toast.success('Valor inserido no caixa e vinculado à despesa existente!');
-        } else {
-          toast.success('Valor inserido no caixa!');
-        }
       } else {
         toast.success('Valor inserido no caixa com sucesso!');
       }
@@ -367,16 +333,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                   <input
                     type="radio"
                     name="expense-option"
-                    checked={wantsExpense === 'existing'}
-                    onChange={() => setWantsExpense('existing')}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm">Já está registrada (vincular)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="expense-option"
                     checked={wantsExpense === 'none'}
                     onChange={() => setWantsExpense('none')}
                     className="accent-primary"
@@ -469,29 +425,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                 </div>
               )}
 
-              {/* Link existing expense */}
-              {wantsExpense === 'existing' && (
-                <div className="pt-2 border-t border-amber-200 dark:border-amber-800">
-                  <Label className="text-xs">Selecione a despesa existente</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    O vínculo será registrado nas observações da despesa (sem alterar valores).
-                  </p>
-                  <Select value={linkedExpenseId} onValueChange={handleSelectExistingExpense}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Selecione a despesa..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groupedExpenses.map((exp) => (
-                        <SelectItem key={exp.id} value={exp.id}>
-                          {exp.description} - R$ {exp.totalAmount.toFixed(2).replace('.', ',')}
-                          {exp.installments > 1 && ` (${exp.installments}x)`}
-                          {` - ${exp.pendingCount} pendente${exp.pendingCount > 1 ? 's' : ''}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           )}
 
