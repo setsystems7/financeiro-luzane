@@ -449,7 +449,7 @@ export default function Financial() {
                     <TableBody>
                       {paginatedReceivables.map((item) => {
                         const sale = item.sales;
-                        const isSplitSale = sale?.notes?.includes('Pagamento dividido');
+                        const isSplitSale = item.description?.includes(' - ');
                         
                         // For split payments, extract the real method from the receivable description
                         // Description format: "Venda #60 - Dinheiro" or "Venda #60 - Crédito"
