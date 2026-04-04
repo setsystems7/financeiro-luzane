@@ -246,20 +246,23 @@ export function useCreateSale() {
           const pFeePercent = p.card_fee_percent || 0;
           const feeBps = Math.round(pFeePercent * 100);
           const amountCents = Math.round(p.amount * 100);
-          const pCardFeeAmount = feeBps > 0 
-            ? (amountCents - Math.round((amountCents * 10000) / (10000 + feeBps))) / 100 
-            : 0;
-          const pNetAmount = p.amount - pCardFeeAmount;
+          // Gross = valor que o cliente paga (com taxa embutida)
+          // Fórmula da maquininha: gross = amount / (1 - fee%)
+          const grossCents = feeBps > 0
+            ? Math.ceil((amountCents * 10000) / (10000 - feeBps))
+            : amountCents;
+          const pCardFeeAmount = (grossCents - amountCents) / 100;
+          const grossAmount = grossCents / 100;
 
           return {
             sale_id: sale.id,
             payment_method: p.payment_method,
-            amount: p.amount,
+            amount: grossAmount,
             card_brand: p.card_brand || null,
             installments: p.installments || 1,
             card_fee_percent: pFeePercent,
             card_fee_amount: pCardFeeAmount,
-            net_amount: pNetAmount,
+            net_amount: p.amount,
           };
         });
 
