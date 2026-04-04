@@ -569,6 +569,16 @@ export default function Financial() {
                                       <Undo2 className="w-4 h-4 mr-1" />Estornar
                                     </Button>
                                   )}
+                                  {!item.sale_id && (
+                                    <>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditingReceivable({ id: item.id, amount: String(item.amount || 0), description: item.description, notes: item.notes || '' }); }}>
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setConfirmDeleteReceivableId(item.id); }}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
