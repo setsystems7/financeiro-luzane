@@ -173,6 +173,29 @@ export default function POS() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Keyboard shortcuts: F2 = finalizar, Esc = limpar carrinho
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (cartItems.length > 0 && !createSale.isPending) {
+          handleFinalizeSale();
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showSuggestions) {
+          setShowSuggestions(false);
+        } else if (cartItems.length > 0) {
+          clearCart();
+          toast.info('Carrinho limpo');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cartItems, createSale.isPending, showSuggestions]);
+
   // Filtrar produtos para autocomplete
   const filteredProducts = searchInput.length >= 2
     ? products.filter(p =>
