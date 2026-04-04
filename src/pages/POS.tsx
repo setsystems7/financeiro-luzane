@@ -297,32 +297,24 @@ export default function POS() {
     ));
   };
 
-  // Split payment helpers
+  // Split payment helpers — fixo em 2 pagamentos
   const splitTotal = splitPayments.reduce((acc, p) => acc + p.amount, 0);
   const splitRemaining = Math.max(0, Math.round((cartTotal - splitTotal) * 100) / 100);
 
-  const addSplitPayment = () => {
-    const newId = splitCounter + 1;
-    setSplitCounter(newId);
-    setSplitPayments(prev => [...prev, {
-      id: newId,
-      payment_method: '',
-      amount: splitRemaining,
-      card_brand: '',
-      installments: 1,
-    }]);
-  };
-
   const updateSplitPayment = (id: number, field: string, value: any) => {
-    setSplitPayments(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
-
-  const removeSplitPayment = (id: number) => {
-    setSplitPayments(prev => prev.filter(p => p.id !== id));
-    if (splitPayments.length <= 1) {
-      setIsSplitMode(false);
-      setSplitPayments([]);
-    }
+    setSplitPayments(prev => {
+      const updated = prev.map(p => p.id === id ? { ...p, [field]: value } : p);
+      // Se alterou o valor do pagamento 1, auto-preencher pagamento 2
+      if (field === 'amount' && updated.length === 2) {
+        const first = updated.find(p => p.id === id);
+        const second = updated.find(p => p.id !== id);
+        if (first && second) {
+          const remaining = Math.max(0, Math.round((cartTotal - (value as number)) * 100) / 100);
+          return updated.map(p => p.id === second.id ? { ...p, amount: remaining } : p);
+        }
+      }
+      return updated;
+    });
   };
 
   const enterSplitMode = () => {
@@ -330,7 +322,7 @@ export default function POS() {
     setPaymentMethod('');
     setCardBrand('');
     setSplitPayments([
-      { id: 1, payment_method: '', amount: 0, card_brand: '', installments: 1 },
+      { id: 1, payment_method: '', amount: cartTotal, card_brand: '', installments: 1 },
       { id: 2, payment_method: '', amount: 0, card_brand: '', installments: 1 },
     ]);
     setSplitCounter(2);
