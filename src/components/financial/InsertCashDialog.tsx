@@ -114,7 +114,6 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
     setExpenseSupplierId('');
     setExpenseInstallments('1');
     setExpenseInstallmentValue('');
-    setLinkedExpenseId('');
   };
 
   const handleSubmit = async () => {
