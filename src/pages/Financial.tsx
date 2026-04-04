@@ -449,7 +449,21 @@ export default function Financial() {
                     <TableBody>
                       {paginatedReceivables.map((item) => {
                         const sale = item.sales;
-                        const paymentMethod = sale?.payment_method || '';
+                        const isSplitSale = item.description?.includes(' - ');
+                        
+                        // For split payments, extract the real method from the receivable description
+                        // Description format: "Venda #60 - Dinheiro" or "Venda #60 - Crédito"
+                        let paymentMethod = sale?.payment_method || '';
+                        if (isSplitSale && item.description) {
+                          const methodMatch = item.description.match(/- (Dinheiro|PIX|Débito|Crédito|Crediário)$/i);
+                          if (methodMatch) {
+                            const labelToMethod: Record<string, string> = {
+                              'dinheiro': 'dinheiro', 'pix': 'pix', 'débito': 'cartao_debito',
+                              'crédito': 'cartao_credito', 'crediário': 'crediario',
+                            };
+                            paymentMethod = labelToMethod[methodMatch[1].toLowerCase()] || paymentMethod;
+                          }
+                        }
                         const isCardSale = paymentMethod === 'cartao_credito';
                         const installments = isCardSale ? (sale?.installments || 1) : 1;
                         const total = Number(item.amount) || 0;
