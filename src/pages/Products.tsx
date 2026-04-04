@@ -239,42 +239,15 @@ export default function Products() {
                 className="pl-9 transition-all duration-300 focus:shadow-md focus:shadow-primary/10"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40 transition-all duration-200 hover:border-primary/50">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={colorFilter} onValueChange={setColorFilter}>
-              <SelectTrigger className="w-36 transition-all duration-200 hover:border-primary/50">
-                <Palette className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Cor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Cores</SelectItem>
-                {colors.map(color => (
-                  <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-              <SelectTrigger className="w-40 transition-all duration-200 hover:border-primary/50">
-                <Truck className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Fornecedor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {suppliers.map(sup => (
-                  <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtros
+              {(categoryFilter !== 'all' || colorFilter !== 'all' || supplierFilter !== 'all') && (
+                <Badge variant="pink" className="ml-1 text-xs px-1.5">
+                  {[categoryFilter !== 'all', colorFilter !== 'all', supplierFilter !== 'all'].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
           </div>
 
           <div className="flex gap-2">
