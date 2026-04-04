@@ -1136,6 +1136,8 @@ export default function Financial() {
           confirmText="Excluir"
           variant="destructive"
         />
+
+        <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
       </main>
     </MainLayout>
   );
