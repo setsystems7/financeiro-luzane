@@ -18,6 +18,10 @@ interface KpiDetailDialogProps {
     balance: number;
     receivablesCount: number;
     expensesCount: number;
+    totalManualCash?: number;
+    totalSalesNet?: number;
+    totalPaidExpenses?: number;
+    manualEntriesCount?: number;
   } | undefined;
 }
 
@@ -48,7 +52,11 @@ export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetail
       title: 'Valor do Caixa — Detalhamento',
       icon: <TrendingUp className="w-5 h-5 text-green-500" />,
       items: [
-        { label: 'Total líquido de todos os recebíveis (histórico)', value: summary.totalReceivable + (summary.totalPayable > 0 ? 0 : 0), highlight: true, info: 'Este valor é o saldo real: total líquido recebido menos despesas pagas' },
+        { label: 'Total líquido de vendas (histórico)', value: summary.totalSalesNet ?? 0 },
+        ...(summary.totalManualCash && summary.totalManualCash > 0 ? [
+          { label: `Entradas manuais / empréstimos (${summary.manualEntriesCount ?? 0})`, value: summary.totalManualCash },
+        ] : []),
+        { label: '(-) Despesas pagas (histórico)', value: summary.totalPaidExpenses ?? 0, negative: true },
         { label: 'Valor do Caixa atual', value: summary.totalReceivable, highlight: true },
       ],
     },

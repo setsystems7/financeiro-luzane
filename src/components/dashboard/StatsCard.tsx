@@ -22,10 +22,10 @@ export function StatsCard({ title, value, icon, trend, description, variant = 'd
       <CardContent className="p-3 md:p-6">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 md:space-y-2 min-w-0 flex-1">
-            <p className="text-xs md:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
-            <p className="text-lg md:text-2xl font-bold text-foreground truncate">{value}</p>
+            <p className="text-[11px] md:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
+            <p className="text-base md:text-2xl font-bold text-foreground break-words leading-tight">{value}</p>
             {description && (
-              <p className="text-[10px] md:text-xs text-muted-foreground leading-tight line-clamp-2">{description}</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground leading-tight break-words">{description}</p>
             )}
             {trend && (
               <div className={cn(

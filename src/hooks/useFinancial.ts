@@ -583,7 +583,7 @@ export function useFinancialSummary(filters?: {
       // All-time receivables for Valor do Caixa (independent of period)
       const { data: allReceivables, error: allRecError } = await supabase
         .from('receivables')
-        .select('net_amount');
+        .select('net_amount, description');
       if (allRecError) throw allRecError;
 
       // All-time paid expenses to subtract from Valor do Caixa
@@ -592,6 +592,16 @@ export function useFinancialSummary(filters?: {
         .select('amount')
         .eq('status', 'pago');
       if (paidExpErr) throw paidExpErr;
+
+      // Separate manual cash entries from sales receivables
+      const manualEntries = (allReceivables || []).filter(r => 
+        r.description?.includes('[Empréstimo]') || r.description?.includes('[Entrada Manual]')
+      );
+      const salesReceivables = (allReceivables || []).filter(r => 
+        !r.description?.includes('[Empréstimo]') && !r.description?.includes('[Entrada Manual]')
+      );
+      const totalManualCash = manualEntries.reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalSalesNet = salesReceivables.reduce((acc, r) => acc + Number(r.net_amount), 0);
 
       // Current month expenses (based on filter period)
       const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
@@ -644,6 +654,10 @@ export function useFinancialSummary(filters?: {
         balance: totalGrossReceivable - totalFees - totalPayable,
         receivablesCount: receivables?.length || 0,
         expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
+        totalManualCash,
+        totalSalesNet,
+        totalPaidExpenses,
+        manualEntriesCount: manualEntries.length,
       };
     },
     staleTime: 0,
