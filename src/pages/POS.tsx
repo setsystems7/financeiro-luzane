@@ -481,6 +481,19 @@ export default function POS() {
         },
         {
           onSuccess: () => {
+            const pm = finalPaymentMethod;
+            setLastSaleData({
+              items: cartItems.map(item => ({ product_name: item.product_name, size: item.size, quantity: item.quantity, total: item.total })),
+              subtotal: cartSubtotal,
+              discount: discountAmount,
+              total: cartTotal,
+              paymentMethod: pm,
+              cardBrand: cardBrand || undefined,
+              installments: pm === 'cartao_credito' ? installments : undefined,
+              feeAmount: pm === 'cartao_credito' ? cardFeeAmount : undefined,
+              customerTotal: pm === 'cartao_credito' ? totalWithFee : cartTotal,
+            });
+            setShowSaleConfirmation(true);
             resetAll();
           },
         }
