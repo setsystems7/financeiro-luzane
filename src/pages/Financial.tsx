@@ -621,7 +621,7 @@ export default function Financial() {
           <TabsContent value="payable">
             <Card variant="elevated">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
-                <CardTitle>Contas a Pagar</CardTitle>
+                <CardTitle className="text-lg md:text-2xl">Contas a Pagar</CardTitle>
                 <div className="flex items-center gap-2">
                   <Select value={expenseStatus} onValueChange={(v: any) => setExpenseStatus(v)}>
                     <SelectTrigger className="w-40">
