@@ -421,12 +421,14 @@ export default function Financial() {
         {/* Tabs */}
         <Tabs defaultValue="receivable" className="space-y-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="receivable" className="gap-2">
-              <CreditCard className="w-4 h-4" />
-              Recebidos ({filteredReceivables.length})
+            <TabsTrigger value="receivable" className="gap-1 md:gap-2 text-xs md:text-sm">
+              <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Recebidos</span>
+              <span className="sm:hidden">Receb.</span>
+              ({filteredReceivables.length})
             </TabsTrigger>
-            <TabsTrigger value="payable" className="gap-2">
-              <Receipt className="w-4 h-4" />
+            <TabsTrigger value="payable" className="gap-1 md:gap-2 text-xs md:text-sm">
+              <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4" />
               A Pagar ({filteredExpenses.length})
             </TabsTrigger>
           </TabsList>
