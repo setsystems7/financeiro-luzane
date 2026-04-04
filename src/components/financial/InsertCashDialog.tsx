@@ -9,9 +9,10 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Loader2, Landmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useSuppliersList } from '@/hooks/useSuppliers';
+import { useCreateExpense } from '@/hooks/useFinancial';
 import { toast } from 'sonner';
 
 interface InsertCashDialogProps {
@@ -23,57 +24,7 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const queryClient = useQueryClient();
   const { data: expenseCategories = [] } = useExpenseCategories();
   const { data: suppliers = [] } = useSuppliersList();
-
-  // Fetch ALL expenses (including paid) to group by parent and show total
-  const { data: allExpenses = [] } = useQuery({
-    queryKey: ['all-expenses-for-link'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('id, description, amount, due_date, status, parent_expense_id, recurrence_months, recurrence_index, is_recurring')
-        .order('due_date', { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: open,
-  });
-
-  // Group expenses: show parent/standalone with total amount across all installments
-  const groupedExpenses = useMemo(() => {
-    // Find root expenses (no parent) that have pending/overdue installments
-    const parentMap = new Map<string, { total: number; count: number; pendingCount: number; description: string; rootId: string }>();
-
-    // Group by parent_expense_id or self
-    allExpenses.forEach((exp: any) => {
-      const rootId = exp.parent_expense_id || exp.id;
-      if (!parentMap.has(rootId)) {
-        parentMap.set(rootId, { total: 0, count: 0, pendingCount: 0, description: '', rootId });
-      }
-      const group = parentMap.get(rootId)!;
-      group.total += Number(exp.amount);
-      group.count += 1;
-      if (exp.status === 'pendente' || exp.status === 'vencido') {
-        group.pendingCount += 1;
-      }
-      // Use the base description (without index suffix) from the first item
-      if (!group.description || (exp.recurrence_index === 1 || !exp.parent_expense_id)) {
-        // Clean description: remove (1/N) suffix
-        group.description = exp.description.replace(/\s*\(\d+\/\d+\)$/, '');
-      }
-    });
-
-    // Only show groups that have at least one pending/overdue installment
-    return Array.from(parentMap.values())
-      .filter(g => g.pendingCount > 0)
-      .map(g => ({
-        id: g.rootId,
-        description: g.description,
-        totalAmount: g.total,
-        installments: g.count,
-        pendingCount: g.pendingCount,
-      }));
-  }, [allExpenses]);
+  const createExpense = useCreateExpense();
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -152,78 +103,22 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
 
       if (recError) throw recError;
 
-      // 2. If loan + create expense (with installments)
+      // 2. If loan + create expense, use shared hook
       if (isLoan && wantsExpense === 'create') {
         const numInstallments = parseInt(expenseInstallments) || 1;
         const installmentAmount = parseFloat(effectiveInstallmentValue) || numAmount;
-        const baseDate = new Date(expenseDueDate);
         const baseDescription = expenseDescription || `Pagamento: ${description}`;
 
-        if (numInstallments === 1) {
-          // Single expense
-          const { error: expError } = await supabase.from('expenses').insert({
-            description: baseDescription,
-            amount: installmentAmount,
-            category: expenseCategory || null,
-            due_date: expenseDueDate,
-            supplier_id: expenseSupplierId || null,
-            notes: `Ref. empréstimo: ${description}`,
-            status: 'pendente',
-          });
-          if (expError) throw expError;
-        } else {
-          // Create first installment
-          const { data: firstExp, error: firstError } = await supabase
-            .from('expenses')
-            .insert({
-              description: `${baseDescription} (1/${numInstallments})`,
-              amount: installmentAmount,
-              category: expenseCategory || null,
-              due_date: expenseDueDate,
-              supplier_id: expenseSupplierId || null,
-              notes: `Ref. empréstimo: ${description}`,
-              status: 'pendente',
-              is_recurring: true,
-              recurrence_months: numInstallments,
-              recurrence_index: 1,
-            })
-            .select()
-            .single();
-
-          if (firstError) throw firstError;
-
-          // Create remaining installments
-          const originalDay = baseDate.getDate();
-          const remaining = [];
-          for (let i = 1; i < numInstallments; i++) {
-            const futureDate = new Date(baseDate);
-            futureDate.setMonth(futureDate.getMonth() + i);
-            const targetMonth = futureDate.getMonth();
-            futureDate.setDate(originalDay);
-            if (futureDate.getMonth() !== targetMonth) {
-              futureDate.setDate(0);
-            }
-
-            remaining.push({
-              description: `${baseDescription} (${i + 1}/${numInstallments})`,
-              amount: installmentAmount,
-              category: expenseCategory || null,
-              due_date: futureDate.toISOString().split('T')[0],
-              supplier_id: expenseSupplierId || null,
-              notes: `Ref. empréstimo: ${description}`,
-              status: 'pendente' as const,
-              is_recurring: true,
-              recurrence_months: numInstallments,
-              parent_expense_id: firstExp.id,
-              recurrence_index: i + 1,
-            });
-          }
-
-          if (remaining.length > 0) {
-            const { error: remError } = await supabase.from('expenses').insert(remaining);
-            if (remError) throw remError;
-          }
-        }
+        await createExpense.mutateAsync({
+          description: baseDescription,
+          amount: installmentAmount,
+          category: expenseCategory || undefined,
+          due_date: expenseDueDate,
+          supplier_id: expenseSupplierId || undefined,
+          notes: `Ref. empréstimo: ${description}`,
+          is_recurring: numInstallments > 1,
+          recurrence_months: numInstallments > 1 ? numInstallments : undefined,
+        });
 
         toast.success(
           numInstallments > 1
