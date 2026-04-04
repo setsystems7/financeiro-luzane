@@ -804,13 +804,6 @@ export default function POS() {
                             )}
                           </>
                         )}
-
-                        {/* Remover */}
-                        {splitPayments.length > 2 && (
-                          <button onClick={() => removeSplitPayment(sp.id)} className="ml-auto p-1 hover:bg-destructive/10 rounded">
-                            <X className="w-4 h-4 text-destructive" />
-                          </button>
-                        )}
                       </div>
                     );
                   })}
