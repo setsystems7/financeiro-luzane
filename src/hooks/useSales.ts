@@ -162,6 +162,7 @@ export function useCreateSale() {
 
   return useMutation({
     mutationFn: async (data: CreateSaleData) => {
+      const isSplit = data.payments && data.payments.length > 1;
       const cardFeePercent = data.card_fee_percent || 0;
       const baseTotal = data.base_total || data.final_total;
       const cardFeeAmount = data.final_total - baseTotal;
@@ -174,22 +175,23 @@ export function useCreateSale() {
           total: data.total,
           discount: data.discount || 0,
           final_total: data.final_total,
-          payment_method: data.payment_method,
+          payment_method: isSplit ? 'pix' : data.payment_method, // 'pix' as fallback for split (field is required)
           customer_name: data.customer_name || null,
           customer_phone: data.customer_phone || null,
-          notes: data.notes || null,
+          notes: isSplit ? `Pagamento dividido | ${data.notes || ''}`.trim() : (data.notes || null),
           installments: data.installments || 1,
           status: 'concluida',
-          card_brand: data.card_brand || null,
-          card_fee_percent: cardFeePercent,
-          card_fee_amount: cardFeeAmount,
-          net_amount: netAmount,
+          card_brand: isSplit ? null : (data.card_brand || null),
+          card_fee_percent: isSplit ? 0 : cardFeePercent,
+          card_fee_amount: isSplit ? 0 : cardFeeAmount,
+          net_amount: isSplit ? baseTotal : netAmount,
         })
         .select()
         .single();
 
       if (saleError) throw saleError;
 
+      // Insert sale items
       const saleItems = data.items.map(item => ({
         sale_id: sale.id,
         product_id: item.product_id,
@@ -207,6 +209,7 @@ export function useCreateSale() {
 
       if (itemsError) throw itemsError;
 
+      // Update stock
       for (const item of data.items) {
         if (item.product_size_id) {
           const { data: sizeData } = await supabase
@@ -236,48 +239,106 @@ export function useCreateSale() {
         }
       }
 
-      const installments = data.installments || 1;
-      const dueDate = new Date();
+      // Handle payments and receivables
+      if (isSplit && data.payments) {
+        // Insert sale_payments records
+        const paymentRecords = data.payments.map(p => {
+          const pFeePercent = p.card_fee_percent || 0;
+          const feeBps = Math.round(pFeePercent * 100);
+          const amountCents = Math.round(p.amount * 100);
+          const pCardFeeAmount = feeBps > 0 
+            ? (amountCents - Math.round((amountCents * 10000) / (10000 + feeBps))) / 100 
+            : 0;
+          const pNetAmount = p.amount - pCardFeeAmount;
 
-      if (data.payment_method === 'dinheiro' || data.payment_method === 'pix' || data.payment_method === 'cartao_credito') {
-        // Immediate
-      } else if (data.payment_method === 'cartao_debito') {
-        dueDate.setDate(dueDate.getDate() + 1);
+          return {
+            sale_id: sale.id,
+            payment_method: p.payment_method,
+            amount: p.amount,
+            card_brand: p.card_brand || null,
+            installments: p.installments || 1,
+            card_fee_percent: pFeePercent,
+            card_fee_amount: pCardFeeAmount,
+            net_amount: pNetAmount,
+          };
+        });
+
+        await supabase.from('sale_payments').insert(paymentRecords);
+
+        // Create one receivable per payment
+        for (const pr of paymentRecords) {
+          const dueDate = new Date();
+          if (pr.payment_method === 'cartao_debito') {
+            dueDate.setDate(dueDate.getDate() + 1);
+          } else if (pr.payment_method === 'crediario') {
+            dueDate.setDate(dueDate.getDate() + 30);
+          }
+
+          const isImmediate = pr.payment_method === 'dinheiro' ||
+                              pr.payment_method === 'pix' ||
+                              pr.payment_method === 'cartao_credito' ||
+                              pr.payment_method === 'cartao_debito';
+
+          const methodLabel = {
+            dinheiro: 'Dinheiro', pix: 'PIX', cartao_debito: 'Débito',
+            cartao_credito: 'Crédito', crediario: 'Crediário',
+          }[pr.payment_method] || pr.payment_method;
+
+          await supabase.from('receivables').insert({
+            sale_id: sale.id,
+            description: `Venda #${sale.sale_number} - ${methodLabel}`,
+            amount: pr.amount,
+            fee: pr.card_fee_amount,
+            net_amount: pr.net_amount,
+            due_date: dueDate.toISOString().split('T')[0],
+            is_received: isImmediate,
+            received_date: isImmediate ? dueDate.toISOString().split('T')[0] : null,
+          });
+        }
       } else {
-        dueDate.setDate(dueDate.getDate() + 30);
-      }
+        // Single payment — original logic
+        const installments = data.installments || 1;
+        const dueDate = new Date();
 
-      const fee = cardFeeAmount;
+        if (data.payment_method === 'dinheiro' || data.payment_method === 'pix' || data.payment_method === 'cartao_credito') {
+          // Immediate
+        } else if (data.payment_method === 'cartao_debito') {
+          dueDate.setDate(dueDate.getDate() + 1);
+        } else {
+          dueDate.setDate(dueDate.getDate() + 30);
+        }
 
-      const isImmediate = data.payment_method === 'dinheiro' ||
-                         data.payment_method === 'pix' ||
-                         data.payment_method === 'cartao_credito' ||
-                         data.payment_method === 'cartao_debito';
+        const fee = cardFeeAmount;
+        const isImmediate = data.payment_method === 'dinheiro' ||
+                           data.payment_method === 'pix' ||
+                           data.payment_method === 'cartao_credito' ||
+                           data.payment_method === 'cartao_debito';
 
-      let description = `Venda #${sale.sale_number}`;
-      if (installments > 1) {
-        description += ` - ${installments}x`;
-      }
+        let description = `Venda #${sale.sale_number}`;
+        if (installments > 1) {
+          description += ` - ${installments}x`;
+        }
 
-      const netAmountReceivable = baseTotal;
+        const netAmountReceivable = baseTotal;
 
-      const receivableEntry = {
-        sale_id: sale.id,
-        description: description,
-        amount: data.final_total,
-        fee: fee,
-        net_amount: netAmountReceivable,
-        due_date: dueDate.toISOString().split('T')[0],
-        is_received: isImmediate,
-        received_date: isImmediate ? dueDate.toISOString().split('T')[0] : null,
-      };
+        const receivableEntry = {
+          sale_id: sale.id,
+          description: description,
+          amount: data.final_total,
+          fee: fee,
+          net_amount: netAmountReceivable,
+          due_date: dueDate.toISOString().split('T')[0],
+          is_received: isImmediate,
+          received_date: isImmediate ? dueDate.toISOString().split('T')[0] : null,
+        };
 
-      const { error: receivableError } = await supabase
-        .from('receivables')
-        .insert(receivableEntry);
+        const { error: receivableError } = await supabase
+          .from('receivables')
+          .insert(receivableEntry);
 
-      if (receivableError) {
-        console.error('Error creating receivables:', receivableError);
+        if (receivableError) {
+          console.error('Error creating receivables:', receivableError);
+        }
       }
 
       return sale;
