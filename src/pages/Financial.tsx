@@ -4,6 +4,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type SupportSection } from '@/components/layout/SupportButton';
 import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon, Landmark } from 'lucide-react';
 import { InsertCashDialog } from '@/components/financial/InsertCashDialog';
+import { KpiDetailDialog } from '@/components/financial/KpiDetailDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,9 @@ export default function Financial() {
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
   const [paymentInterest, setPaymentInterest] = useState<string>('');
   const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
+
+  // KPI detail dialog
+  const [kpiDetailType, setKpiDetailType] = useState<'entrada' | 'taxas' | 'caixa' | 'pagar' | 'saldo' | null>(null);
 
   // Confirm dialog states
   const [confirmCancelSaleId, setConfirmCancelSaleId] = useState<string | null>(null);
@@ -296,102 +300,120 @@ export default function Financial() {
 
   return (
     <MainLayout title="Financeiro" subtitle="Controle de contas a pagar e receber" supportContent={{ moduleName: 'Financeiro', sections: financialSupportSections }}>
-      <main className="space-y-6 animate-fade-in">
+      <main className="space-y-4 md:space-y-6 animate-fade-in">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatsCard
-            title="Entrada de Vendas"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
-            icon={<ArrowUpRight className="w-6 h-6 text-blue-500" />}
-            description="Valor bruto com taxas"
-          />
-          <StatsCard
-            title="Taxas Recebidas"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
-            icon={<CreditCard className="w-6 h-6 text-amber-500" />}
-            description="Taxas pagas pelos clientes"
-          />
-          <StatsCard
-            title="Valor do Caixa"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
-            icon={<TrendingUp className="w-6 h-6 text-green-500" />}
-            description="Valor que entra no caixa"
-          />
-          <StatsCard
-            title="Contas a Pagar"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
-            icon={<TrendingDown className="w-6 h-6 text-red-500" />}
-            description={
-              summaryLoading ? '' : 
-              summary?.totalOverdue && summary.totalOverdue > 0 
-                ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
-                : `Despesas do período`
-            }
-          />
-          <StatsCard
-            title="Saldo Previsto do Mês"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
-            icon={<Wallet className="w-6 h-6 text-pink-500" />}
-            variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
-            description="Entrada - Taxas - Contas a Pagar"
-          />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+          <div onClick={() => setKpiDetailType('entrada')} className="cursor-pointer">
+            <StatsCard
+              title="Entrada de Vendas"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
+              icon={<ArrowUpRight className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />}
+              description="Valor bruto com taxas"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('taxas')} className="cursor-pointer">
+            <StatsCard
+              title="Taxas Recebidas"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
+              icon={<CreditCard className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />}
+              description="Taxas pagas pelos clientes"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer col-span-2 sm:col-span-1">
+            <StatsCard
+              title="Valor do Caixa"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
+              icon={<TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-500" />}
+              description="Valor que entra no caixa"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('pagar')} className="cursor-pointer">
+            <StatsCard
+              title="Contas a Pagar"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
+              icon={<TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-red-500" />}
+              description={
+                summaryLoading ? '' : 
+                summary?.totalOverdue && summary.totalOverdue > 0 
+                  ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
+                  : `Despesas do período`
+              }
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer">
+            <StatsCard
+              title="Saldo Previsto"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
+              icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
+              variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
+              description="Entrada - Taxas - A Pagar"
+            />
+          </div>
         </div>
 
         {/* Filters */}
         <Card variant="elevated">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-end gap-4">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="text-sm font-medium">Filtros:</span>
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-xs text-muted-foreground">Buscar</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Label className="text-xs text-muted-foreground">Buscar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por descrição..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Inicial</Label>
                   <Input
-                    placeholder="Buscar por descrição..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="h-9"
                   />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Final</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button variant="outline" size="sm" onClick={clearFilters} className="h-9">
+                    Limpar
+                  </Button>
                 </div>
               </div>
 
-              <div className="w-40">
-                <Label className="text-xs text-muted-foreground">Data Inicial</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-9"
-                />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="h-9">
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Importar Histórico</span>
+                  <span className="sm:hidden">Importar</span>
+                </Button>
+
+                <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white h-9">
+                  <Landmark className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Inserir no Caixa</span>
+                  <span className="sm:hidden">Inserir</span>
+                </Button>
               </div>
-
-              <div className="w-40">
-                <Label className="text-xs text-muted-foreground">Data Final</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                Limpar
-              </Button>
-
-              <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Importar Histórico
-              </Button>
-
-              <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-                <Landmark className="w-4 h-4 mr-2" />
-                Inserir no Caixa
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -399,12 +421,14 @@ export default function Financial() {
         {/* Tabs */}
         <Tabs defaultValue="receivable" className="space-y-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="receivable" className="gap-2">
-              <CreditCard className="w-4 h-4" />
-              Recebidos ({filteredReceivables.length})
+            <TabsTrigger value="receivable" className="gap-1 md:gap-2 text-xs md:text-sm">
+              <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Recebidos</span>
+              <span className="sm:hidden">Receb.</span>
+              ({filteredReceivables.length})
             </TabsTrigger>
-            <TabsTrigger value="payable" className="gap-2">
-              <Receipt className="w-4 h-4" />
+            <TabsTrigger value="payable" className="gap-1 md:gap-2 text-xs md:text-sm">
+              <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4" />
               A Pagar ({filteredExpenses.length})
             </TabsTrigger>
           </TabsList>
@@ -412,10 +436,10 @@ export default function Financial() {
           {/* Receivables */}
           <TabsContent value="receivable">
             <Card variant="elevated">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Contas a Receber</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
+                <CardTitle className="text-lg md:text-2xl">Contas a Receber</CardTitle>
                 <Select value={receivableStatus} onValueChange={(v: any) => setReceivableStatus(v)}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -425,7 +449,7 @@ export default function Financial() {
                   </SelectContent>
                 </Select>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6 pt-0">
                 {receivablesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -436,6 +460,7 @@ export default function Financial() {
                   </div>
                 ) : (
                   <>
+                  <div className="overflow-x-auto -mx-2 md:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -576,6 +601,7 @@ export default function Financial() {
                       </TableRow>
                     </tfoot>
                   </Table>
+                  </div>
                   {receivableTotalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 px-2">
                       <span className="text-sm text-muted-foreground">Página {receivablePage} de {receivableTotalPages} ({filteredReceivables.length} registros)</span>
@@ -594,11 +620,11 @@ export default function Financial() {
           {/* Payables */}
           <TabsContent value="payable">
             <Card variant="elevated">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Contas a Pagar</CardTitle>
-                <div className="flex items-center gap-2">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
+                <CardTitle className="text-lg md:text-2xl">Contas a Pagar</CardTitle>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <Select value={expenseStatus} onValueChange={(v: any) => setExpenseStatus(v)}>
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full sm:w-40">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -759,7 +785,7 @@ export default function Financial() {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 md:p-6 pt-0">
                 {expensesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -770,6 +796,7 @@ export default function Financial() {
                   </div>
                 ) : (
                   <>
+                  <div className="overflow-x-auto -mx-2 md:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -992,6 +1019,7 @@ export default function Financial() {
                       </TableRow>
                     </tfoot>
                   </Table>
+                  </div>
                   {expenseTotalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 px-2">
                       <span className="text-sm text-muted-foreground">Página {expensePage} de {expenseTotalPages} ({filteredExpenses.length} registros)</span>
@@ -1138,6 +1166,13 @@ export default function Financial() {
         />
 
         <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
+
+        <KpiDetailDialog
+          open={!!kpiDetailType}
+          onOpenChange={(open) => { if (!open) setKpiDetailType(null); }}
+          type={kpiDetailType}
+          summary={summary}
+        />
       </main>
     </MainLayout>
   );
