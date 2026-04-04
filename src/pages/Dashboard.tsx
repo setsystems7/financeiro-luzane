@@ -10,11 +10,13 @@ import { RestockNeeded } from '@/components/dashboard/RestockNeeded';
 import { ExchangesSummary } from '@/components/dashboard/ExchangesSummary';
 import { StockValue } from '@/components/dashboard/StockValue';
 import { OverdueExpensesAlert } from '@/components/dashboard/OverdueExpensesAlert';
+import { DashboardDrilldownDialog } from '@/components/dashboard/DashboardDrilldownDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTodaySales, useMonthSales, useMonthProfit, useSales } from '@/hooks/useSales';
 import { useLowStockProducts } from '@/hooks/useStock';
 import { useFinancialSummary } from '@/hooks/useFinancial';
-import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, BarChart3, HelpCircle, Package, Calendar } from 'lucide-react';
+import { useProducts } from '@/hooks/useProducts';
+import { DollarSign, ShoppingBag, TrendingUp, AlertTriangle, BarChart3, HelpCircle, Package, Calendar, Percent } from 'lucide-react';
 import { type SupportSection } from '@/components/layout/SupportButton';
 import { subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
@@ -57,42 +59,16 @@ const dashboardSupportSections: SupportSection[] = [
     ],
   },
   {
-    title: 'Alertas de estoque baixo',
+    title: 'Cards clicáveis',
     icon: Package,
-    tag: 'essencial',
-    content: 'O card "Estoque Baixo" mostra quantos produtos estão com estoque abaixo do mínimo configurado.',
-    tips: [
-      'O estoque mínimo é definido no cadastro de cada produto.',
-      'A seção inferior "Estoque Baixo" mostra a lista completa com nomes e quantidades.',
-      'Vá até Produtos para ajustar o estoque mínimo de cada item.',
-    ],
-  },
-  {
-    title: 'Despesas vencidas',
-    icon: AlertTriangle,
     tag: 'dica',
-    content: 'A seção de despesas vencidas mostra contas a pagar que já passaram do vencimento.',
-    tips: [
-      'Despesas vencidas aparecem destacadas em vermelho.',
-      'Clique para ir ao módulo Financeiro e quitar as pendências.',
-      'Manter despesas em dia é essencial para um controle financeiro saudável.',
-    ],
-  },
-  {
-    title: 'Gráficos e produtos mais vendidos',
-    icon: ShoppingBag,
-    content: 'O dashboard inclui gráficos e listas para análise rápida:',
-    tips: [
-      'O gráfico de vendas mostra a evolução dos últimos dias em barras.',
-      'A lista de produtos mais vendidos ajuda a identificar os itens mais populares.',
-      'Os produtos menos vendidos indicam o que pode precisar de promoção.',
-      'O resumo de trocas mostra quantas trocas foram feitas e o valor envolvido.',
-    ],
+    content: 'Clique no card "Estoque Baixo" para ver a lista detalhada dos produtos com estoque baixo, sem precisar ir até outra tela.',
   },
 ];
 
 export default function Dashboard() {
   const [period, setPeriod] = useState<DashboardPeriod>('30d');
+  const [drilldownType, setDrilldownType] = useState<'low-stock' | null>(null);
   
   const { data: todaySales } = useTodaySales();
   const { data: monthSales } = useMonthSales();
@@ -100,6 +76,29 @@ export default function Dashboard() {
   const { data: lowStockProducts = [] } = useLowStockProducts();
   const { data: financialSummary } = useFinancialSummary();
   const { data: allSales = [] } = useSales();
+  const { data: products = [] } = useProducts();
+
+  // Compute profit margin
+  const profitMargin = useMemo(() => {
+    const completedSales = allSales.filter(s => s.status === 'concluida');
+    const totalRevenue = completedSales.reduce((acc, s) => acc + Number(s.final_total), 0);
+    
+    // Calculate cost from sale items
+    let totalCost = 0;
+    completedSales.forEach(sale => {
+      sale.sale_items?.forEach((item: any) => {
+        const product = products.find(p => p.id === item.product_id);
+        if (product) {
+          totalCost += product.cost_price * item.quantity;
+        }
+      });
+    });
+    
+    const grossProfit = totalRevenue - totalCost;
+    const marginPercent = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    
+    return { grossProfit, marginPercent, totalRevenue, totalCost };
+  }, [allSales, products]);
 
   // Compute period-based stats with trends
   const periodStats = useMemo(() => {
@@ -152,30 +151,32 @@ export default function Dashboard() {
   return (
     <MainLayout title="Dashboard" subtitle="Visão geral do seu negócio" supportContent={{ moduleName: 'Dashboard', sections: dashboardSupportSections }}>
       <div className="space-y-6">
-        {/* Period Selector */}
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {periodOptions.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Period Selector integrated in KPI header */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Indicadores</h2>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {periodOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Cards — 5 columns with profit margin */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="opacity-0 animate-fade-in-up stagger-1">
             <StatsCard
               title="Vendas no Período"
               value={`R$ ${periodStats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               icon={<ShoppingBag className="w-6 h-6 text-pink-dark" />}
               variant="pink"
-              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-2">
@@ -183,7 +184,6 @@ export default function Dashboard() {
               title="Qtd. Vendas"
               value={periodStats.count}
               icon={<DollarSign className="w-6 h-6 text-primary-foreground" />}
-              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-3">
@@ -191,20 +191,28 @@ export default function Dashboard() {
               title="Ticket Médio"
               value={`R$ ${periodStats.ticket.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               icon={<TrendingUp className="w-6 h-6 text-success" />}
-              
             />
           </div>
           <div className="opacity-0 animate-fade-in-up stagger-4">
             <StatsCard
+              title="Margem de Lucro"
+              value={`${profitMargin.marginPercent.toFixed(1)}%`}
+              icon={<Percent className="w-6 h-6 text-primary" />}
+              description={`Lucro: R$ ${profitMargin.grossProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            />
+          </div>
+          <div className="opacity-0 animate-fade-in-up stagger-4 cursor-pointer" onClick={() => setDrilldownType('low-stock')}>
+            <StatsCard
               title="Estoque Baixo"
               value={lowStockProducts.length}
               icon={<AlertTriangle className="w-6 h-6 text-warning" />}
+              description="Clique para ver detalhes"
             />
           </div>
         </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 opacity-0 animate-fade-in-up stagger-5">
+        {/* Charts Row — 50/50 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-0 animate-fade-in-up stagger-5">
           <SalesChart />
           <TopProducts />
         </div>
@@ -216,13 +224,9 @@ export default function Dashboard() {
           <StockValue />
         </div>
 
-        {/* Exchanges Summary */}
-        <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '0.7s' }}>
+        {/* Alerts grouped */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.7s' }}>
           <ExchangesSummary />
-        </div>
-
-        {/* Overdue Expenses Alert */}
-        <div className="opacity-0 animate-fade-in-up" style={{ animationDelay: '0.75s' }}>
           <OverdueExpensesAlert />
         </div>
 
@@ -232,6 +236,14 @@ export default function Dashboard() {
           <LowStockAlert />
         </div>
       </div>
+
+      {/* Drilldown Dialog */}
+      <DashboardDrilldownDialog
+        open={!!drilldownType}
+        onOpenChange={(open) => !open && setDrilldownType(null)}
+        type={drilldownType}
+        lowStockProducts={lowStockProducts}
+      />
     </MainLayout>
   );
 }
