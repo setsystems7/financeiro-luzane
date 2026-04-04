@@ -13,6 +13,14 @@ export interface SaleItem {
   total: number;
 }
 
+export interface PaymentEntry {
+  payment_method: 'dinheiro' | 'cartao_credito' | 'cartao_debito' | 'pix' | 'crediario';
+  amount: number;
+  card_brand?: string;
+  installments?: number;
+  card_fee_percent?: number;
+}
+
 export interface CreateSaleData {
   items: SaleItem[];
   total: number;
@@ -26,6 +34,8 @@ export interface CreateSaleData {
   installments?: number;
   card_brand?: string;
   card_fee_percent?: number;
+  // Split payments
+  payments?: PaymentEntry[];
 }
 
 export function useSales() {
