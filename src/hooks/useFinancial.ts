@@ -627,7 +627,8 @@ export function useFinancialSummary(filters?: {
 
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
-      const totalCaixa = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalPaidExpenses = (allPaidExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalCaixa = totalAllReceivables - totalPaidExpenses;
       const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalPayable = totalMonthPayable + totalOverdue;
