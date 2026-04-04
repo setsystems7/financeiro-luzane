@@ -322,7 +322,7 @@ export default function POS() {
     setPaymentMethod('');
     setCardBrand('');
     setSplitPayments([
-      { id: 1, payment_method: '', amount: cartTotal, card_brand: '', installments: 1 },
+      { id: 1, payment_method: '', amount: 0, card_brand: '', installments: 1 },
       { id: 2, payment_method: '', amount: 0, card_brand: '', installments: 1 },
     ]);
     setSplitCounter(2);
