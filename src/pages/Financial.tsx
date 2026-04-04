@@ -1183,6 +1183,77 @@ export default function Financial() {
           variant="destructive"
         />
 
+        <ConfirmDialog
+          open={!!confirmDeleteReceivableId}
+          onOpenChange={(open) => !open && setConfirmDeleteReceivableId(null)}
+          onConfirm={() => {
+            if (confirmDeleteReceivableId) {
+              deleteReceivable.mutate(confirmDeleteReceivableId);
+              setConfirmDeleteReceivableId(null);
+            }
+          }}
+          title="Excluir entrada"
+          description="Tem certeza que deseja excluir esta entrada do caixa? Esta ação não pode ser desfeita."
+          confirmText="Excluir"
+          variant="destructive"
+        />
+
+        {/* Edit manual entry dialog */}
+        <Dialog open={!!editingReceivable} onOpenChange={(open) => { if (!open) setEditingReceivable(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Entrada Manual</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editingReceivable?.amount || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, amount: e.target.value } : null)}
+                />
+              </div>
+              <div>
+                <Label>Descrição</Label>
+                <Input
+                  value={editingReceivable?.description || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, description: e.target.value } : null)}
+                />
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Input
+                  value={editingReceivable?.notes || ''}
+                  onChange={(e) => setEditingReceivable(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingReceivable(null)}>Cancelar</Button>
+                <Button onClick={() => {
+                  if (editingReceivable) {
+                    const amt = parseFloat(editingReceivable.amount);
+                    updateReceivable.mutate({
+                      id: editingReceivable.id,
+                      data: {
+                        amount: amt,
+                        net_amount: amt,
+                        description: editingReceivable.description,
+                        notes: editingReceivable.notes || undefined,
+                      }
+                    }, {
+                      onSuccess: () => setEditingReceivable(null),
+                    });
+                  }
+                }} disabled={updateReceivable.isPending}>
+                  {updateReceivable.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
 
         <KpiDetailDialog
