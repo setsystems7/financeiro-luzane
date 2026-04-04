@@ -23,6 +23,20 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const queryClient = useQueryClient();
   const { data: expenseCategories = [] } = useExpenseCategories();
   const { data: suppliers = [] } = useSuppliersList();
+  const { data: pendingExpenses = [] } = useQuery({
+    queryKey: ['pending-expenses-for-link'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id, description, amount, due_date, status')
+        .in('status', ['pendente', 'vencido'])
+        .order('due_date', { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
