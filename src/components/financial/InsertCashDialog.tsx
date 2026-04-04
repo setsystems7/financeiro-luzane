@@ -320,10 +320,14 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                   </p>
                   <Select value={linkedExpenseId} onValueChange={setLinkedExpenseId}>
                     <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Buscar despesa..." />
+                      <SelectValue placeholder="Selecione a despesa..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Will show pending/overdue expenses */}
+                      {pendingExpenses.map((exp: any) => (
+                        <SelectItem key={exp.id} value={exp.id}>
+                          {exp.description} - R$ {Number(exp.amount).toFixed(2).replace('.', ',')} ({exp.due_date})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
