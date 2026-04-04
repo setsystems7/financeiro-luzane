@@ -122,6 +122,19 @@ export default function Products() {
     return matchesSearch && matchesCategory && matchesColor && matchesSupplier;
   });
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => { setSearchTerm(value); setCurrentPage(1); };
+  const handleCategoryChange = (value: string) => { setCategoryFilter(value); setCurrentPage(1); };
+  const handleColorChange = (value: string) => { setColorFilter(value); setCurrentPage(1); };
+  const handleSupplierChange = (value: string) => { setSupplierFilter(value); setCurrentPage(1); };
+
   const handleEdit = (product: any) => {
     const dbProduct = products.find(p => p.id === product.id);
     if (dbProduct) {
