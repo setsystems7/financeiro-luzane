@@ -297,57 +297,185 @@ export default function POS() {
     ));
   };
 
+  // Split payment helpers
+  const splitTotal = splitPayments.reduce((acc, p) => acc + p.amount, 0);
+  const splitRemaining = Math.max(0, Math.round((cartTotal - splitTotal) * 100) / 100);
+
+  const addSplitPayment = () => {
+    const newId = splitCounter + 1;
+    setSplitCounter(newId);
+    setSplitPayments(prev => [...prev, {
+      id: newId,
+      payment_method: '',
+      amount: splitRemaining,
+      card_brand: '',
+      installments: 1,
+    }]);
+  };
+
+  const updateSplitPayment = (id: number, field: string, value: any) => {
+    setSplitPayments(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const removeSplitPayment = (id: number) => {
+    setSplitPayments(prev => prev.filter(p => p.id !== id));
+    if (splitPayments.length <= 1) {
+      setIsSplitMode(false);
+      setSplitPayments([]);
+    }
+  };
+
+  const enterSplitMode = () => {
+    setIsSplitMode(true);
+    setPaymentMethod('');
+    setCardBrand('');
+    setSplitPayments([
+      { id: 1, payment_method: '', amount: 0, card_brand: '', installments: 1 },
+      { id: 2, payment_method: '', amount: 0, card_brand: '', installments: 1 },
+    ]);
+    setSplitCounter(2);
+  };
+
+  const exitSplitMode = () => {
+    setIsSplitMode(false);
+    setSplitPayments([]);
+  };
+
+  // Calculate split total with fees
+  const getSplitGrossTotal = () => {
+    let gross = 0;
+    for (const p of splitPayments) {
+      if (p.payment_method === 'cartao_credito' && p.card_brand) {
+        const fee = getCardFee('cartao_credito', p.card_brand, p.installments);
+        const bps = Math.round(fee * 100);
+        const amtCents = Math.round(p.amount * 100);
+        gross += bps > 0 ? Math.ceil((amtCents * 10000) / (10000 - bps)) / 100 : p.amount;
+      } else {
+        gross += p.amount;
+      }
+    }
+    return gross;
+  };
+
   const handleFinalizeSale = () => {
     if (cartItems.length === 0) {
       toast.error('Adicione produtos ao carrinho para finalizar');
       return;
     }
 
-    const finalPaymentMethod = paymentMethod || 'dinheiro';
-
-    // Validate card brand for credit card payments only
-    if (finalPaymentMethod === 'cartao_credito' && !cardBrand) {
-      toast.error('Selecione a bandeira do cartão');
-      return;
-    }
-
-    createSale.mutate(
-      {
-        items: cartItems.map(item => ({
-          product_id: item.product_id,
-          product_size_id: item.product_size_id,
-          product_name: item.product_name,
-          size: item.size,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total: item.total,
-        })),
-        total: cartSubtotal,
-        discount: discountAmount,
-        final_total: paymentMethod === 'cartao_credito' ? totalWithFee : cartTotal,
-        base_total: cartTotal,
-        payment_method: finalPaymentMethod as any,
-        installments: paymentMethod === 'cartao_credito' ? installments : 1,
-        card_brand: cardBrand || undefined,
-        card_fee_percent: cardFeePercent,
-      },
-      {
-        onSuccess: () => {
-          setCartItems([]);
-          setDiscount(0);
-          setPaymentMethod('');
-          setInstallments(1);
-          setCardBrand('');
-          inputRef.current?.focus();
-        },
+    if (isSplitMode) {
+      // Validate split payments
+      for (const p of splitPayments) {
+        if (!p.payment_method) {
+          toast.error('Selecione o método de pagamento para todas as parcelas');
+          return;
+        }
+        if (p.amount <= 0) {
+          toast.error('Todos os valores devem ser maiores que zero');
+          return;
+        }
+        if (p.payment_method === 'cartao_credito' && !p.card_brand) {
+          toast.error('Selecione a bandeira do cartão para pagamentos em crédito');
+          return;
+        }
       }
-    );
+
+      if (Math.abs(splitTotal - cartTotal) > 0.01) {
+        toast.error(`A soma dos pagamentos (R$ ${formatCurrency(splitTotal)}) deve ser igual ao total (R$ ${formatCurrency(cartTotal)})`);
+        return;
+      }
+
+      const payments: PaymentEntry[] = splitPayments.map(p => ({
+        payment_method: p.payment_method as any,
+        amount: p.amount,
+        card_brand: p.card_brand || undefined,
+        installments: p.installments,
+        card_fee_percent: p.payment_method === 'cartao_credito' && p.card_brand
+          ? getCardFee('cartao_credito', p.card_brand, p.installments)
+          : 0,
+      }));
+
+      const grossTotal = getSplitGrossTotal();
+
+      createSale.mutate(
+        {
+          items: cartItems.map(item => ({
+            product_id: item.product_id,
+            product_size_id: item.product_size_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total: item.total,
+          })),
+          total: cartSubtotal,
+          discount: discountAmount,
+          final_total: grossTotal,
+          base_total: cartTotal,
+          payment_method: 'dinheiro', // fallback for DB constraint
+          payments,
+        },
+        {
+          onSuccess: () => {
+            resetAll();
+          },
+        }
+      );
+    } else {
+      // Original single payment logic
+      const finalPaymentMethod = paymentMethod || 'dinheiro';
+
+      if (finalPaymentMethod === 'cartao_credito' && !cardBrand) {
+        toast.error('Selecione a bandeira do cartão');
+        return;
+      }
+
+      createSale.mutate(
+        {
+          items: cartItems.map(item => ({
+            product_id: item.product_id,
+            product_size_id: item.product_size_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total: item.total,
+          })),
+          total: cartSubtotal,
+          discount: discountAmount,
+          final_total: paymentMethod === 'cartao_credito' ? totalWithFee : cartTotal,
+          base_total: cartTotal,
+          payment_method: finalPaymentMethod as any,
+          installments: paymentMethod === 'cartao_credito' ? installments : 1,
+          card_brand: cardBrand || undefined,
+          card_fee_percent: cardFeePercent,
+        },
+        {
+          onSuccess: () => {
+            resetAll();
+          },
+        }
+      );
+    }
+  };
+
+  const resetAll = () => {
+    setCartItems([]);
+    setDiscount(0);
+    setPaymentMethod('');
+    setInstallments(1);
+    setCardBrand('');
+    setIsSplitMode(false);
+    setSplitPayments([]);
+    inputRef.current?.focus();
   };
 
   const clearCart = () => {
     setCartItems([]);
     setDiscount(0);
     setCardBrand('');
+    setIsSplitMode(false);
+    setSplitPayments([]);
   };
 
   return (
