@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { type SupportSection } from '@/components/layout/SupportButton';
-import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon } from 'lucide-react';
+import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon, Landmark } from 'lucide-react';
+import { InsertCashDialog } from '@/components/financial/InsertCashDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ export default function Financial() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isInsertCashOpen, setIsInsertCashOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editDueDate, setEditDueDate] = useState<Date | undefined>(undefined);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -384,6 +386,11 @@ export default function Financial() {
               <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
                 Importar Histórico
+              </Button>
+
+              <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
+                <Landmark className="w-4 h-4 mr-2" />
+                Inserir no Caixa
               </Button>
             </div>
           </CardContent>
@@ -1129,6 +1136,8 @@ export default function Financial() {
           confirmText="Excluir"
           variant="destructive"
         />
+
+        <InsertCashDialog open={isInsertCashOpen} onOpenChange={setIsInsertCashOpen} />
       </main>
     </MainLayout>
   );
