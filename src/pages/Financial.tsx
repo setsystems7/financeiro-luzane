@@ -455,7 +455,7 @@ export default function Financial() {
                         // Description format: "Venda #60 - Dinheiro" or "Venda #60 - Crédito"
                         let paymentMethod = sale?.payment_method || '';
                         if (isSplitSale && item.description) {
-                          const methodMatch = item.description.match(/- (Dinheiro|PIX|Débito|Crédito|Crediário)$/i);
+                          const methodMatch = item.description.match(/- (Dinheiro|PIX|Débito|Crédito|Crediário)(?:\s|$)/i);
                           if (methodMatch) {
                             const labelToMethod: Record<string, string> = {
                               'dinheiro': 'dinheiro', 'pix': 'pix', 'débito': 'cartao_debito',
