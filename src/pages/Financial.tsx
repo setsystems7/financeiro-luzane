@@ -90,6 +90,10 @@ export default function Financial() {
   // Confirm dialog states
   const [confirmCancelSaleId, setConfirmCancelSaleId] = useState<string | null>(null);
   const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
+  const [confirmDeleteReceivableId, setConfirmDeleteReceivableId] = useState<string | null>(null);
+
+  // Edit manual entry state
+  const [editingReceivable, setEditingReceivable] = useState<{ id: string; amount: string; description: string; notes: string } | null>(null);
 
   const financialSupportSections: SupportSection[] = [
     {
