@@ -550,6 +550,50 @@ export function useMarkReceivableAsReceived() {
   });
 }
 
+export function useDeleteReceivable() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('receivables')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      toast.success('Entrada removida com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao remover entrada');
+    },
+  });
+}
+
+export function useUpdateReceivable() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { amount?: number; net_amount?: number; description?: string; notes?: string } }) => {
+      const { error } = await supabase
+        .from('receivables')
+        .update(data)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      toast.success('Entrada atualizada com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar entrada');
+    },
+  });
+}
+
 export function useFinancialSummary(filters?: {
   receivableStatus?: 'all' | 'pending' | 'received';
   expenseStatus?: 'all' | 'pendente' | 'pago' | 'vencido';
