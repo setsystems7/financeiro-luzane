@@ -79,7 +79,7 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoan, setIsLoan] = useState(false);
-  const [wantsExpense, setWantsExpense] = useState<'none' | 'create' | 'existing'>('none');
+  const [wantsExpense, setWantsExpense] = useState<'none' | 'create'>('none');
   const [loading, setLoading] = useState(false);
 
   // Expense fields (when creating new)
