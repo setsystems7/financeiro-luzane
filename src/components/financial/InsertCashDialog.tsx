@@ -93,6 +93,15 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   // Link existing expense
   const [linkedExpenseId, setLinkedExpenseId] = useState('');
 
+  const handleSelectExistingExpense = (expId: string) => {
+    setLinkedExpenseId(expId);
+    const selected = groupedExpenses.find(e => e.id === expId);
+    if (selected) {
+      setAmount(selected.totalAmount.toFixed(2));
+      setDescription(selected.description);
+    }
+  };
+
   // Auto-calculate installment value when amount or installments change
   const computedInstallmentValue = useMemo(() => {
     const numAmount = parseFloat(amount);
