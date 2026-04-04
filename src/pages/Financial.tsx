@@ -40,6 +40,8 @@ import {
   useUpdateExpenseDescription,
   useCanDeleteRecurringExpense,
   useDeleteExpense,
+  useDeleteReceivable,
+  useUpdateReceivable,
   type Expense
 } from '@/hooks/useFinancial';
 import { useExpenseCategories } from '@/hooks/useExpenseCategories';
