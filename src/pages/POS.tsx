@@ -367,8 +367,8 @@ export default function POS() {
           toast.error('Todos os valores devem ser maiores que zero');
           return;
         }
-        if (p.payment_method === 'cartao_credito' && !p.card_brand) {
-          toast.error('Selecione a bandeira do cartão para pagamentos em crédito');
+        if ((p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && !p.card_brand) {
+          toast.error('Selecione a bandeira do cartão para pagamentos com cartão');
           return;
         }
       }
@@ -383,8 +383,8 @@ export default function POS() {
         amount: p.amount,
         card_brand: p.card_brand || undefined,
         installments: p.installments,
-        card_fee_percent: p.payment_method === 'cartao_credito' && p.card_brand
-          ? getCardFee('cartao_credito', p.card_brand, p.installments)
+        card_fee_percent: (p.payment_method === 'cartao_credito' || p.payment_method === 'cartao_debito') && p.card_brand
+          ? getCardFee(p.payment_method, p.card_brand, p.installments)
           : 0,
       }));
 
