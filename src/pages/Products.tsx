@@ -281,9 +281,57 @@ export default function Products() {
           </div>
         </div>
 
+        {/* Collapsible Filters */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-3 p-3 rounded-lg border border-border bg-muted/30 animate-fade-in-down">
+            <Select value={categoryFilter} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-40">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={colorFilter} onValueChange={handleColorChange}>
+              <SelectTrigger className="w-36">
+                <Palette className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Cor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Cores</SelectItem>
+                {colors.map(color => (
+                  <SelectItem key={color.id} value={color.id}>{color.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={supplierFilter} onValueChange={handleSupplierChange}>
+              <SelectTrigger className="w-40">
+                <Truck className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Fornecedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {suppliers.map(sup => (
+                  <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(categoryFilter !== 'all' || colorFilter !== 'all' || supplierFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={() => { setCategoryFilter('all'); setColorFilter('all'); setSupplierFilter('all'); setCurrentPage(1); }}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Products Count */}
         <div className="text-sm text-muted-foreground">
-          Exibindo {filteredProducts.length} de {products.length} produtos
+          Exibindo {paginatedProducts.length} de {filteredProducts.length} produtos
+          {filteredProducts.length !== products.length && ` (${products.length} total)`}
         </div>
 
         {/* Products Grid */}
@@ -293,13 +341,13 @@ export default function Products() {
             : "space-y-4"
           }>
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-64 w-full rounded-xl" />
+              <Skeleton key={i} className="h-48 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
             <FileSpreadsheet className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground mb-4">Nenhum produto cadastrado.</p>
+            <p className="text-muted-foreground mb-4">Nenhum produto encontrado.</p>
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
@@ -312,24 +360,39 @@ export default function Products() {
             </div>
           </div>
         ) : (
-          <div className={viewMode === 'grid'
-            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-            : "space-y-4"
-          }>
-            {filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="opacity-0 animate-fade-in-up"
-                style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
-              >
-                <ProductCard
-                  product={convertToLegacyFormat(product)}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
+          <>
+            <div className={viewMode === 'grid'
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              : "space-y-4"
+            }>
+              {paginatedProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="opacity-0 animate-fade-in-up"
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                >
+                  <ProductCard
+                    product={convertToLegacyFormat(product)}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Próxima</Button>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
 
         {/* Form Dialog */}
