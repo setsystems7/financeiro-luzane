@@ -353,59 +353,67 @@ export default function Financial() {
 
         {/* Filters */}
         <Card variant="elevated">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap items-end gap-4">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-muted-foreground" />
+                <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="text-sm font-medium">Filtros:</span>
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <Label className="text-xs text-muted-foreground">Buscar</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Label className="text-xs text-muted-foreground">Buscar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por descrição..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 h-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Inicial</Label>
                   <Input
-                    placeholder="Buscar por descrição..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="h-9"
                   />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Final</Label>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button variant="outline" size="sm" onClick={clearFilters} className="h-9">
+                    Limpar
+                  </Button>
                 </div>
               </div>
 
-              <div className="w-40">
-                <Label className="text-xs text-muted-foreground">Data Inicial</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-9"
-                />
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)} className="h-9">
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Importar Histórico</span>
+                  <span className="sm:hidden">Importar</span>
+                </Button>
+
+                <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white h-9">
+                  <Landmark className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">Inserir no Caixa</span>
+                  <span className="sm:hidden">Inserir</span>
+                </Button>
               </div>
-
-              <div className="w-40">
-                <Label className="text-xs text-muted-foreground">Data Final</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                Limpar
-              </Button>
-
-              <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Importar Histórico
-              </Button>
-
-              <Button size="sm" onClick={() => setIsInsertCashOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-                <Landmark className="w-4 h-4 mr-2" />
-                Inserir no Caixa
-              </Button>
             </div>
           </CardContent>
         </Card>
