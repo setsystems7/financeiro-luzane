@@ -585,60 +585,84 @@ export default function POS() {
                   <span className="text-sm text-muted-foreground">%</span>
                 </div>
 
-                {/* Métodos de Pagamento */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setPaymentMethod(paymentMethod === 'dinheiro' ? '' : 'dinheiro'); setCardBrand(''); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                      paymentMethod === 'dinheiro'
-                        ? 'border-pink-primary bg-pink-glow shadow-md'
-                        : 'border-border bg-background hover:border-pink-primary/50'
-                    }`}
-                  >
-                    <Banknote className={`w-5 h-5 ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
-                    <span className={`text-sm font-medium ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-foreground'}`}>Dinheiro</span>
-                  </button>
+                {!isSplitMode ? (
+                  <>
+                    {/* Métodos de Pagamento — modo normal */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => { setPaymentMethod(paymentMethod === 'dinheiro' ? '' : 'dinheiro'); setCardBrand(''); }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                          paymentMethod === 'dinheiro'
+                            ? 'border-pink-primary bg-pink-glow shadow-md'
+                            : 'border-border bg-background hover:border-pink-primary/50'
+                        }`}
+                      >
+                        <Banknote className={`w-5 h-5 ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'dinheiro' ? 'text-pink-primary' : 'text-foreground'}`}>Dinheiro</span>
+                      </button>
 
-                  <button
-                    onClick={() => { setPaymentMethod(paymentMethod === 'pix' ? '' : 'pix'); setCardBrand(''); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                      paymentMethod === 'pix'
-                        ? 'border-pink-primary bg-pink-glow shadow-md'
-                        : 'border-border bg-background hover:border-pink-primary/50'
-                    }`}
-                  >
-                    <QrCode className={`w-5 h-5 ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
-                    <span className={`text-sm font-medium ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-foreground'}`}>PIX</span>
-                  </button>
+                      <button
+                        onClick={() => { setPaymentMethod(paymentMethod === 'pix' ? '' : 'pix'); setCardBrand(''); }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                          paymentMethod === 'pix'
+                            ? 'border-pink-primary bg-pink-glow shadow-md'
+                            : 'border-border bg-background hover:border-pink-primary/50'
+                        }`}
+                      >
+                        <QrCode className={`w-5 h-5 ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'pix' ? 'text-pink-primary' : 'text-foreground'}`}>PIX</span>
+                      </button>
 
-                  <button
-                    onClick={() => { setPaymentMethod(paymentMethod === 'cartao_debito' ? '' : 'cartao_debito'); setCardBrand(''); }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                      paymentMethod === 'cartao_debito'
-                        ? 'border-pink-primary bg-pink-glow shadow-md'
-                        : 'border-border bg-background hover:border-pink-primary/50'
-                    }`}
-                  >
-                    <Wallet className={`w-5 h-5 ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
-                    <span className={`text-sm font-medium ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-foreground'}`}>Débito</span>
-                  </button>
+                      <button
+                        onClick={() => { setPaymentMethod(paymentMethod === 'cartao_debito' ? '' : 'cartao_debito'); setCardBrand(''); }}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                          paymentMethod === 'cartao_debito'
+                            ? 'border-pink-primary bg-pink-glow shadow-md'
+                            : 'border-border bg-background hover:border-pink-primary/50'
+                        }`}
+                      >
+                        <Wallet className={`w-5 h-5 ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'cartao_debito' ? 'text-pink-primary' : 'text-foreground'}`}>Débito</span>
+                      </button>
 
+                      <button
+                        onClick={() => setPaymentMethod(paymentMethod === 'cartao_credito' ? '' : 'cartao_credito')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                          paymentMethod === 'cartao_credito'
+                            ? 'border-pink-primary bg-pink-glow shadow-md'
+                            : 'border-border bg-background hover:border-pink-primary/50'
+                        }`}
+                      >
+                        <CreditCard className={`w-5 h-5 ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-foreground'}`}>Crédito</span>
+                      </button>
+                    </div>
+
+                    {/* Botão Dividir */}
+                    {cartItems.length > 0 && (
+                      <button
+                        onClick={enterSplitMode}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-background hover:border-pink-primary/50 hover:bg-pink-glow/30 transition-all duration-200"
+                      >
+                        <Wallet className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">Dividir</span>
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  /* Modo Split — botão para voltar */
                   <button
-                    onClick={() => setPaymentMethod(paymentMethod === 'cartao_credito' ? '' : 'cartao_credito')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                      paymentMethod === 'cartao_credito'
-                        ? 'border-pink-primary bg-pink-glow shadow-md'
-                        : 'border-border bg-background hover:border-pink-primary/50'
-                    }`}
+                    onClick={exitSplitMode}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-destructive/50 bg-destructive/10 hover:bg-destructive/20 transition-all duration-200"
                   >
-                    <CreditCard className={`w-5 h-5 ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-muted-foreground'}`} />
-                    <span className={`text-sm font-medium ${paymentMethod === 'cartao_credito' ? 'text-pink-primary' : 'text-foreground'}`}>Crédito</span>
+                    <X className="w-4 h-4 text-destructive" />
+                    <span className="text-sm font-medium text-destructive">Cancelar divisão</span>
                   </button>
-                </div>
+                )}
               </div>
 
-              {/* Linha 2: Bandeira e Parcelas (quando crédito selecionado) */}
-              {paymentMethod === 'cartao_credito' && (
+              {/* Bandeira e Parcelas (modo normal - crédito selecionado) */}
+              {!isSplitMode && paymentMethod === 'cartao_credito' && (
                 <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs sm:text-sm font-medium text-muted-foreground">Bandeira:</span>
@@ -660,7 +684,6 @@ export default function POS() {
                     </div>
                   </div>
 
-                  {/* Parcelas */}
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Separator orientation="vertical" className="h-8 mx-2 hidden sm:block" />
                     <span className="text-xs sm:text-sm font-medium text-muted-foreground">Parcelas:</span>
@@ -684,7 +707,6 @@ export default function POS() {
                     </Select>
                   </div>
 
-                  {/* Info da taxa */}
                   {cardBrand && cardFeePercent > 0 && (
                     <div className="flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto mt-1 sm:mt-0">
                       <Separator orientation="vertical" className="h-8 mx-2 hidden sm:block" />
@@ -699,7 +721,119 @@ export default function POS() {
                 </div>
               )}
 
-              {/* Linha 2: Total e Botão Finalizar */}
+              {/* Split Payment UI */}
+              {isSplitMode && (
+                <div className="space-y-2 p-3 rounded-lg border-2 border-pink-primary/30 bg-pink-glow/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-foreground">Pagamento dividido</span>
+                    <span className={`text-xs font-medium ${Math.abs(splitRemaining) < 0.01 ? 'text-green-500' : 'text-amber-500'}`}>
+                      {Math.abs(splitRemaining) < 0.01
+                        ? '✓ Valor completo'
+                        : `Faltam R$ ${formatCurrency(splitRemaining)}`}
+                    </span>
+                  </div>
+
+                  {splitPayments.map((sp, idx) => {
+                    const spFee = sp.payment_method === 'cartao_credito' && sp.card_brand
+                      ? getCardFee('cartao_credito', sp.card_brand, sp.installments)
+                      : 0;
+                    const spFeeBps = Math.round(spFee * 100);
+                    const spAmtCents = Math.round(sp.amount * 100);
+                    const spGross = spFeeBps > 0
+                      ? Math.ceil((spAmtCents * 10000) / (10000 - spFeeBps)) / 100
+                      : sp.amount;
+                    const spFeeAmount = spGross - sp.amount;
+
+                    return (
+                      <div key={sp.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-background border border-border">
+                        <span className="text-xs font-bold text-muted-foreground w-5">{idx + 1}.</span>
+
+                        {/* Valor */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">R$</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={sp.amount || ''}
+                            onChange={(e) => updateSplitPayment(sp.id, 'amount', Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="w-24 h-8 text-sm text-center border-border"
+                          />
+                        </div>
+
+                        {/* Método */}
+                        <Select value={sp.payment_method} onValueChange={(v) => {
+                          updateSplitPayment(sp.id, 'payment_method', v);
+                          if (v !== 'cartao_credito') {
+                            updateSplitPayment(sp.id, 'card_brand', '');
+                            updateSplitPayment(sp.id, 'installments', 1);
+                          }
+                        }}>
+                          <SelectTrigger className="w-32 h-8 text-xs bg-background border-border">
+                            <SelectValue placeholder="Método" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border-border">
+                            <SelectItem value="dinheiro"><span className="flex items-center gap-1.5"><Banknote className="w-3.5 h-3.5" /> Dinheiro</span></SelectItem>
+                            <SelectItem value="pix"><span className="flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> PIX</span></SelectItem>
+                            <SelectItem value="cartao_debito"><span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Débito</span></SelectItem>
+                            <SelectItem value="cartao_credito"><span className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Crédito</span></SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {/* Bandeira + Parcelas (se crédito) */}
+                        {sp.payment_method === 'cartao_credito' && (
+                          <>
+                            <Select value={sp.card_brand} onValueChange={(v) => updateSplitPayment(sp.id, 'card_brand', v)}>
+                              <SelectTrigger className="w-28 h-8 text-xs bg-background border-border">
+                                <SelectValue placeholder="Bandeira" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border-border">
+                                {CARD_BRANDS.map(b => (
+                                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            <Select value={sp.installments.toString()} onValueChange={(v) => updateSplitPayment(sp.id, 'installments', parseInt(v))}>
+                              <SelectTrigger className="w-20 h-8 text-xs bg-background border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border-border">
+                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                                  <SelectItem key={n} value={n.toString()}>{n}x</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            {spFee > 0 && (
+                              <span className="text-xs text-amber-500 font-medium">
+                                +{spFee.toFixed(1)}% (R$ {formatCurrency(spFeeAmount)})
+                              </span>
+                            )}
+                          </>
+                        )}
+
+                        {/* Remover */}
+                        {splitPayments.length > 2 && (
+                          <button onClick={() => removeSplitPayment(sp.id)} className="ml-auto p-1 hover:bg-destructive/10 rounded">
+                            <X className="w-4 h-4 text-destructive" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Botão adicionar mais */}
+                  <button
+                    onClick={addSplitPayment}
+                    className="w-full flex items-center justify-center gap-1 py-1.5 rounded-lg border border-dashed border-muted-foreground/30 hover:border-pink-primary/50 hover:bg-pink-glow/20 transition-all text-xs text-muted-foreground"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Adicionar forma de pagamento
+                  </button>
+                </div>
+              )}
+
+              {/* Total e Botão Finalizar */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-wrap">
                   {discount > 0 && (
@@ -709,8 +843,19 @@ export default function POS() {
                     </div>
                   )}
 
-                  {/* Quando é crédito com taxa - mostra valor com taxa no campo Peça */}
-                  {cardBrand && cardFeePercent > 0 ? (
+                  {isSplitMode ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg text-muted-foreground">Total:</span>
+                      <span className="text-3xl font-bold text-pink-primary">
+                        R$ {formatCurrency(cartTotal)}
+                      </span>
+                      {getSplitGrossTotal() > cartTotal && (
+                        <span className="text-sm text-amber-500 font-medium">
+                          (Cliente: R$ {formatCurrency(getSplitGrossTotal())})
+                        </span>
+                      )}
+                    </div>
+                  ) : cardBrand && cardFeePercent > 0 ? (
                     <>
                       <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-glow border-2 border-pink-primary/50 shadow-lg">
                         <span className="text-lg text-muted-foreground">Peça:</span>
@@ -724,7 +869,6 @@ export default function POS() {
                       </div>
                     </>
                   ) : (
-                    /* Quando não é crédito - mostra valor normal */
                     <div className="flex items-center gap-2">
                       <span className="text-lg text-muted-foreground">Total:</span>
                       <span className="text-3xl font-bold text-pink-primary">
