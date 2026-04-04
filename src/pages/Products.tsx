@@ -229,13 +229,13 @@ export default function Products() {
       <div className="space-y-6">
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between opacity-0 animate-fade-in-down">
-          <div className="flex flex-1 gap-3">
-            <div className="relative flex-1 max-w-md group">
+          <div className="flex flex-1 gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-md group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Buscar produtos..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 transition-all duration-300 focus:shadow-md focus:shadow-primary/10"
               />
             </div>
