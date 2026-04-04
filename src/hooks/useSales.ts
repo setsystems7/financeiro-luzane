@@ -263,7 +263,7 @@ export function useCreateSale() {
           };
         });
 
-        await supabase.from('sale_payments').insert(paymentRecords);
+        await (supabase as any).from('sale_payments').insert(paymentRecords);
 
         // Create one receivable per payment
         for (const pr of paymentRecords) {
