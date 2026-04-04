@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,20 +23,57 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const queryClient = useQueryClient();
   const { data: expenseCategories = [] } = useExpenseCategories();
   const { data: suppliers = [] } = useSuppliersList();
-  const { data: pendingExpenses = [] } = useQuery({
-    queryKey: ['pending-expenses-for-link'],
+
+  // Fetch ALL expenses (including paid) to group by parent and show total
+  const { data: allExpenses = [] } = useQuery({
+    queryKey: ['all-expenses-for-link'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expenses')
-        .select('id, description, amount, due_date, status')
-        .in('status', ['pendente', 'vencido'])
+        .select('id, description, amount, due_date, status, parent_expense_id, recurrence_months, recurrence_index, is_recurring')
         .order('due_date', { ascending: true })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return data || [];
     },
     enabled: open,
   });
+
+  // Group expenses: show parent/standalone with total amount across all installments
+  const groupedExpenses = useMemo(() => {
+    // Find root expenses (no parent) that have pending/overdue installments
+    const parentMap = new Map<string, { total: number; count: number; pendingCount: number; description: string; rootId: string }>();
+
+    // Group by parent_expense_id or self
+    allExpenses.forEach((exp: any) => {
+      const rootId = exp.parent_expense_id || exp.id;
+      if (!parentMap.has(rootId)) {
+        parentMap.set(rootId, { total: 0, count: 0, pendingCount: 0, description: '', rootId });
+      }
+      const group = parentMap.get(rootId)!;
+      group.total += Number(exp.amount);
+      group.count += 1;
+      if (exp.status === 'pendente' || exp.status === 'vencido') {
+        group.pendingCount += 1;
+      }
+      // Use the base description (without index suffix) from the first item
+      if (!group.description || (exp.recurrence_index === 1 || !exp.parent_expense_id)) {
+        // Clean description: remove (1/N) suffix
+        group.description = exp.description.replace(/\s*\(\d+\/\d+\)$/, '');
+      }
+    });
+
+    // Only show groups that have at least one pending/overdue installment
+    return Array.from(parentMap.values())
+      .filter(g => g.pendingCount > 0)
+      .map(g => ({
+        id: g.rootId,
+        description: g.description,
+        totalAmount: g.total,
+        installments: g.count,
+        pendingCount: g.pendingCount,
+      }));
+  }, [allExpenses]);
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -50,10 +87,22 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
   const [expenseCategory, setExpenseCategory] = useState('');
   const [expenseDueDate, setExpenseDueDate] = useState('');
   const [expenseSupplierId, setExpenseSupplierId] = useState('');
-  const [expenseNotes, setExpenseNotes] = useState('');
+  const [expenseInstallments, setExpenseInstallments] = useState('1');
+  const [expenseInstallmentValue, setExpenseInstallmentValue] = useState('');
 
   // Link existing expense
   const [linkedExpenseId, setLinkedExpenseId] = useState('');
+
+  // Auto-calculate installment value when amount or installments change
+  const computedInstallmentValue = useMemo(() => {
+    const numAmount = parseFloat(amount);
+    const numInstallments = parseInt(expenseInstallments) || 1;
+    if (!numAmount || numAmount <= 0 || numInstallments <= 0) return '';
+    return (numAmount / numInstallments).toFixed(2);
+  }, [amount, expenseInstallments]);
+
+  // Use custom value if set, otherwise computed
+  const effectiveInstallmentValue = expenseInstallmentValue || computedInstallmentValue;
 
   const resetForm = () => {
     setAmount('');
@@ -65,7 +114,8 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
     setExpenseCategory('');
     setExpenseDueDate('');
     setExpenseSupplierId('');
-    setExpenseNotes('');
+    setExpenseInstallments('1');
+    setExpenseInstallmentValue('');
     setLinkedExpenseId('');
   };
 
@@ -105,21 +155,85 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
 
       if (recError) throw recError;
 
-      // 2. If loan + create expense
+      // 2. If loan + create expense (with installments)
       if (isLoan && wantsExpense === 'create') {
-        const { error: expError } = await supabase.from('expenses').insert({
-          description: expenseDescription || `Pagamento: ${description}`,
-          amount: numAmount,
-          category: expenseCategory || null,
-          due_date: expenseDueDate,
-          supplier_id: expenseSupplierId || null,
-          notes: expenseNotes || `Ref. empréstimo: ${description}`,
-          status: 'pendente',
-        });
-        if (expError) throw expError;
-        toast.success('Valor inserido no caixa e conta a pagar registrada!');
+        const numInstallments = parseInt(expenseInstallments) || 1;
+        const installmentAmount = parseFloat(effectiveInstallmentValue) || numAmount;
+        const baseDate = new Date(expenseDueDate);
+        const baseDescription = expenseDescription || `Pagamento: ${description}`;
+
+        if (numInstallments === 1) {
+          // Single expense
+          const { error: expError } = await supabase.from('expenses').insert({
+            description: baseDescription,
+            amount: installmentAmount,
+            category: expenseCategory || null,
+            due_date: expenseDueDate,
+            supplier_id: expenseSupplierId || null,
+            notes: `Ref. empréstimo: ${description}`,
+            status: 'pendente',
+          });
+          if (expError) throw expError;
+        } else {
+          // Create first installment
+          const { data: firstExp, error: firstError } = await supabase
+            .from('expenses')
+            .insert({
+              description: `${baseDescription} (1/${numInstallments})`,
+              amount: installmentAmount,
+              category: expenseCategory || null,
+              due_date: expenseDueDate,
+              supplier_id: expenseSupplierId || null,
+              notes: `Ref. empréstimo: ${description}`,
+              status: 'pendente',
+              is_recurring: true,
+              recurrence_months: numInstallments,
+              recurrence_index: 1,
+            })
+            .select()
+            .single();
+
+          if (firstError) throw firstError;
+
+          // Create remaining installments
+          const originalDay = baseDate.getDate();
+          const remaining = [];
+          for (let i = 1; i < numInstallments; i++) {
+            const futureDate = new Date(baseDate);
+            futureDate.setMonth(futureDate.getMonth() + i);
+            const targetMonth = futureDate.getMonth();
+            futureDate.setDate(originalDay);
+            if (futureDate.getMonth() !== targetMonth) {
+              futureDate.setDate(0);
+            }
+
+            remaining.push({
+              description: `${baseDescription} (${i + 1}/${numInstallments})`,
+              amount: installmentAmount,
+              category: expenseCategory || null,
+              due_date: futureDate.toISOString().split('T')[0],
+              supplier_id: expenseSupplierId || null,
+              notes: `Ref. empréstimo: ${description}`,
+              status: 'pendente' as const,
+              is_recurring: true,
+              recurrence_months: numInstallments,
+              parent_expense_id: firstExp.id,
+              recurrence_index: i + 1,
+            });
+          }
+
+          if (remaining.length > 0) {
+            const { error: remError } = await supabase.from('expenses').insert(remaining);
+            if (remError) throw remError;
+          }
+        }
+
+        toast.success(
+          numInstallments > 1
+            ? `Valor inserido no caixa e ${numInstallments} parcelas registradas!`
+            : 'Valor inserido no caixa e conta a pagar registrada!'
+        );
       } else if (isLoan && wantsExpense === 'existing') {
-        // Just link via notes for audit - don't change expense values
         if (linkedExpenseId) {
           const { data: existingExp } = await supabase
             .from('expenses')
@@ -148,6 +262,8 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
       queryClient.invalidateQueries({ queryKey: ['receivables'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
 
       resetForm();
       onOpenChange(false);
@@ -282,6 +398,39 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                       required
                     />
                   </div>
+
+                  {/* Installments */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Parcelas</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="48"
+                        value={expenseInstallments}
+                        onChange={(e) => {
+                          setExpenseInstallments(e.target.value);
+                          setExpenseInstallmentValue(''); // reset custom value
+                        }}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Valor por parcela</Label>
+                      <CurrencyInput
+                        value={effectiveInstallmentValue}
+                        onChange={setExpenseInstallmentValue}
+                        placeholder="Auto"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {parseInt(expenseInstallments) > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {expenseInstallments}x de R$ {Number(effectiveInstallmentValue || 0).toFixed(2).replace('.', ',')} = R$ {(Number(effectiveInstallmentValue || 0) * (parseInt(expenseInstallments) || 1)).toFixed(2).replace('.', ',')} total
+                    </p>
+                  )}
+
                   <div>
                     <Label className="text-xs">Categoria</Label>
                     <Select value={expenseCategory} onValueChange={setExpenseCategory}>
@@ -323,9 +472,11 @@ export function InsertCashDialog({ open, onOpenChange }: InsertCashDialogProps) 
                       <SelectValue placeholder="Selecione a despesa..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {pendingExpenses.map((exp: any) => (
+                      {groupedExpenses.map((exp) => (
                         <SelectItem key={exp.id} value={exp.id}>
-                          {exp.description} - R$ {Number(exp.amount).toFixed(2).replace('.', ',')} ({exp.due_date})
+                          {exp.description} - R$ {exp.totalAmount.toFixed(2).replace('.', ',')}
+                          {exp.installments > 1 && ` (${exp.installments}x)`}
+                          {` - ${exp.pendingCount} pendente${exp.pendingCount > 1 ? 's' : ''}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
