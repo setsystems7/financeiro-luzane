@@ -460,6 +460,7 @@ export default function Financial() {
                   </div>
                 ) : (
                   <>
+                  <div className="overflow-x-auto -mx-2 md:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
