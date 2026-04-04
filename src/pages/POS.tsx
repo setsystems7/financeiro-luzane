@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts, Product } from '@/hooks/useProducts';
-import { useCreateSale, SaleItem } from '@/hooks/useSales';
+import { useCreateSale, SaleItem, PaymentEntry } from '@/hooks/useSales';
 import { CARD_BRANDS, getCardFee } from '@/data/cardFees';
 import { CardBrandIcon } from '@/components/pos/CardBrandLogos';
 import { formatCurrency } from '@/lib/utils';
