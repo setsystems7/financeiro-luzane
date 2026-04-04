@@ -66,6 +66,7 @@ export default function Financial() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isInsertCashOpen, setIsInsertCashOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editDueDate, setEditDueDate] = useState<Date | undefined>(undefined);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
