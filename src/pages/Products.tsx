@@ -44,6 +44,9 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 24;
 
   const productsSupportSections: SupportSection[] = [
     {
