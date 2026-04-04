@@ -645,7 +645,7 @@ export default function POS() {
                         className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-background hover:border-pink-primary/50 hover:bg-pink-glow/30 transition-all duration-200"
                       >
                         <Wallet className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground">Dividir</span>
+                        <span className="text-sm font-medium text-muted-foreground">Múltipla Forma de Pagamento</span>
                       </button>
                     )}
                   </>
