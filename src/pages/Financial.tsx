@@ -300,45 +300,55 @@ export default function Financial() {
 
   return (
     <MainLayout title="Financeiro" subtitle="Controle de contas a pagar e receber" supportContent={{ moduleName: 'Financeiro', sections: financialSupportSections }}>
-      <main className="space-y-6 animate-fade-in">
+      <main className="space-y-4 md:space-y-6 animate-fade-in">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <StatsCard
-            title="Entrada de Vendas"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
-            icon={<ArrowUpRight className="w-6 h-6 text-blue-500" />}
-            description="Valor bruto com taxas"
-          />
-          <StatsCard
-            title="Taxas Recebidas"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
-            icon={<CreditCard className="w-6 h-6 text-amber-500" />}
-            description="Taxas pagas pelos clientes"
-          />
-          <StatsCard
-            title="Valor do Caixa"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
-            icon={<TrendingUp className="w-6 h-6 text-green-500" />}
-            description="Valor que entra no caixa"
-          />
-          <StatsCard
-            title="Contas a Pagar"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
-            icon={<TrendingDown className="w-6 h-6 text-red-500" />}
-            description={
-              summaryLoading ? '' : 
-              summary?.totalOverdue && summary.totalOverdue > 0 
-                ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
-                : `Despesas do período`
-            }
-          />
-          <StatsCard
-            title="Saldo Previsto do Mês"
-            value={summaryLoading ? 'Carregando...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
-            icon={<Wallet className="w-6 h-6 text-pink-500" />}
-            variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
-            description="Entrada - Taxas - Contas a Pagar"
-          />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+          <div onClick={() => setKpiDetailType('entrada')} className="cursor-pointer">
+            <StatsCard
+              title="Entrada de Vendas"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
+              icon={<ArrowUpRight className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />}
+              description="Valor bruto com taxas"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('taxas')} className="cursor-pointer">
+            <StatsCard
+              title="Taxas Recebidas"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
+              icon={<CreditCard className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />}
+              description="Taxas pagas pelos clientes"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer col-span-2 sm:col-span-1">
+            <StatsCard
+              title="Valor do Caixa"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
+              icon={<TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-500" />}
+              description="Valor que entra no caixa"
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('pagar')} className="cursor-pointer">
+            <StatsCard
+              title="Contas a Pagar"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
+              icon={<TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-red-500" />}
+              description={
+                summaryLoading ? '' : 
+                summary?.totalOverdue && summary.totalOverdue > 0 
+                  ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
+                  : `Despesas do período`
+              }
+            />
+          </div>
+          <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer">
+            <StatsCard
+              title="Saldo Previsto"
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
+              icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
+              variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
+              description="Entrada - Taxas - A Pagar"
+            />
+          </div>
         </div>
 
         {/* Filters */}
