@@ -400,13 +400,13 @@ export default function Stock() {
                               </Button>
                             </TableCell>
                             <TableCell>
-                              <div>
-                                <p className="font-medium text-foreground">{product.name}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground text-sm truncate">{product.name}</p>
                                 <p className="text-xs text-muted-foreground">{product.category_name}</p>
                               </div>
                             </TableCell>
                             <TableCell className="text-center font-semibold">{totalStock}</TableCell>
-                            <TableCell className="text-center text-muted-foreground">{product.min_stock}</TableCell>
+                            <TableCell className="text-center text-muted-foreground hidden sm:table-cell">{product.min_stock}</TableCell>
                             <TableCell className="text-center">
                               <Badge variant={isLow ? 'destructive' : 'success'}>{isLow ? 'Baixo' : 'OK'}</Badge>
                             </TableCell>
