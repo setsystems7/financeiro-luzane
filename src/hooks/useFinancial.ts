@@ -627,7 +627,7 @@ export function useFinancialSummary(filters?: {
       // All-time receivables for Valor do Caixa (independent of period)
       const { data: allReceivables, error: allRecError } = await supabase
         .from('receivables')
-        .select('net_amount, description');
+        .select('amount, net_amount, description');
       if (allRecError) throw allRecError;
 
       // All-time paid expenses to subtract from Valor do Caixa
@@ -644,8 +644,8 @@ export function useFinancialSummary(filters?: {
       const salesReceivables = (allReceivables || []).filter(r => 
         !r.description?.includes('[Empréstimo]') && !r.description?.includes('[Entrada Manual]')
       );
-      const totalManualCash = manualEntries.reduce((acc, r) => acc + Number(r.net_amount), 0);
-      const totalSalesNet = salesReceivables.reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalManualCash = manualEntries.reduce((acc, r) => acc + Number(r.amount), 0);
+      const totalSalesNet = salesReceivables.reduce((acc, r) => acc + Number(r.amount), 0);
 
       // Current month expenses (based on filter period)
       const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
@@ -697,7 +697,7 @@ export function useFinancialSummary(filters?: {
 
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
-      const totalAllReceivables = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
+      const totalAllReceivables = (allReceivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalPaidExpenses = (allPaidExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalCaixa = totalAllReceivables - totalPaidExpenses;
       const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
