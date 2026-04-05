@@ -159,7 +159,7 @@ export function useExpenses(filters?: {
         .eq('status', 'pendente')
         .lt('due_date', today);
 
-      // Then fetch expenses
+      // Fetch expenses within the period
       let query = supabase
         .from('expenses')
         .select('*, suppliers(name)')
@@ -178,12 +178,30 @@ export function useExpenses(filters?: {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      return data as Expense[];
+
+      // Also fetch overdue (vencido) expenses from BEFORE the period
+      // so they always appear until paid
+      let overdueFromPast: Expense[] = [];
+      if (filters?.startDate && (filters?.status === 'all' || filters?.status === 'vencido' || !filters?.status)) {
+        const { data: overdueData, error: overdueErr } = await supabase
+          .from('expenses')
+          .select('*, suppliers(name)')
+          .eq('status', 'vencido')
+          .lt('due_date', filters.startDate.toISOString().split('T')[0])
+          .order('due_date', { ascending: true });
+        if (overdueErr) throw overdueErr;
+        overdueFromPast = (overdueData || []) as Expense[];
+      }
+
+      // Merge: overdue from past first, then period expenses (avoid duplicates)
+      const periodIds = new Set((data || []).map((e: Expense) => e.id));
+      const uniqueOverdue = overdueFromPast.filter(e => !periodIds.has(e.id));
+      
+      return [...uniqueOverdue, ...(data || [])] as Expense[];
     },
     staleTime: 0,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
   });
 }
 
