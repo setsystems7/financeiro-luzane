@@ -152,12 +152,12 @@ export default function Dashboard() {
     <MainLayout title="Dashboard" subtitle="Visão geral do seu negócio" supportContent={{ moduleName: 'Dashboard', sections: dashboardSupportSections }}>
       <div className="space-y-6">
         {/* Period Selector integrated in KPI header */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Indicadores</h2>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">Indicadores</h2>
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Calendar className="w-4 h-4 text-muted-foreground hidden sm:block" />
             <Select value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-40 sm:w-48 h-8 sm:h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
