@@ -830,8 +830,10 @@ export default function Financial() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedExpenses.map((item) => (
-                        <TableRow key={item.id}>
+                      {paginatedExpenses.map((item) => {
+                        const isOverdueFromPast = item.status === 'vencido' && startDate && item.due_date < startDate;
+                        return (
+                        <TableRow key={item.id} className={isOverdueFromPast ? 'bg-destructive/5 border-l-2 border-l-destructive' : ''}>
                           <TableCell className="font-medium">
                             {editingDescriptionExpenseId === item.id ? (
                               <div className="flex items-center gap-2">
