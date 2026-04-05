@@ -355,19 +355,19 @@ export default function Stock() {
 
           <TabsContent value="stock">
           <Card variant="elevated">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="relative">
+             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     placeholder="Buscar produto..." 
                     value={stockSearchTerm} 
                     onChange={(e) => setStockSearchTerm(e.target.value)} 
-                    className="pl-8 w-48 h-8 text-sm"
+                    className="pl-8 w-full sm:w-48 h-8 text-sm"
                   />
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0} className="shrink-0"><Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Exportar</span></Button>
               </div>
             </CardHeader>
             <CardContent>
