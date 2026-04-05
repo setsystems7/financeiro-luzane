@@ -1030,11 +1030,31 @@ export default function Financial() {
                     </TableBody>
                     <tfoot>
                       <TableRow className="bg-muted/50 font-semibold">
-                        <TableCell colSpan={3} className="text-right">Totais:</TableCell>
+                        <TableCell colSpan={3} className="text-right">
+                          Totais ({expenseTotals.count} registros):
+                        </TableCell>
                         <TableCell className="text-right">R$ {formatCurrency(expenseTotals.amount)}</TableCell>
                         <TableCell className="text-right">{expenseTotals.interest > 0 ? `R$ ${formatCurrency(expenseTotals.interest)}` : '-'}</TableCell>
                         <TableCell className="text-right">R$ {formatCurrency(expenseTotals.paid)}</TableCell>
                         <TableCell colSpan={2} />
+                      </TableRow>
+                      <TableRow className="bg-muted/30 text-sm">
+                        <TableCell colSpan={3} className="text-right text-muted-foreground">
+                          Resumo por status:
+                        </TableCell>
+                        <TableCell colSpan={5} className="text-left">
+                          <div className="flex flex-wrap gap-3">
+                            <span className="text-green-600 dark:text-green-400">
+                              Pagos: R$ {formatCurrency(expenseTotals.byStatus.pago)}
+                            </span>
+                            <span className="text-destructive">
+                              Vencidos: R$ {formatCurrency(expenseTotals.byStatus.vencido)}
+                            </span>
+                            <span className="text-yellow-600 dark:text-yellow-400">
+                              Pendentes: R$ {formatCurrency(expenseTotals.byStatus.pendente)}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     </tfoot>
                   </Table>
