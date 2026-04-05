@@ -421,7 +421,7 @@ export default function Stock() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-center font-medium">{size.quantity}</TableCell>
-                              <TableCell />
+                              <TableCell className="hidden sm:table-cell" />
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={(e) => { e.stopPropagation(); setOutDialog({ product, sizeId: size.id, mode: 'saida' }); setOutQuantity(1); setOutNotes(''); }}>
