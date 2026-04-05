@@ -18,8 +18,8 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon, trend, description, variant = 'default', className }: StatsCardProps) {
   return (
-    <Card className={cn("group hover:shadow-md transition-shadow", className)}>
-      <CardContent className="p-3 md:p-6">
+    <Card className={cn("group hover:shadow-md transition-shadow h-full", className)}>
+      <CardContent className="p-3 md:p-6 h-full flex flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 md:space-y-2 min-w-0 flex-1">
             <p className="text-[11px] md:text-sm font-medium text-muted-foreground leading-tight">{title}</p>
