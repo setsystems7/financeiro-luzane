@@ -354,7 +354,7 @@ export default function Financial() {
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
               icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
               variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
-              description="Entrada - Taxas - A Pagar"
+              description="Caixa - Contas a Pagar"
             />
           </div>
         </div>
