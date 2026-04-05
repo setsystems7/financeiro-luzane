@@ -1028,7 +1028,8 @@ export default function Financial() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                     <tfoot>
                       <TableRow className="bg-muted/50 font-semibold">
