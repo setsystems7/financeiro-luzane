@@ -12,24 +12,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Verify authenticated user
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
-    }
-
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getUser()
-    if (claimsError || !claimsData?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
-    }
-
-    // Use service role to bypass RLS
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     // Fetch all expenses
@@ -48,57 +32,70 @@ Deno.serve(async (req) => {
 
     if (recError) throw recError
 
-    // Compute summaries
-    const paidExpenses = expenses?.filter(e => e.status === 'pago') || []
-    const overdueExpenses = expenses?.filter(e => e.status === 'vencido') || []
-    const pendingExpenses = expenses?.filter(e => e.status === 'pendente') || []
+    // ---- KPI-matching calculations ----
+    // Valor do Caixa = sum(ALL receivables.amount) - sum(ALL paid expenses.amount)
+    const allReceivables = receivables || []
+    const allExpenses = expenses || []
+    
+    const totalAllReceivablesAmount = allReceivables.reduce((s, r) => s + Number(r.amount || 0), 0)
+    const totalAllReceivablesNet = allReceivables.reduce((s, r) => s + Number(r.net_amount || 0), 0)
+    
+    const paidExpenses = allExpenses.filter(e => e.status === 'pago')
+    const overdueExpenses = allExpenses.filter(e => e.status === 'vencido')
+    const pendingExpenses = allExpenses.filter(e => e.status === 'pendente')
 
-    const totalPaidAmount = paidExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const totalPaidExpensesAmount = paidExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
     const totalPaidWithInterest = paidExpenses.reduce((s, e) => s + Number(e.amount_paid || e.amount || 0), 0)
     const totalOverdueAmount = overdueExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
     const totalPendingAmount = pendingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
 
-    const receivedReceivables = receivables?.filter(r => r.is_received) || []
-    const pendingReceivables = receivables?.filter(r => !r.is_received) || []
+    // Manual entries vs sales
+    const manualEntries = allReceivables.filter(r => 
+      r.description?.includes('[Empréstimo]') || r.description?.includes('[Entrada Manual]')
+    )
+    const salesReceivables = allReceivables.filter(r => 
+      !r.description?.includes('[Empréstimo]') && !r.description?.includes('[Entrada Manual]')
+    )
 
-    const totalReceivedGross = receivedReceivables.reduce((s, r) => s + Number(r.amount || 0), 0)
-    const totalReceivedNet = receivedReceivables.reduce((s, r) => s + Number(r.net_amount || 0), 0)
-    const totalReceivedFees = receivedReceivables.reduce((s, r) => s + Number(r.fee || 0), 0)
-    const totalPendingReceivablesGross = pendingReceivables.reduce((s, r) => s + Number(r.amount || 0), 0)
+    const totalFees = allReceivables.reduce((s, r) => s + Number(r.fee || 0), 0)
 
-    const cashUsingGross = totalReceivedGross - totalPaidWithInterest
-    const cashUsingNet = totalReceivedNet - totalPaidWithInterest
+    // KPI: Valor do Caixa (usando amount bruto, como o hook faz agora)
+    const caixaUsingAmount = totalAllReceivablesAmount - totalPaidExpensesAmount
+    // Comparação: se usasse net_amount
+    const caixaUsingNet = totalAllReceivablesNet - totalPaidExpensesAmount
 
     const report = {
       generated_at: new Date().toISOString(),
-      summary: {
-        cash_using_gross_amount: cashUsingGross,
-        cash_using_net_amount: cashUsingNet,
-        difference_gross_vs_net: cashUsingGross - cashUsingNet,
-        total_fees_deducted: totalReceivedFees,
+      kpi_comparison: {
+        'Valor do Caixa (amount bruto)': caixaUsingAmount,
+        'Valor do Caixa (net_amount)': caixaUsingNet,
+        'Diferença (amount - net)': caixaUsingAmount - caixaUsingNet,
+        'Total Taxas': totalFees,
       },
-      expenses: {
-        paid: { count: paidExpenses.length, total_amount: totalPaidAmount, total_paid_with_interest: totalPaidWithInterest },
+      receivables_totals: {
+        count: allReceivables.length,
+        total_amount_bruto: totalAllReceivablesAmount,
+        total_net_amount: totalAllReceivablesNet,
+        manual_entries_count: manualEntries.length,
+        manual_entries_amount: manualEntries.reduce((s, r) => s + Number(r.amount || 0), 0),
+        sales_count: salesReceivables.length,
+        sales_amount: salesReceivables.reduce((s, r) => s + Number(r.amount || 0), 0),
+      },
+      expenses_totals: {
+        paid: { count: paidExpenses.length, total_amount: totalPaidExpensesAmount, total_paid_with_interest: totalPaidWithInterest },
         overdue: { count: overdueExpenses.length, total_amount: totalOverdueAmount },
         pending: { count: pendingExpenses.length, total_amount: totalPendingAmount },
-        all_total: totalPaidAmount + totalOverdueAmount + totalPendingAmount,
-      },
-      receivables: {
-        received: { count: receivedReceivables.length, total_gross: totalReceivedGross, total_net: totalReceivedNet, total_fees: totalReceivedFees },
-        pending: { count: pendingReceivables.length, total_gross: totalPendingReceivablesGross },
+        all_total: totalPaidExpensesAmount + totalOverdueAmount + totalPendingAmount,
       },
       detail_paid_expenses: paidExpenses.map(e => ({
-        id: e.id,
         description: e.description,
         amount: Number(e.amount),
         interest: Number(e.interest_amount || 0),
         amount_paid: Number(e.amount_paid || e.amount),
         category: e.category,
         due_date: e.due_date,
-        paid_date: e.paid_date,
       })),
       detail_overdue_expenses: overdueExpenses.map(e => ({
-        id: e.id,
         description: e.description,
         amount: Number(e.amount),
         category: e.category,
