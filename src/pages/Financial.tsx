@@ -265,11 +265,20 @@ export default function Financial() {
     net: filteredReceivables.reduce((acc, r) => acc + Number(r.net_amount || 0), 0),
   }), [filteredReceivables]);
 
-  const expenseTotals = useMemo(() => ({
-    amount: filteredExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0),
-    interest: filteredExpenses.reduce((acc, e) => acc + Number(e.interest_amount || 0), 0),
-    paid: filteredExpenses.reduce((acc, e) => acc + Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0)), 0),
-  }), [filteredExpenses]);
+  const expenseTotals = useMemo(() => {
+    const byStatus = { pago: 0, vencido: 0, pendente: 0 };
+    let amount = 0, interest = 0, paid = 0;
+    filteredExpenses.forEach(e => {
+      const val = Number(e.amount || 0);
+      amount += val;
+      interest += Number(e.interest_amount || 0);
+      paid += Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0));
+      if (e.status === 'pago') byStatus.pago += val;
+      else if (e.status === 'vencido') byStatus.vencido += val;
+      else byStatus.pendente += val;
+    });
+    return { amount, interest, paid, byStatus, count: filteredExpenses.length };
+  }, [filteredExpenses]);
 
   const handleCreateExpense = (data: any) => {
     if (!data.description || !data.amount || !data.due_date) {
