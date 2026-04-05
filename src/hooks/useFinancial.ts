@@ -679,6 +679,22 @@ export function useFinancialSummary(filters?: {
       const { data: overdueExpenses, error: overdueErr } = await overdueQuery;
       if (overdueErr) throw overdueErr;
 
+      // Paid expenses in the period (for Saldo Previsto - only actually paid ones count)
+      let paidInPeriodQuery = supabase
+        .from('expenses')
+        .select('amount')
+        .eq('status', 'pago');
+
+      if (periodStart) {
+        paidInPeriodQuery = paidInPeriodQuery.gte('due_date', periodStart);
+      }
+      if (periodEnd) {
+        paidInPeriodQuery = paidInPeriodQuery.lte('due_date', periodEnd);
+      }
+
+      const { data: paidInPeriod, error: paidPeriodErr } = await paidInPeriodQuery;
+      if (paidPeriodErr) throw paidPeriodErr;
+
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
       const totalAllReceivables = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
@@ -687,6 +703,7 @@ export function useFinancialSummary(filters?: {
       const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalPayable = totalMonthPayable + totalOverdue;
+      const totalPaidInPeriod = (paidInPeriod || []).reduce((acc, e) => acc + Number(e.amount), 0);
 
       return {
         totalGrossReceivable,
@@ -695,12 +712,13 @@ export function useFinancialSummary(filters?: {
         totalPayable,
         totalMonthPayable,
         totalOverdue,
-        balance: totalGrossReceivable - totalFees - totalPayable,
+        balance: totalGrossReceivable - totalFees - totalPaidInPeriod,
         receivablesCount: receivables?.length || 0,
         expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
         totalManualCash,
         totalSalesNet,
         totalPaidExpenses,
+        totalPaidInPeriod,
         manualEntriesCount: manualEntries.length,
       };
     },

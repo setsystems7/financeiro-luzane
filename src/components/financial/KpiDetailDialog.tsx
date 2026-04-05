@@ -21,6 +21,7 @@ interface KpiDetailDialogProps {
     totalManualCash?: number;
     totalSalesNet?: number;
     totalPaidExpenses?: number;
+    totalPaidInPeriod?: number;
     manualEntriesCount?: number;
   } | undefined;
 }
@@ -76,7 +77,7 @@ export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetail
       items: [
         { label: 'Entrada de vendas (bruto)', value: summary.totalGrossReceivable },
         { label: '(-) Taxas de cartão', value: summary.totalFees, negative: true },
-        { label: '(-) Contas a pagar (mês + atraso)', value: summary.totalPayable, negative: true },
+        { label: '(-) Contas pagas no período', value: summary.totalPaidInPeriod ?? 0, negative: true },
         { label: 'Saldo previsto', value: summary.balance, highlight: true },
       ],
     },
