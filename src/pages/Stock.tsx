@@ -500,8 +500,8 @@ export default function Stock() {
                     ))}
                   </div>
                   {movementTotalPages > 1 && (
-                    <div className="flex items-center justify-between mt-4 px-2">
-                      <span className="text-sm text-muted-foreground">Página {movementPage} de {movementTotalPages} ({filteredMovements.length} registros)</span>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4 px-2">
+                      <span className="text-xs sm:text-sm text-muted-foreground">Página {movementPage} de {movementTotalPages} ({filteredMovements.length} registros)</span>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setMovementPage(p => Math.max(1, p - 1))} disabled={movementPage === 1}>Anterior</Button>
                         <Button variant="outline" size="sm" onClick={() => setMovementPage(p => Math.min(movementTotalPages, p + 1))} disabled={movementPage === movementTotalPages}>Próxima</Button>
