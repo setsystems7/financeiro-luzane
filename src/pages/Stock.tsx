@@ -287,17 +287,17 @@ export default function Stock() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4">
+           <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-2">
                 <Label htmlFor="barcode">Código de Barras / QR Code</Label>
                 <div className="flex gap-2">
                   <Input id="barcode" ref={barcodeInputRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="Escaneie ou digite o código..." onKeyDown={(e) => e.key === 'Enter' && handleBarcodeSearch()} />
-                  <Button onClick={() => handleBarcodeSearch()} variant="pink"><Search className="w-4 h-4 mr-2" />Buscar</Button>
+                  <Button onClick={() => handleBarcodeSearch()} variant="pink" className="shrink-0"><Search className="w-4 h-4 mr-2" />Buscar</Button>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-2">
                 <Label>Ou selecione manualmente</Label>
                 <Select value={selectedProduct?.id || ''} onValueChange={(value) => { const product = products.find(p => p.id === value); setSelectedProduct(product || null); setSelectedSizeId(''); }}>
@@ -318,27 +318,27 @@ export default function Stock() {
 
             {selectedProduct && selectedSizeId && (
               <div className="p-4 rounded-lg bg-card border border-border animate-scale-in">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center"><Package className="w-8 h-8 text-muted-foreground" /></div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{selectedProduct.name}</h3>
-                      <p className="text-sm text-muted-foreground">{selectedProduct.category_name} • {selectedProduct.color_name}</p>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center shrink-0"><Package className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" /></div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{selectedProduct.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedProduct.category_name} • {selectedProduct.color_name}</p>
                       <div className="flex gap-2 mt-1">
                         <Badge variant="pink">{selectedSize?.size}</Badge>
                         <Badge variant="secondary">Atual: {selectedSize?.quantity}</Badge>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="w-4 h-4" /></Button>
-                      <Input type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 text-center" min="1" />
-                      <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}><Plus className="w-4 h-4" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="w-4 h-4" /></Button>
+                      <Input type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 text-center h-8" min="1" />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(quantity + 1)}><Plus className="w-4 h-4" /></Button>
                     </div>
-                    <Button onClick={handleAddStock} variant="success" disabled={addStock.isPending}>
-                      {addStock.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                      Adicionar ao Estoque
+                    <Button onClick={handleAddStock} variant="success" disabled={addStock.isPending} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                      {addStock.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+                      Adicionar
                     </Button>
                   </div>
                 </div>
@@ -355,19 +355,19 @@ export default function Stock() {
 
           <TabsContent value="stock">
           <Card variant="elevated">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="relative">
+             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg"><Package className="w-5 h-5" />Estoque Atual</CardTitle>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     placeholder="Buscar produto..." 
                     value={stockSearchTerm} 
                     onChange={(e) => setStockSearchTerm(e.target.value)} 
-                    className="pl-8 w-48 h-8 text-sm"
+                    className="pl-8 w-full sm:w-48 h-8 text-sm"
                   />
                 </div>
-                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0}><Download className="w-4 h-4 mr-2" />Exportar</Button>
+                <Button variant="outline" size="sm" onClick={handleExportStock} disabled={products.length === 0} className="shrink-0"><Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Exportar</span></Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -381,8 +381,8 @@ export default function Stock() {
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Produto</TableHead>
-                      <TableHead className="text-center">Qtd Total</TableHead>
-                      <TableHead className="text-center">Mínimo</TableHead>
+                      <TableHead className="text-center">Qtd</TableHead>
+                      <TableHead className="text-center hidden sm:table-cell">Mínimo</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -400,13 +400,13 @@ export default function Stock() {
                               </Button>
                             </TableCell>
                             <TableCell>
-                              <div>
-                                <p className="font-medium text-foreground">{product.name}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground text-sm truncate">{product.name}</p>
                                 <p className="text-xs text-muted-foreground">{product.category_name}</p>
                               </div>
                             </TableCell>
                             <TableCell className="text-center font-semibold">{totalStock}</TableCell>
-                            <TableCell className="text-center text-muted-foreground">{product.min_stock}</TableCell>
+                            <TableCell className="text-center text-muted-foreground hidden sm:table-cell">{product.min_stock}</TableCell>
                             <TableCell className="text-center">
                               <Badge variant={isLow ? 'destructive' : 'success'}>{isLow ? 'Baixo' : 'OK'}</Badge>
                             </TableCell>
@@ -421,7 +421,7 @@ export default function Stock() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-center font-medium">{size.quantity}</TableCell>
-                              <TableCell />
+                              <TableCell className="hidden sm:table-cell" />
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-1">
                                   <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={(e) => { e.stopPropagation(); setOutDialog({ product, sizeId: size.id, mode: 'saida' }); setOutQuantity(1); setOutNotes(''); }}>
@@ -448,16 +448,16 @@ export default function Stock() {
           <Card variant="elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" />Histórico de Movimentações</CardTitle>
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Select value={movementProductFilter} onValueChange={(v) => { setMovementProductFilter(v); setMovementPage(1); }}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os produtos</SelectItem>
                     {products.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={movementPeriod} onValueChange={(v) => { setMovementPeriod(v); setMovementPage(1); }}>
-                  <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todo período</SelectItem>
                     <SelectItem value="7d">Últimos 7 dias</SelectItem>
@@ -500,8 +500,8 @@ export default function Stock() {
                     ))}
                   </div>
                   {movementTotalPages > 1 && (
-                    <div className="flex items-center justify-between mt-4 px-2">
-                      <span className="text-sm text-muted-foreground">Página {movementPage} de {movementTotalPages} ({filteredMovements.length} registros)</span>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4 px-2">
+                      <span className="text-xs sm:text-sm text-muted-foreground">Página {movementPage} de {movementTotalPages} ({filteredMovements.length} registros)</span>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setMovementPage(p => Math.max(1, p - 1))} disabled={movementPage === 1}>Anterior</Button>
                         <Button variant="outline" size="sm" onClick={() => setMovementPage(p => Math.min(movementTotalPages, p + 1))} disabled={movementPage === movementTotalPages}>Próxima</Button>
