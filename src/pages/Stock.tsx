@@ -287,12 +287,12 @@ export default function Stock() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4">
+           <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-2">
                 <Label htmlFor="barcode">Código de Barras / QR Code</Label>
                 <div className="flex gap-2">
                   <Input id="barcode" ref={barcodeInputRef} value={barcodeInput} onChange={(e) => setBarcodeInput(e.target.value)} placeholder="Escaneie ou digite o código..." onKeyDown={(e) => e.key === 'Enter' && handleBarcodeSearch()} />
-                  <Button onClick={() => handleBarcodeSearch()} variant="pink"><Search className="w-4 h-4 mr-2" />Buscar</Button>
+                  <Button onClick={() => handleBarcodeSearch()} variant="pink" className="shrink-0"><Search className="w-4 h-4 mr-2" />Buscar</Button>
                 </div>
               </div>
             </div>
