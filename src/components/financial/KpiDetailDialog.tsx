@@ -75,9 +75,8 @@ export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetail
       title: 'Saldo Previsto do Mês — Detalhamento',
       icon: <Wallet className="w-5 h-5 text-pink-500" />,
       items: [
-        { label: 'Entrada de vendas (bruto)', value: summary.totalGrossReceivable },
-        { label: '(-) Taxas de cartão', value: summary.totalFees, negative: true },
-        { label: '(-) Contas pagas no período', value: summary.totalPaidInPeriod ?? 0, negative: true },
+        { label: 'Valor do Caixa atual', value: summary.totalReceivable },
+        { label: '(-) Contas a pagar (mês + vencidas)', value: summary.totalPayable, negative: true },
         { label: 'Saldo previsto', value: summary.balance, highlight: true },
       ],
     },
