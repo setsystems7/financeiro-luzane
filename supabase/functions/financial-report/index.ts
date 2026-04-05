@@ -12,28 +12,37 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+    // Verify authenticated user
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+    }
+
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getUser()
+    if (claimsError || !claimsData?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+    }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
-    // Fetch all expenses
     const { data: expenses, error: expError } = await adminClient
       .from('expenses')
       .select('id, description, amount, category, due_date, status, paid_date, interest_amount, amount_paid, is_recurring, recurrence_index, supplier_id')
       .order('due_date', { ascending: true })
-
     if (expError) throw expError
 
-    // Fetch all receivables
     const { data: receivables, error: recError } = await adminClient
       .from('receivables')
       .select('id, description, amount, net_amount, fee, due_date, is_received, received_date, sale_id')
       .order('due_date', { ascending: true })
-
     if (recError) throw recError
 
-    // ---- KPI-matching calculations ----
-    // Valor do Caixa = sum(ALL receivables.amount) - sum(ALL paid expenses.amount)
     const allReceivables = receivables || []
     const allExpenses = expenses || []
     
@@ -49,7 +58,6 @@ Deno.serve(async (req) => {
     const totalOverdueAmount = overdueExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
     const totalPendingAmount = pendingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
 
-    // Manual entries vs sales
     const manualEntries = allReceivables.filter(r => 
       r.description?.includes('[Empréstimo]') || r.description?.includes('[Entrada Manual]')
     )
@@ -59,9 +67,7 @@ Deno.serve(async (req) => {
 
     const totalFees = allReceivables.reduce((s, r) => s + Number(r.fee || 0), 0)
 
-    // KPI: Valor do Caixa (usando amount bruto, como o hook faz agora)
     const caixaUsingAmount = totalAllReceivablesAmount - totalPaidExpensesAmount
-    // Comparação: se usasse net_amount
     const caixaUsingNet = totalAllReceivablesNet - totalPaidExpensesAmount
 
     const report = {
