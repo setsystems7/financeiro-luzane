@@ -318,27 +318,27 @@ export default function Stock() {
 
             {selectedProduct && selectedSizeId && (
               <div className="p-4 rounded-lg bg-card border border-border animate-scale-in">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center"><Package className="w-8 h-8 text-muted-foreground" /></div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{selectedProduct.name}</h3>
-                      <p className="text-sm text-muted-foreground">{selectedProduct.category_name} • {selectedProduct.color_name}</p>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-muted flex items-center justify-center shrink-0"><Package className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" /></div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{selectedProduct.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{selectedProduct.category_name} • {selectedProduct.color_name}</p>
                       <div className="flex gap-2 mt-1">
                         <Badge variant="pink">{selectedSize?.size}</Badge>
                         <Badge variant="secondary">Atual: {selectedSize?.quantity}</Badge>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="w-4 h-4" /></Button>
-                      <Input type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 text-center" min="1" />
-                      <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}><Plus className="w-4 h-4" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="w-4 h-4" /></Button>
+                      <Input type="number" value={quantity} onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 text-center h-8" min="1" />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setQuantity(quantity + 1)}><Plus className="w-4 h-4" /></Button>
                     </div>
-                    <Button onClick={handleAddStock} variant="success" disabled={addStock.isPending}>
-                      {addStock.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                      Adicionar ao Estoque
+                    <Button onClick={handleAddStock} variant="success" disabled={addStock.isPending} className="flex-1 sm:flex-none text-xs sm:text-sm">
+                      {addStock.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+                      Adicionar
                     </Button>
                   </div>
                 </div>
