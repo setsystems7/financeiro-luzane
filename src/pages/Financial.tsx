@@ -979,17 +979,22 @@ export default function Financial() {
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge
-                              variant={
-                                item.status === 'pago' ? 'success' :
-                                item.status === 'vencido' ? 'destructive' :
-                                'warning'
-                              }
-                            >
-                              {item.status === 'pago' ? 'Pago' :
-                               item.status === 'vencido' ? 'Vencido' :
-                               'Pendente'}
-                            </Badge>
+                            <div className="flex flex-col items-center gap-1">
+                              <Badge
+                                variant={
+                                  item.status === 'pago' ? 'success' :
+                                  item.status === 'vencido' ? 'destructive' :
+                                  'warning'
+                                }
+                              >
+                                {item.status === 'pago' ? 'Pago' :
+                                 item.status === 'vencido' ? 'Vencido' :
+                                 'Pendente'}
+                              </Badge>
+                              {isOverdueFromPast && (
+                                <span className="text-[10px] text-destructive font-medium">Mês anterior</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1">
