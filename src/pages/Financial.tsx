@@ -310,7 +310,7 @@ export default function Financial() {
     <MainLayout title="Financeiro" subtitle="Controle de contas a pagar e receber" supportContent={{ moduleName: 'Financeiro', sections: financialSupportSections }}>
       <main className="space-y-4 md:space-y-6 animate-fade-in">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           <div onClick={() => setKpiDetailType('entrada')} className="cursor-pointer">
             <StatsCard
               title="Entrada de Vendas"
@@ -319,15 +319,7 @@ export default function Financial() {
               description="Valor bruto com taxas"
             />
           </div>
-          <div onClick={() => setKpiDetailType('taxas')} className="cursor-pointer">
-            <StatsCard
-              title="Taxas Recebidas"
-              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalFees || 0)}`}
-              icon={<CreditCard className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />}
-              description="Taxas pagas pelos clientes"
-            />
-          </div>
-          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer col-span-2 sm:col-span-1">
+          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer">
             <StatsCard
               title="Valor do Caixa"
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
