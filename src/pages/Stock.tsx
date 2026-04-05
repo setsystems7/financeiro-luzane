@@ -297,7 +297,7 @@ export default function Stock() {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 space-y-2">
                 <Label>Ou selecione manualmente</Label>
                 <Select value={selectedProduct?.id || ''} onValueChange={(value) => { const product = products.find(p => p.id === value); setSelectedProduct(product || null); setSelectedSizeId(''); }}>
