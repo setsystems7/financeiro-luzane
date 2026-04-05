@@ -381,8 +381,8 @@ export default function Stock() {
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
                       <TableHead>Produto</TableHead>
-                      <TableHead className="text-center">Qtd Total</TableHead>
-                      <TableHead className="text-center">Mínimo</TableHead>
+                      <TableHead className="text-center">Qtd</TableHead>
+                      <TableHead className="text-center hidden sm:table-cell">Mínimo</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                     </TableRow>
                   </TableHeader>
