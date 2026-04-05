@@ -319,7 +319,7 @@ export default function Financial() {
               description="Valor bruto com taxas"
             />
           </div>
-          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer">
+          <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer h-full">
             <StatsCard
               title="Valor do Caixa"
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
@@ -327,7 +327,7 @@ export default function Financial() {
               description="Valor que entra no caixa"
             />
           </div>
-          <div onClick={() => setKpiDetailType('pagar')} className="cursor-pointer">
+          <div onClick={() => setKpiDetailType('pagar')} className="cursor-pointer h-full">
             <StatsCard
               title="Contas a Pagar"
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
@@ -340,7 +340,7 @@ export default function Financial() {
               }
             />
           </div>
-          <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer">
+          <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer h-full">
             <StatsCard
               title={`Saldo Previsto - ${format(new Date(startDate), 'MMMM', { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}`}
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
