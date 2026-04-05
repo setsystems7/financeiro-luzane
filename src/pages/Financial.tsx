@@ -350,7 +350,7 @@ export default function Financial() {
           </div>
           <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer">
             <StatsCard
-              title="Saldo Previsto"
+              title={`Saldo Previsto - ${format(new Date(startDate), 'MMMM', { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}`}
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
               icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
               variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
