@@ -448,16 +448,16 @@ export default function Stock() {
           <Card variant="elevated">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" />Histórico de Movimentações</CardTitle>
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Select value={movementProductFilter} onValueChange={(v) => { setMovementProductFilter(v); setMovementPage(1); }}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os produtos</SelectItem>
                     {products.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Select value={movementPeriod} onValueChange={(v) => { setMovementPeriod(v); setMovementPage(1); }}>
-                  <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs"><SelectValue placeholder="Período" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todo período</SelectItem>
                     <SelectItem value="7d">Últimos 7 dias</SelectItem>
