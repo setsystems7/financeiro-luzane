@@ -265,11 +265,20 @@ export default function Financial() {
     net: filteredReceivables.reduce((acc, r) => acc + Number(r.net_amount || 0), 0),
   }), [filteredReceivables]);
 
-  const expenseTotals = useMemo(() => ({
-    amount: filteredExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0),
-    interest: filteredExpenses.reduce((acc, e) => acc + Number(e.interest_amount || 0), 0),
-    paid: filteredExpenses.reduce((acc, e) => acc + Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0)), 0),
-  }), [filteredExpenses]);
+  const expenseTotals = useMemo(() => {
+    const byStatus = { pago: 0, vencido: 0, pendente: 0 };
+    let amount = 0, interest = 0, paid = 0;
+    filteredExpenses.forEach(e => {
+      const val = Number(e.amount || 0);
+      amount += val;
+      interest += Number(e.interest_amount || 0);
+      paid += Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0));
+      if (e.status === 'pago') byStatus.pago += val;
+      else if (e.status === 'vencido') byStatus.vencido += val;
+      else byStatus.pendente += val;
+    });
+    return { amount, interest, paid, byStatus, count: filteredExpenses.length };
+  }, [filteredExpenses]);
 
   const handleCreateExpense = (data: any) => {
     if (!data.description || !data.amount || !data.due_date) {
@@ -1021,11 +1030,31 @@ export default function Financial() {
                     </TableBody>
                     <tfoot>
                       <TableRow className="bg-muted/50 font-semibold">
-                        <TableCell colSpan={3} className="text-right">Totais:</TableCell>
+                        <TableCell colSpan={3} className="text-right">
+                          Totais ({expenseTotals.count} registros):
+                        </TableCell>
                         <TableCell className="text-right">R$ {formatCurrency(expenseTotals.amount)}</TableCell>
                         <TableCell className="text-right">{expenseTotals.interest > 0 ? `R$ ${formatCurrency(expenseTotals.interest)}` : '-'}</TableCell>
                         <TableCell className="text-right">R$ {formatCurrency(expenseTotals.paid)}</TableCell>
                         <TableCell colSpan={2} />
+                      </TableRow>
+                      <TableRow className="bg-muted/30 text-sm">
+                        <TableCell colSpan={3} className="text-right text-muted-foreground">
+                          Resumo por status:
+                        </TableCell>
+                        <TableCell colSpan={5} className="text-left">
+                          <div className="flex flex-wrap gap-3">
+                            <span className="text-green-600 dark:text-green-400">
+                              Pagos: R$ {formatCurrency(expenseTotals.byStatus.pago)}
+                            </span>
+                            <span className="text-destructive">
+                              Vencidos: R$ {formatCurrency(expenseTotals.byStatus.vencido)}
+                            </span>
+                            <span className="text-yellow-600 dark:text-yellow-400">
+                              Pendentes: R$ {formatCurrency(expenseTotals.byStatus.pendente)}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     </tfoot>
                   </Table>
