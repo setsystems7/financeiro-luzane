@@ -62,6 +62,58 @@ export interface Expense {
   suppliers?: { name: string } | null;
 }
 
+const SUMMARY_BATCH_SIZE = 1000;
+
+const isManualReceivable = (description?: string | null) =>
+  Boolean(
+    description?.includes('[Empréstimo]') ||
+    description?.includes('[Entrada Manual]')
+  );
+
+const isEffectivelyReceived = (receivable: { is_received?: boolean | null; received_date?: string | null }) =>
+  Boolean(receivable.received_date || receivable.is_received);
+
+const isEffectivelyPaid = (expense: { status?: string | null; paid_date?: string | null }) =>
+  Boolean(expense.paid_date || expense.status === 'pago');
+
+const getReceivableNetValue = (receivable: { net_amount?: number | null; amount?: number | null }) =>
+  Number(receivable.net_amount ?? receivable.amount ?? 0);
+
+const getExpensePaidValue = (expense: { amount_paid?: number | null; amount?: number | null }) =>
+  Number(expense.amount_paid ?? expense.amount ?? 0);
+
+async function fetchAllRows<T>(
+  table: 'receivables' | 'expenses',
+  select: string,
+  buildQuery?: (query: any) => any,
+) {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += SUMMARY_BATCH_SIZE) {
+    let query = supabase
+      .from(table)
+      .select(select)
+      .range(from, from + SUMMARY_BATCH_SIZE - 1);
+
+    if (buildQuery) {
+      query = buildQuery(query);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const batch = (data || []) as T[];
+    rows.push(...batch);
+
+    if (batch.length < SUMMARY_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return rows;
+}
+
 export function useFinancialRealtime() {
   const queryClient = useQueryClient();
 
@@ -621,62 +673,72 @@ export function useFinancialSummary(filters?: {
   return useQuery({
     queryKey: ['financial-summary', filters],
     queryFn: async () => {
-      const isManualReceivable = (description?: string | null) =>
-        Boolean(
-          description?.includes('[Empréstimo]') ||
-          description?.includes('[Entrada Manual]')
-        );
+      const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
+      const periodEnd = filters?.endDate ? filters.endDate.toISOString().split('T')[0] : null;
 
-      const isEffectivelyReceived = (receivable: { is_received?: boolean | null; received_date?: string | null }) =>
-        Boolean(receivable.is_received || receivable.received_date);
+      const receivables = await fetchAllRows<{
+        amount: number | null;
+        fee: number | null;
+        net_amount: number | null;
+        is_received: boolean | null;
+        received_date: string | null;
+        due_date: string;
+        description: string | null;
+      }>('receivables', 'amount, fee, net_amount, is_received, received_date, due_date, description', (query) => {
+        let nextQuery = query;
 
-      const getReceivableNetValue = (receivable: { net_amount?: number | null; amount?: number | null }) =>
-        Number(receivable.net_amount ?? receivable.amount ?? 0);
+        if (periodStart) {
+          nextQuery = nextQuery.gte('due_date', periodStart);
+        }
+        if (periodEnd) {
+          nextQuery = nextQuery.lte('due_date', periodEnd);
+        }
 
-      const getExpensePaidValue = (expense: { amount_paid?: number | null; amount?: number | null }) =>
-        Number(expense.amount_paid ?? expense.amount ?? 0);
+        return nextQuery.order('due_date', { ascending: true });
+      });
 
-      // Period-filtered receivables (for Entrada de Vendas and Taxas)
-      let receivablesQuery = supabase
-        .from('receivables')
-        .select('amount, fee, net_amount, is_received, received_date, due_date, description');
+      const filteredPeriodReceivables = receivables.filter((receivable) => {
+        if (filters?.receivableStatus === 'received') {
+          return isEffectivelyReceived(receivable);
+        }
 
-      if (filters?.receivableStatus === 'pending') {
-        receivablesQuery = receivablesQuery.eq('is_received', false);
-      } else if (filters?.receivableStatus === 'received') {
-        receivablesQuery = receivablesQuery.eq('is_received', true);
-      }
+        if (filters?.receivableStatus === 'pending') {
+          return !isEffectivelyReceived(receivable);
+        }
 
-      if (filters?.startDate) {
-        receivablesQuery = receivablesQuery.gte('due_date', filters.startDate.toISOString().split('T')[0]);
-      }
-      if (filters?.endDate) {
-        receivablesQuery = receivablesQuery.lte('due_date', filters.endDate.toISOString().split('T')[0]);
-      }
+        return true;
+      });
 
-      const { data: receivables, error: recError } = await receivablesQuery;
-      if (recError) throw recError;
-
-      const periodSalesReceivables = (receivables || []).filter(
+      const periodSalesReceivables = filteredPeriodReceivables.filter(
         (receivable) => !isManualReceivable(receivable.description)
       );
 
+      const periodManualReceivables = filteredPeriodReceivables.filter(
+        (receivable) => isManualReceivable(receivable.description)
+      );
+
       // All-time receivables for Valor do Caixa (independent of period)
-      const { data: allReceivables, error: allRecError } = await supabase
-        .from('receivables')
-        .select('amount, net_amount, description, is_received, received_date');
-      if (allRecError) throw allRecError;
+      const allReceivables = await fetchAllRows<{
+        amount: number | null;
+        net_amount: number | null;
+        description: string | null;
+        is_received: boolean | null;
+        received_date: string | null;
+      }>('receivables', 'amount, net_amount, description, is_received, received_date');
 
       // All-time effectively paid expenses to subtract from Valor do Caixa
-      const { data: allPaidExpenses, error: paidExpErr } = await supabase
-        .from('expenses')
-        .select('amount, amount_paid, paid_date')
-        .eq('status', 'pago')
-        .not('paid_date', 'is', null);
-      if (paidExpErr) throw paidExpErr;
+      const allExpenses = await fetchAllRows<{
+        amount: number | null;
+        amount_paid: number | null;
+        status: 'pendente' | 'pago' | 'vencido' | null;
+        paid_date: string | null;
+        due_date: string;
+      }>('expenses', 'amount, amount_paid, status, paid_date, due_date');
+
+      const allPaidExpenses = allExpenses.filter(isEffectivelyPaid);
 
       // Valor do Caixa uses only amounts that were effectively received
-      const realizedReceivables = (allReceivables || []).filter(isEffectivelyReceived);
+      const realizedReceivables = allReceivables.filter(isEffectivelyReceived);
       const manualEntries = realizedReceivables.filter((receivable) =>
         isManualReceivable(receivable.description)
       );
@@ -692,57 +754,33 @@ export function useFinancialSummary(filters?: {
         0
       );
 
-      // Current month expenses (based on filter period)
-      const periodStart = filters?.startDate ? filters.startDate.toISOString().split('T')[0] : null;
-      const periodEnd = filters?.endDate ? filters.endDate.toISOString().split('T')[0] : null;
+      const monthExpenses = allExpenses.filter((expense) => {
+        if (isEffectivelyPaid(expense)) return false;
+        if (periodStart && expense.due_date < periodStart) return false;
+        if (periodEnd && expense.due_date > periodEnd) return false;
+        return true;
+      });
 
-      let monthExpensesQuery = supabase
-        .from('expenses')
-        .select('amount, status, due_date')
-        .neq('status', 'pago');
-
-      if (periodStart) {
-        monthExpensesQuery = monthExpensesQuery.gte('due_date', periodStart);
-      }
-      if (periodEnd) {
-        monthExpensesQuery = monthExpensesQuery.lte('due_date', periodEnd);
-      }
-
-      const { data: monthExpenses, error: monthExpErr } = await monthExpensesQuery;
-      if (monthExpErr) throw monthExpErr;
-
-      // Overdue expenses from BEFORE the period start (vencido status)
-      let overdueQuery = supabase
-        .from('expenses')
-        .select('amount, status, due_date')
-        .eq('status', 'vencido');
-
-      if (periodStart) {
-        overdueQuery = overdueQuery.lt('due_date', periodStart);
-      }
-
-      const { data: overdueExpenses, error: overdueErr } = await overdueQuery;
-      if (overdueErr) throw overdueErr;
+      const overdueExpenses = allExpenses.filter((expense) => {
+        if (isEffectivelyPaid(expense)) return false;
+        if (!periodStart) return expense.status === 'vencido';
+        return expense.due_date < periodStart;
+      });
 
       // Expenses effectively paid inside the selected period use paid_date, not due_date
-      let paidInPeriodQuery = supabase
-        .from('expenses')
-        .select('amount, amount_paid, paid_date')
-        .eq('status', 'pago')
-        .not('paid_date', 'is', null);
-
-      if (periodStart) {
-        paidInPeriodQuery = paidInPeriodQuery.gte('paid_date', periodStart);
-      }
-      if (periodEnd) {
-        paidInPeriodQuery = paidInPeriodQuery.lte('paid_date', periodEnd);
-      }
-
-      const { data: paidInPeriod, error: paidPeriodErr } = await paidInPeriodQuery;
-      if (paidPeriodErr) throw paidPeriodErr;
+      const paidInPeriod = allPaidExpenses.filter((expense) => {
+        if (!expense.paid_date) return false;
+        if (periodStart && expense.paid_date < periodStart) return false;
+        if (periodEnd && expense.paid_date > periodEnd) return false;
+        return true;
+      });
 
       const totalGrossReceivable = periodSalesReceivables.reduce(
         (acc, receivable) => acc + Number(receivable.amount ?? 0),
+        0
+      );
+      const totalPeriodManualCash = periodManualReceivables.reduce(
+        (acc, receivable) => acc + getReceivableNetValue(receivable),
         0
       );
       const totalFees = periodSalesReceivables.reduce(
@@ -765,6 +803,7 @@ export function useFinancialSummary(filters?: {
         (acc, expense) => acc + getExpensePaidValue(expense),
         0
       );
+      const totalPeriodEntries = totalGrossReceivable + totalPeriodManualCash;
 
       return {
         totalGrossReceivable,
@@ -776,6 +815,9 @@ export function useFinancialSummary(filters?: {
         balance: totalCaixa - totalPayable,
         receivablesCount: periodSalesReceivables.length,
         expensesCount: (monthExpenses?.length || 0) + (overdueExpenses?.length || 0),
+        totalPeriodEntries,
+        totalPeriodManualCash,
+        periodManualEntriesCount: periodManualReceivables.length,
         totalManualCash,
         totalSalesNet,
         totalPaidExpenses,
