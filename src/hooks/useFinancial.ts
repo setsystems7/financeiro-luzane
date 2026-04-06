@@ -789,7 +789,7 @@ export function useFinancialSummary(filters?: {
         (acc, receivable) => acc + Number(receivable.fee ?? 0),
         0
       );
-      const totalAllReceivables = realizedReceivables.reduce(
+      const totalAllReceivables = allReceivables.reduce(
         (acc, receivable) => acc + getReceivableNetValue(receivable),
         0
       );
