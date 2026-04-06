@@ -648,11 +648,12 @@ export function useFinancialSummary(filters?: {
         .select('amount, net_amount, description');
       if (allRecError) throw allRecError;
 
-      // All-time paid expenses to subtract from Valor do Caixa
+      // All-time effectively paid expenses to subtract from Valor do Caixa
       const { data: allPaidExpenses, error: paidExpErr } = await supabase
         .from('expenses')
-        .select('amount')
-        .eq('status', 'pago');
+        .select('amount, amount_paid, paid_date')
+        .eq('status', 'pago')
+        .not('paid_date', 'is', null);
       if (paidExpErr) throw paidExpErr;
 
       // Separate manual cash entries from sales receivables
@@ -697,17 +698,18 @@ export function useFinancialSummary(filters?: {
       const { data: overdueExpenses, error: overdueErr } = await overdueQuery;
       if (overdueErr) throw overdueErr;
 
-      // Paid expenses in the period (for Saldo Previsto - only actually paid ones count)
+      // Expenses effectively paid inside the selected period use paid_date, not due_date
       let paidInPeriodQuery = supabase
         .from('expenses')
-        .select('amount')
-        .eq('status', 'pago');
+        .select('amount, amount_paid, paid_date')
+        .eq('status', 'pago')
+        .not('paid_date', 'is', null);
 
       if (periodStart) {
-        paidInPeriodQuery = paidInPeriodQuery.gte('due_date', periodStart);
+        paidInPeriodQuery = paidInPeriodQuery.gte('paid_date', periodStart);
       }
       if (periodEnd) {
-        paidInPeriodQuery = paidInPeriodQuery.lte('due_date', periodEnd);
+        paidInPeriodQuery = paidInPeriodQuery.lte('paid_date', periodEnd);
       }
 
       const { data: paidInPeriod, error: paidPeriodErr } = await paidInPeriodQuery;
@@ -716,12 +718,12 @@ export function useFinancialSummary(filters?: {
       const totalGrossReceivable = (receivables || []).reduce((acc, r) => acc + Number(r.amount), 0);
       const totalFees = (receivables || []).reduce((acc, r) => acc + Number(r.fee || 0), 0);
       const totalAllReceivables = (allReceivables || []).reduce((acc, r) => acc + Number(r.net_amount), 0);
-      const totalPaidExpenses = (allPaidExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalPaidExpenses = (allPaidExpenses || []).reduce((acc, e) => acc + Number(e.amount_paid ?? e.amount ?? 0), 0);
       const totalCaixa = totalAllReceivables - totalPaidExpenses;
       const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
       const totalPayable = totalMonthPayable + totalOverdue;
-      const totalPaidInPeriod = (paidInPeriod || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalPaidInPeriod = (paidInPeriod || []).reduce((acc, e) => acc + Number(e.amount_paid ?? e.amount ?? 0), 0);
 
       return {
         totalGrossReceivable,
