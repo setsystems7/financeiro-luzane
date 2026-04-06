@@ -66,6 +66,19 @@ export default function Financial() {
   }, []);
   const [startDate, setStartDate] = useState<string>(defaultStartDate);
   const [endDate, setEndDate] = useState<string>(defaultEndDate);
+  const periodLabel = useMemo(() => {
+    if (!startDate || !endDate) return 'Período';
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const sameMonth =
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth();
+
+    return sameMonth
+      ? format(start, 'MMMM', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())
+      : 'Período';
+  }, [startDate, endDate]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -322,10 +335,10 @@ export default function Financial() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           <div onClick={() => setKpiDetailType('entrada')} className="cursor-pointer h-full">
             <StatsCard
-              title="Entrada de Vendas"
+              title={`Entrada de Vendas - ${periodLabel}`}
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
               icon={<ArrowUpRight className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />}
-              description="Valor bruto com taxas"
+              description={periodLabel === 'Período' ? 'Valor bruto do período' : 'Valor bruto do mês'}
             />
           </div>
           <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer h-full">
@@ -333,25 +346,25 @@ export default function Financial() {
               title="Valor do Caixa"
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
               icon={<TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-500" />}
-              description="Valor que entra no caixa"
+              description="Saldo real sem filtro"
             />
           </div>
           <div onClick={() => setKpiDetailType('pagar')} className="cursor-pointer h-full">
             <StatsCard
-              title="Contas a Pagar"
+              title={`Contas a Pagar - ${periodLabel}`}
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalPayable || 0)}`}
               icon={<TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-red-500" />}
               description={
                 summaryLoading ? '' : 
                 summary?.totalOverdue && summary.totalOverdue > 0 
                   ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
-                  : `Despesas do período`
+                  : periodLabel === 'Período' ? 'Despesas do período' : 'Despesas do mês'
               }
             />
           </div>
           <div onClick={() => setKpiDetailType('saldo')} className="cursor-pointer h-full">
             <StatsCard
-              title={`Saldo Previsto - ${format(new Date(startDate), 'MMMM', { locale: ptBR }).replace(/^\w/, c => c.toUpperCase())}`}
+              title={`Saldo Previsto - ${periodLabel}`}
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
               icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
               variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
@@ -1289,6 +1302,7 @@ export default function Financial() {
           open={!!kpiDetailType}
           onOpenChange={(open) => { if (!open) setKpiDetailType(null); }}
           type={kpiDetailType}
+          periodLabel={periodLabel}
           summary={summary}
         />
       </main>

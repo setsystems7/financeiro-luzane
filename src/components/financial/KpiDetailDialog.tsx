@@ -8,6 +8,7 @@ interface KpiDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   type: 'entrada' | 'taxas' | 'caixa' | 'pagar' | 'saldo' | null;
+  periodLabel?: string;
   summary: {
     totalGrossReceivable: number;
     totalFees: number;
@@ -26,16 +27,18 @@ interface KpiDetailDialogProps {
   } | undefined;
 }
 
-export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetailDialogProps) {
+export function KpiDetailDialog({ open, onOpenChange, type, periodLabel, summary }: KpiDetailDialogProps) {
   if (!summary || !type) return null;
+
+  const periodSuffix = periodLabel ? ` - ${periodLabel}` : '';
 
   const configs: Record<string, { title: string; icon: React.ReactNode; items: { label: string; value: number; highlight?: boolean; negative?: boolean; info?: string }[] }> = {
     entrada: {
-      title: 'Entrada de Vendas — Detalhamento',
+      title: `Entrada de Vendas${periodSuffix} — Detalhamento`,
       icon: <ArrowUpRight className="w-5 h-5 text-blue-500" />,
       items: [
         { label: 'Valor bruto das vendas (com taxas)', value: summary.totalGrossReceivable, highlight: true },
-        { label: 'Quantidade de recebíveis no período', value: summary.receivablesCount, info: 'registros' },
+        { label: 'Quantidade de recebíveis de vendas no período', value: summary.receivablesCount, info: 'registros' },
         { label: 'Taxas de cartão inclusas', value: summary.totalFees, negative: true },
         { label: 'Valor líquido (sem taxas)', value: summary.totalGrossReceivable - summary.totalFees },
       ],
@@ -50,19 +53,19 @@ export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetail
       ],
     },
     caixa: {
-      title: 'Valor do Caixa — Detalhamento',
+      title: 'Valor do Caixa Real — Detalhamento',
       icon: <TrendingUp className="w-5 h-5 text-green-500" />,
       items: [
-        { label: 'Total líquido de vendas (histórico)', value: summary.totalSalesNet ?? 0 },
+        { label: 'Total líquido já recebido de vendas (histórico)', value: summary.totalSalesNet ?? 0 },
         ...(summary.totalManualCash && summary.totalManualCash > 0 ? [
-          { label: `Entradas manuais / empréstimos (${summary.manualEntriesCount ?? 0})`, value: summary.totalManualCash },
+          { label: `Entradas manuais / empréstimos realizados (${summary.manualEntriesCount ?? 0})`, value: summary.totalManualCash },
         ] : []),
         { label: '(-) Despesas pagas (histórico)', value: summary.totalPaidExpenses ?? 0, negative: true },
-        { label: 'Valor do Caixa atual', value: summary.totalReceivable, highlight: true },
+        { label: 'Valor do Caixa real atual', value: summary.totalReceivable, highlight: true },
       ],
     },
     pagar: {
-      title: 'Contas a Pagar — Detalhamento',
+      title: `Contas a Pagar${periodSuffix} — Detalhamento`,
       icon: <TrendingDown className="w-5 h-5 text-red-500" />,
       items: [
         { label: 'Despesas pendentes do mês atual', value: summary.totalMonthPayable },
@@ -72,10 +75,10 @@ export function KpiDetailDialog({ open, onOpenChange, type, summary }: KpiDetail
       ],
     },
     saldo: {
-      title: 'Saldo Previsto do Mês — Detalhamento',
+      title: `Saldo Previsto${periodSuffix} — Detalhamento`,
       icon: <Wallet className="w-5 h-5 text-pink-500" />,
       items: [
-        { label: 'Valor do Caixa atual', value: summary.totalReceivable },
+        { label: 'Valor do Caixa real atual', value: summary.totalReceivable },
         { label: '(-) Contas a pagar (mês + vencidas)', value: summary.totalPayable, negative: true },
         { label: 'Saldo previsto', value: summary.balance, highlight: true },
       ],
