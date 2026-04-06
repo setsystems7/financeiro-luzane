@@ -15,98 +15,107 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Verify authenticated user
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
     }
 
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getUser()
-    if (claimsError || !claimsData?.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+    const token = authHeader.replace('Bearer ', '')
+    const isServiceRole = token === serviceRoleKey
+
+    if (!isServiceRole) {
+      const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+      const { data: claimsData, error: claimsError } = await anonClient.auth.getUser()
+      if (claimsError || !claimsData?.user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders })
+      }
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
-    const { data: expenses, error: expError } = await adminClient
-      .from('expenses')
-      .select('id, description, amount, category, due_date, status, paid_date, interest_amount, amount_paid, is_recurring, recurrence_index, supplier_id')
-      .order('due_date', { ascending: true })
-    if (expError) throw expError
+    // Fetch ALL with pagination
+    async function fetchAll(table: string, select: string) {
+      let all: any[] = []; let from = 0; const ps = 1000;
+      while (true) {
+        const { data, error } = await adminClient.from(table).select(select).order('due_date', { ascending: true }).range(from, from + ps - 1)
+        if (error) throw error
+        if (!data || !data.length) break
+        all = all.concat(data)
+        if (data.length < ps) break
+        from += ps
+      }
+      return all
+    }
 
-    const { data: receivables, error: recError } = await adminClient
-      .from('receivables')
-      .select('id, description, amount, net_amount, fee, due_date, is_received, received_date, sale_id')
-      .order('due_date', { ascending: true })
-    if (recError) throw recError
-
-    const allReceivables = receivables || []
-    const allExpenses = expenses || []
+    const allReceivables = await fetchAll('receivables', 'id, description, amount, net_amount, fee, due_date, is_received, received_date, sale_id')
+    const allExpenses = await fetchAll('expenses', 'id, description, amount, category, due_date, status, paid_date, interest_amount, amount_paid, is_recurring, recurrence_index, supplier_id')
     
     const totalAllReceivablesAmount = allReceivables.reduce((s, r) => s + Number(r.amount || 0), 0)
     const totalAllReceivablesNet = allReceivables.reduce((s, r) => s + Number(r.net_amount || 0), 0)
-    
+    const totalFees = allReceivables.reduce((s, r) => s + Number(r.fee || 0), 0)
+
+    const receivedReceivables = allReceivables.filter(r => r.is_received === true || r.received_date)
+    const notReceived = allReceivables.filter(r => !r.is_received && !r.received_date)
+    const totalReceivedNet = receivedReceivables.reduce((s, r) => s + Number(r.net_amount || 0), 0)
+    const totalNotReceivedNet = notReceived.reduce((s, r) => s + Number(r.net_amount || 0), 0)
+
+    const manualEntries = allReceivables.filter(r => r.description?.includes('[Empréstimo]') || r.description?.includes('[Entrada Manual]'))
+    const salesRecv = allReceivables.filter(r => !r.description?.includes('[Empréstimo]') && !r.description?.includes('[Entrada Manual]'))
+
     const paidExpenses = allExpenses.filter(e => e.status === 'pago')
     const overdueExpenses = allExpenses.filter(e => e.status === 'vencido')
     const pendingExpenses = allExpenses.filter(e => e.status === 'pendente')
+    const effectivelyPaid = allExpenses.filter(e => e.paid_date || e.status === 'pago')
 
-    const totalPaidExpensesAmount = paidExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
-    const totalPaidWithInterest = paidExpenses.reduce((s, e) => s + Number(e.amount_paid || e.amount || 0), 0)
-    const totalOverdueAmount = overdueExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
-    const totalPendingAmount = pendingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const totalPaidAmount = paidExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const totalPaidAmountPaid = paidExpenses.reduce((s, e) => s + Number(e.amount_paid || e.amount || 0), 0)
+    const totalOverdue = overdueExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const totalPending = pendingExpenses.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const effectivelyPaidAmount = effectivelyPaid.reduce((s, e) => s + Number(e.amount || 0), 0)
+    const effectivelyPaidAmountPaid = effectivelyPaid.reduce((s, e) => s + Number(e.amount_paid || e.amount || 0), 0)
 
-    const manualEntries = allReceivables.filter(r => 
-      r.description?.includes('[Empréstimo]') || r.description?.includes('[Entrada Manual]')
-    )
-    const salesReceivables = allReceivables.filter(r => 
-      !r.description?.includes('[Empréstimo]') && !r.description?.includes('[Entrada Manual]')
-    )
-
-    const totalFees = allReceivables.reduce((s, r) => s + Number(r.fee || 0), 0)
-
-    const caixaUsingAmount = totalAllReceivablesAmount - totalPaidExpensesAmount
-    const caixaUsingNet = totalAllReceivablesNet - totalPaidExpensesAmount
+    const pagoSemDate = allExpenses.filter(e => e.status === 'pago' && !e.paid_date)
+    const dateSemPago = allExpenses.filter(e => e.paid_date && e.status !== 'pago')
+    const diffAmounts = effectivelyPaid.filter(e => e.amount_paid && Math.abs(Number(e.amount_paid) - Number(e.amount)) > 0.01)
 
     const report = {
       generated_at: new Date().toISOString(),
-      kpi_comparison: {
-        'Valor do Caixa (amount bruto)': caixaUsingAmount,
-        'Valor do Caixa (net_amount)': caixaUsingNet,
-        'Diferença (amount - net)': caixaUsingAmount - caixaUsingNet,
-        'Total Taxas': totalFees,
+      receivables: {
+        total_registros: allReceivables.length,
+        total_bruto: totalAllReceivablesAmount,
+        total_liquido: totalAllReceivablesNet,
+        total_taxas: totalFees,
+        recebidos: { count: receivedReceivables.length, total_net: totalReceivedNet },
+        nao_recebidos: { count: notReceived.length, total_net: totalNotReceivedNet },
+        manuais: { count: manualEntries.length, total_amount: manualEntries.reduce((s, r) => s + Number(r.amount || 0), 0), total_net: manualEntries.reduce((s, r) => s + Number(r.net_amount || 0), 0) },
+        vendas: { count: salesRecv.length, total_amount: salesRecv.reduce((s, r) => s + Number(r.amount || 0), 0), total_net: salesRecv.reduce((s, r) => s + Number(r.net_amount || 0), 0) },
       },
-      receivables_totals: {
-        count: allReceivables.length,
-        total_amount_bruto: totalAllReceivablesAmount,
-        total_net_amount: totalAllReceivablesNet,
-        manual_entries_count: manualEntries.length,
-        manual_entries_amount: manualEntries.reduce((s, r) => s + Number(r.amount || 0), 0),
-        sales_count: salesReceivables.length,
-        sales_amount: salesReceivables.reduce((s, r) => s + Number(r.amount || 0), 0),
+      expenses: {
+        por_status: {
+          pago: { count: paidExpenses.length, total_amount: totalPaidAmount, total_amount_paid: totalPaidAmountPaid },
+          vencido: { count: overdueExpenses.length, total_amount: totalOverdue },
+          pendente: { count: pendingExpenses.length, total_amount: totalPending },
+        },
+        efetivamente_pagas: { count: effectivelyPaid.length, total_amount: effectivelyPaidAmount, total_amount_paid: effectivelyPaidAmountPaid },
+        total_geral: totalPaidAmount + totalOverdue + totalPending,
       },
-      expenses_totals: {
-        paid: { count: paidExpenses.length, total_amount: totalPaidExpensesAmount, total_paid_with_interest: totalPaidWithInterest },
-        overdue: { count: overdueExpenses.length, total_amount: totalOverdueAmount },
-        pending: { count: pendingExpenses.length, total_amount: totalPendingAmount },
-        all_total: totalPaidExpensesAmount + totalOverdueAmount + totalPendingAmount,
+      inconsistencias: {
+        pago_sem_paid_date: { count: pagoSemDate.length, total: pagoSemDate.reduce((s, e) => s + Number(e.amount || 0), 0), items: pagoSemDate.map(e => ({ desc: e.description, amount: Number(e.amount) })) },
+        paid_date_sem_status_pago: { count: dateSemPago.length, items: dateSemPago.map(e => ({ desc: e.description, amount: Number(e.amount), status: e.status })) },
+        amount_paid_diff: { count: diffAmounts.length, total_diff: diffAmounts.reduce((s, e) => s + (Number(e.amount_paid) - Number(e.amount)), 0), items: diffAmounts.map(e => ({ desc: e.description, amount: Number(e.amount), paid: Number(e.amount_paid), diff: Number(e.amount_paid) - Number(e.amount) })) },
       },
-      detail_paid_expenses: paidExpenses.map(e => ({
-        description: e.description,
-        amount: Number(e.amount),
-        interest: Number(e.interest_amount || 0),
-        amount_paid: Number(e.amount_paid || e.amount),
-        category: e.category,
-        due_date: e.due_date,
-      })),
-      detail_overdue_expenses: overdueExpenses.map(e => ({
-        description: e.description,
-        amount: Number(e.amount),
-        category: e.category,
-        due_date: e.due_date,
-      })),
+      caixa: {
+        recebidos_liquido: totalReceivedNet,
+        pagas_amount_paid: effectivelyPaidAmountPaid,
+        pagas_amount: effectivelyPaidAmount,
+        caixa_com_amount_paid: totalReceivedNet - effectivelyPaidAmountPaid,
+        caixa_com_amount: totalReceivedNet - effectivelyPaidAmount,
+        meta: 1837.01,
+        diff_com_amount_paid: (totalReceivedNet - effectivelyPaidAmountPaid) - 1837.01,
+        diff_com_amount: (totalReceivedNet - effectivelyPaidAmount) - 1837.01,
+      },
     }
 
     return new Response(JSON.stringify(report), {
