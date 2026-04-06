@@ -718,6 +718,7 @@ export function useFinancialSummary(filters?: {
       );
 
       // All-time receivables for Valor do Caixa (independent of period)
+      // Uses ALL receivables net_amount — not filtered by is_received
       const allReceivables = await fetchAllRows<{
         amount: number | null;
         net_amount: number | null;
@@ -726,7 +727,7 @@ export function useFinancialSummary(filters?: {
         received_date: string | null;
       }>('receivables', 'amount, net_amount, description, is_received, received_date');
 
-      // All-time effectively paid expenses to subtract from Valor do Caixa
+      // All-time expenses for Valor do Caixa and payables
       const allExpenses = await fetchAllRows<{
         amount: number | null;
         amount_paid: number | null;
@@ -735,14 +736,15 @@ export function useFinancialSummary(filters?: {
         due_date: string;
       }>('expenses', 'amount, amount_paid, status, paid_date, due_date');
 
-      const allPaidExpenses = allExpenses.filter(isEffectivelyPaid);
+      // Only expenses with status='pago' count as paid for Caixa
+      // (not isEffectivelyPaid which could include vencido with paid_date)
+      const allPaidExpenses = allExpenses.filter(e => e.status === 'pago');
 
-      // Valor do Caixa uses only amounts that were effectively received
-      const realizedReceivables = allReceivables.filter(isEffectivelyReceived);
-      const manualEntries = realizedReceivables.filter((receivable) =>
+      // Valor do Caixa uses ALL receivables (not just effectively received)
+      const manualEntries = allReceivables.filter((receivable) =>
         isManualReceivable(receivable.description)
       );
-      const salesReceivables = realizedReceivables.filter((receivable) =>
+      const salesReceivables = allReceivables.filter((receivable) =>
         !isManualReceivable(receivable.description)
       );
       const totalManualCash = manualEntries.reduce(
