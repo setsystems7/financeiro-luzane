@@ -19,6 +19,9 @@ interface KpiDetailDialogProps {
     balance: number;
     receivablesCount: number;
     expensesCount: number;
+    totalPeriodEntries?: number;
+    totalPeriodManualCash?: number;
+    periodManualEntriesCount?: number;
     totalManualCash?: number;
     totalSalesNet?: number;
     totalPaidExpenses?: number;
@@ -34,13 +37,17 @@ export function KpiDetailDialog({ open, onOpenChange, type, periodLabel, summary
 
   const configs: Record<string, { title: string; icon: React.ReactNode; items: { label: string; value: number; highlight?: boolean; negative?: boolean; info?: string }[] }> = {
     entrada: {
-      title: `Entrada de Vendas${periodSuffix} — Detalhamento`,
+      title: `Entradas${periodSuffix} — Detalhamento`,
       icon: <ArrowUpRight className="w-5 h-5 text-blue-500" />,
       items: [
-        { label: 'Valor bruto das vendas (com taxas)', value: summary.totalGrossReceivable, highlight: true },
+        { label: 'Valor bruto das vendas no período', value: summary.totalGrossReceivable },
+        ...(summary.totalPeriodManualCash && summary.totalPeriodManualCash > 0 ? [
+          { label: `Entradas manuais / empréstimos no período (${summary.periodManualEntriesCount ?? 0})`, value: summary.totalPeriodManualCash },
+        ] : []),
         { label: 'Quantidade de recebíveis de vendas no período', value: summary.receivablesCount, info: 'registros' },
         { label: 'Taxas de cartão inclusas', value: summary.totalFees, negative: true },
         { label: 'Valor líquido (sem taxas)', value: summary.totalGrossReceivable - summary.totalFees },
+        { label: 'Total de entradas no período', value: summary.totalPeriodEntries ?? summary.totalGrossReceivable, highlight: true },
       ],
     },
     taxas: {

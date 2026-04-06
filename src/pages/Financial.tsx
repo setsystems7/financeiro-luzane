@@ -67,7 +67,7 @@ export default function Financial() {
   const [startDate, setStartDate] = useState<string>(defaultStartDate);
   const [endDate, setEndDate] = useState<string>(defaultEndDate);
   const periodLabel = useMemo(() => {
-    if (!startDate || !endDate) return 'Período';
+    if (!startDate || !endDate) return 'Período selecionado';
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -76,8 +76,8 @@ export default function Financial() {
       start.getMonth() === end.getMonth();
 
     return sameMonth
-      ? format(start, 'MMMM', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())
-      : 'Período';
+      ? format(start, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())
+      : 'Período selecionado';
   }, [startDate, endDate]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
@@ -335,10 +335,10 @@ export default function Financial() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           <div onClick={() => setKpiDetailType('entrada')} className="cursor-pointer h-full">
             <StatsCard
-              title={`Entrada de Vendas - ${periodLabel}`}
-              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalGrossReceivable || 0)}`}
+              title={`Entradas - ${periodLabel}`}
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalPeriodEntries || 0)}`}
               icon={<ArrowUpRight className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />}
-              description={periodLabel === 'Período' ? 'Valor bruto do período' : 'Valor bruto do mês'}
+              description={periodLabel === 'Período selecionado' ? 'Vendas + entradas manuais do período' : `Vendas + entradas manuais de ${periodLabel}`}
             />
           </div>
           <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer h-full">
@@ -358,7 +358,7 @@ export default function Financial() {
                 summaryLoading ? '' : 
                 summary?.totalOverdue && summary.totalOverdue > 0 
                   ? `Mês: R$ ${formatCurrency(summary.totalMonthPayable || 0)} | Atraso: R$ ${formatCurrency(summary.totalOverdue)}`
-                  : periodLabel === 'Período' ? 'Despesas do período' : 'Despesas do mês'
+                  : periodLabel === 'Período selecionado' ? 'Despesas do período' : `Despesas de ${periodLabel}`
               }
             />
           </div>
@@ -368,7 +368,7 @@ export default function Financial() {
               value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.balance || 0)}`}
               icon={<Wallet className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />}
               variant={(summary?.balance || 0) >= 0 ? 'pink' : 'default'}
-              description="Caixa - Contas a Pagar"
+              description={periodLabel === 'Período selecionado' ? 'Caixa - contas a pagar do período' : `Caixa - contas de ${periodLabel}`}
             />
           </div>
         </div>
