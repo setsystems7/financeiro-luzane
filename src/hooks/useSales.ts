@@ -38,6 +38,46 @@ export interface CreateSaleData {
   payments?: PaymentEntry[];
 }
 
+export interface RecentSale {
+  id: string;
+  sale_number: number | null;
+  created_at: string;
+  total: number | null;
+  discount: number | null;
+  final_total: number | null;
+  net_amount: number | null;
+  payment_method: string | null;
+  card_brand: string | null;
+  installments: number | null;
+  card_fee_percent: number | null;
+  card_fee_amount: number | null;
+  status: string | null;
+  sale_items: {
+    product_name: string;
+    size: string | null;
+    quantity: number;
+    unit_price: number;
+    total: number;
+  }[];
+}
+
+export function useRecentSales(limit = 10) {
+  return useQuery({
+    queryKey: ['sales', 'recent', limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, sale_number, created_at, total, discount, final_total, net_amount, payment_method, card_brand, installments, card_fee_percent, card_fee_amount, status, sale_items(product_name, size, quantity, unit_price, total)')
+        .eq('status', 'concluida')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data || []) as RecentSale[];
+    },
+    staleTime: 0,
+  });
+}
+
 export function useSales() {
   return useQuery({
     queryKey: ['sales'],
@@ -360,26 +400,6 @@ export function useCreateSale() {
     onError: (error: any) => {
       console.error('Error creating sale:', error);
       toast.error('Não foi possível finalizar a venda. Verifique os dados e tente novamente.');
-    },
-  });
-}
-
-export function useRecentSales(limit: number = 5) {
-  return useQuery({
-    queryKey: ['sales', 'recent', limit],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          sale_items(product_name)
-        `)
-        .eq('status', 'concluida')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data;
     },
   });
 }

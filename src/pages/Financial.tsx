@@ -5,6 +5,7 @@ import { type SupportSection } from '@/components/layout/SupportButton';
 import { Wallet as WalletIcon, Receipt as ReceiptIcon, CreditCard as CreditCardIcon, Filter as FilterIcon, Upload as UploadIcon, HelpCircle, Calendar as CalendarSupportIcon, DollarSign as DollarSupportIcon, FileSpreadsheet as FileIcon, Landmark } from 'lucide-react';
 import { InsertCashDialog } from '@/components/financial/InsertCashDialog';
 import { KpiDetailDialog } from '@/components/financial/KpiDetailDialog';
+import { ExpensePaymentHistoryDialog } from '@/components/financial/ExpensePaymentHistoryDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ import { ExpenseCategoryDialog } from '@/components/financial/ExpenseCategoryDia
 import { formatCurrency, cn } from '@/lib/utils';
 import {
   Wallet, TrendingUp, TrendingDown, Receipt, CreditCard, Plus, Check,
-  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2, Pencil, Trash2
+  Filter, Loader2, Search, ChevronDown, ChevronUp, Percent, ArrowUpRight, Upload, Repeat, Undo2, Pencil, Trash2, History
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
@@ -35,6 +36,7 @@ import {
   useMarkReceivableAsReceived,
   useCreateExpense,
   useFinancialRealtime,
+  useMarkOverdueExpenses,
   useUpdateExpenseDueDate,
   useUpdateExpenseCategory,
   useUpdateExpenseDescription,
@@ -48,6 +50,7 @@ import { useExpenseCategories } from '@/hooks/useExpenseCategories';
 import { useCardSales, useCancelSale } from '@/hooks/useSales';
 import { useSuppliersList } from '@/hooks/useSuppliers';
 import { useForm } from 'react-hook-form';
+import { useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
 export default function Financial() {
@@ -107,6 +110,12 @@ export default function Financial() {
 
   // Edit manual entry state
   const [editingReceivable, setEditingReceivable] = useState<{ id: string; amount: string; description: string; notes: string } | null>(null);
+
+  // Payment history dialog
+  const [historyExpense, setHistoryExpense] = useState<{ id: string; description: string; amount: number; amount_paid: number } | null>(null);
+
+  // FIX 13: toggle between filtering receivables by due_date vs sale date
+  const [receivableDateMode, setReceivableDateMode] = useState<'due_date' | 'sale_date'>('due_date');
 
   const financialSupportSections: SupportSection[] = [
     {
@@ -202,10 +211,12 @@ export default function Financial() {
     startDate: startDate ? new Date(startDate) : undefined,
     endDate: endDate ? new Date(endDate) : undefined,
   });
+  // FIX 13: in sale_date mode skip the DB date filter and apply it in JS below
   const { data: receivables = [], isLoading: receivablesLoading } = useReceivables({
     status: receivableStatus,
-    startDate: startDate ? new Date(startDate) : undefined,
-    endDate: endDate ? new Date(endDate) : undefined,
+    startDate: receivableDateMode === 'due_date' ? (startDate ? new Date(startDate) : undefined) : undefined,
+    endDate: receivableDateMode === 'due_date' ? (endDate ? new Date(endDate) : undefined) : undefined,
+    skipDateFilter: receivableDateMode === 'sale_date',
   });
   const { data: expenses = [], isLoading: expensesLoading } = useExpenses({
     status: expenseStatus,
@@ -231,6 +242,15 @@ export default function Financial() {
   const deleteReceivable = useDeleteReceivable();
   const updateReceivable = useUpdateReceivable();
 
+  // FIX 3: mark overdue expenses once on mount (not inside queryFn)
+  const markOverdue = useMarkOverdueExpenses();
+  const markOverdueFn = useCallback(() => { markOverdue.mutate(); }, []); // eslint-disable-line
+  useEffect(() => { markOverdueFn(); }, [markOverdueFn]);
+
+  // FIX 6: reset pagination when filters change
+  useEffect(() => { setExpensePage(1); }, [searchTerm, expenseStatus, startDate, endDate]);
+  useEffect(() => { setReceivablePage(1); }, [searchTerm, receivableStatus, startDate, endDate, receivableDateMode]);
+
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: {
       description: '',
@@ -246,9 +266,23 @@ export default function Financial() {
 
   const isRecurring = watch('is_recurring');
 
-  const filteredReceivables = receivables.filter(r =>
-    r.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReceivables = receivables.filter(r => {
+    if (!r.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    // FIX 13: filter by sale creation date in sale_date mode
+    if (receivableDateMode === 'sale_date') {
+      if (r.sale_id && r.sales?.created_at) {
+        const saleDate = r.sales.created_at.split('T')[0];
+        if (startDate && saleDate < startDate) return false;
+        if (endDate && saleDate > endDate) return false;
+      }
+      // manual entries: keep due_date filter
+      if (!r.sale_id) {
+        if (startDate && r.due_date < startDate) return false;
+        if (endDate && r.due_date > endDate) return false;
+      }
+    }
+    return true;
+  });
 
   const filteredExpenses = expenses.filter(e =>
     e.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -283,9 +317,11 @@ export default function Financial() {
     let amount = 0, interest = 0, paid = 0;
     filteredExpenses.forEach(e => {
       const val = Number(e.amount || 0);
+      const amtPaid = Number(e.amount_paid || 0);
       amount += val;
       interest += Number(e.interest_amount || 0);
-      paid += Number(e.amount_paid || (e.status === 'pago' ? e.amount : 0));
+      // FIX 7: use amount_paid if set, otherwise fall back to full amount for status='pago'
+      paid += amtPaid > 0 ? amtPaid : (e.status === 'pago' ? val : 0);
       if (e.status === 'pago') byStatus.pago += val;
       else if (e.status === 'vencido') byStatus.vencido += val;
       else byStatus.pendente += val;
@@ -326,6 +362,9 @@ export default function Financial() {
     setEndDate(defaultEndDate);
     setSearchTerm('');
     setExpenseStatus('all');
+    // FIX 4: also reset receivables status and date mode
+    setReceivableStatus('all');
+    setReceivableDateMode('due_date');
   };
 
   return (
@@ -344,7 +383,7 @@ export default function Financial() {
           <div onClick={() => setKpiDetailType('caixa')} className="cursor-pointer h-full">
             <StatsCard
               title="Valor do Caixa"
-              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalReceivable || 0)}`}
+              value={summaryLoading ? '...' : `R$ ${formatCurrency(summary?.totalCaixa || 0)}`}
               icon={<TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-500" />}
               description="Saldo real sem filtro"
             />
@@ -460,16 +499,28 @@ export default function Financial() {
             <Card variant="elevated">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 md:p-6">
                 <CardTitle className="text-lg md:text-2xl">Contas a Receber</CardTitle>
-                <Select value={receivableStatus} onValueChange={(v: any) => setReceivableStatus(v)}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="pending">Pendentes</SelectItem>
-                    <SelectItem value="received">Recebidos</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* FIX 13: toggle between filtering by due_date and sale date */}
+                  <Select value={receivableDateMode} onValueChange={(v: any) => setReceivableDateMode(v)}>
+                    <SelectTrigger className="w-full sm:w-44 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="due_date">Filtrar por vencimento</SelectItem>
+                      <SelectItem value="sale_date">Filtrar por data da venda</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={receivableStatus} onValueChange={(v: any) => setReceivableStatus(v)}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="pending">Pendentes</SelectItem>
+                      <SelectItem value="received">Recebidos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="p-2 md:p-6 pt-0">
                 {receivablesLoading ? (
@@ -927,9 +978,9 @@ export default function Financial() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span>{format(new Date(item.due_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}</span>
-                              {item.status !== 'pago' && (
-                                <Popover 
-                                  open={editingExpenseId === item.id} 
+                              {(item.status !== 'pago' || (item.amount_paid !== null && Number(item.amount_paid) < item.amount)) && (
+                                <Popover
+                                  open={editingExpenseId === item.id}
                                   onOpenChange={(open) => {
                                     if (open) {
                                       setEditingExpenseId(item.id);
@@ -992,38 +1043,73 @@ export default function Financial() {
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <Badge
-                                variant={
-                                  item.status === 'pago' ? 'success' :
-                                  item.status === 'vencido' ? 'destructive' :
-                                  'warning'
-                                }
-                              >
-                                {item.status === 'pago' ? 'Pago' :
-                                 item.status === 'vencido' ? 'Vencido' :
-                                 'Pendente'}
-                              </Badge>
-                              {isOverdueFromPast && (
-                                <span className="text-[10px] text-destructive font-medium">Mês anterior</span>
-                              )}
-                            </div>
+                            {/* FIX 1: show Parcial badge when amount_paid > 0 but < amount */}
+                            {(() => {
+                              const alreadyPaid = Number(item.amount_paid || 0);
+                              const isPartial = alreadyPaid > 0 && alreadyPaid < item.amount && item.status !== 'pago';
+                              const isHistoricPartial = item.status === 'pago' && item.amount_paid !== null && Number(item.amount_paid) < item.amount;
+                              return (
+                                <div className="flex flex-col items-center gap-1">
+                                  <Badge
+                                    variant={
+                                      item.status === 'pago' && !isHistoricPartial ? 'success' :
+                                      item.status === 'vencido' ? 'destructive' :
+                                      isPartial ? 'warning' :
+                                      'warning'
+                                    }
+                                    className={isPartial || isHistoricPartial ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300' : ''}
+                                  >
+                                    {isHistoricPartial ? 'Parcial*' :
+                                     isPartial ? `Parcial (R$ ${(item.amount - alreadyPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})` :
+                                     item.status === 'pago' ? 'Pago' :
+                                     item.status === 'vencido' ? 'Vencido' :
+                                     'Pendente'}
+                                  </Badge>
+                                  {isOverdueFromPast && (
+                                    <span className="text-[10px] text-destructive font-medium">Mês anterior</span>
+                                  )}
+                                  {(isPartial || isHistoricPartial) && alreadyPaid > 0 && (
+                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Pago: R$ {alreadyPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1">
-                              {item.status !== 'pago' && (
+                              {/* Show Pagar for unpaid AND for historical "pago but partial" cases */}
+                              {(item.status !== 'pago' || (item.amount_paid !== null && Number(item.amount_paid) < item.amount)) && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
                                     setPayingExpense(item);
                                     setPaymentInterest('0');
-                                    setPaymentAmountPaid(String(item.amount));
+                                    const alreadyPaid = Number(item.amount_paid || 0);
+                                    const remaining = Math.max(0, item.amount - alreadyPaid);
+                                    setPaymentAmountPaid(String(remaining.toFixed(2)));
                                   }}
                                   disabled={markExpenseAsPaid.isPending}
                                 >
                                   <Check className="w-4 h-4 mr-1" />
                                   Pagar
+                                </Button>
+                              )}
+                              {/* History button — shows for any expense that has been paid (fully or partially) */}
+                              {(item.status === 'pago' || (Number(item.amount_paid || 0) > 0)) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  title="Ver histórico de pagamentos"
+                                  onClick={() => setHistoryExpense({
+                                    id: item.id,
+                                    description: item.description,
+                                    amount: item.amount,
+                                    amount_paid: Number(item.amount_paid || 0),
+                                  })}
+                                >
+                                  <History className="w-4 h-4" />
                                 </Button>
                               )}
                               <Button
@@ -1097,83 +1183,165 @@ export default function Financial() {
 
         </Tabs>
 
-        {/* Payment Dialog */}
+        {/* Payment Dialog — FIX 1: partial payment support */}
         <Dialog open={!!payingExpense} onOpenChange={(open) => { if (!open) setPayingExpense(null); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Registrar Pagamento</DialogTitle>
             </DialogHeader>
-            {payingExpense && (
-              <div className="space-y-4">
-                <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                  <p className="text-sm font-medium">{payingExpense.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Vencimento: {format(new Date(payingExpense.due_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Valor da Parcela</Label>
-                    <Input
-                      value={`R$ ${formatCurrency(payingExpense.amount)}`}
-                      disabled
-                      className="bg-muted"
-                    />
+            {payingExpense && (() => {
+              const alreadyPaid = Number(payingExpense.amount_paid || 0);
+              const remaining = Math.max(0, payingExpense.amount - alreadyPaid);
+              const nowPaying = parseFloat(paymentAmountPaid) || 0;
+              const interest = parseFloat(paymentInterest) || 0;
+              const willBeFullyPaid = (alreadyPaid + nowPaying) >= payingExpense.amount;
+
+              return (
+                <div className="space-y-4">
+                  <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                    <p className="text-sm font-medium">{payingExpense.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Vencimento: {format(new Date(payingExpense.due_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                    </p>
+                    <div className="flex gap-4 pt-1">
+                      <span className="text-xs">Valor original: <strong>R$ {formatCurrency(payingExpense.amount)}</strong></span>
+                      {alreadyPaid > 0 && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400">
+                          Já pago: <strong>R$ {formatCurrency(alreadyPaid)}</strong>
+                        </span>
+                      )}
+                    </div>
+                    {alreadyPaid > 0 && (
+                      <p className="text-xs font-semibold text-destructive">
+                        Saldo restante: R$ {formatCurrency(remaining)}
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <Label>Juros / Multa</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0,00"
-                      value={paymentInterest}
-                      onChange={(e) => {
-                        setPaymentInterest(e.target.value);
-                        const interest = parseFloat(e.target.value) || 0;
-                        setPaymentAmountPaid(String((payingExpense.amount + interest).toFixed(2)));
+
+                  {/* Quick action buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                      onClick={() => {
+                        setPaymentInterest('0');
+                        setPaymentAmountPaid(String(remaining.toFixed(2)));
                       }}
-                      autoFocus
-                    />
+                    >
+                      Pagar tudo (R$ {formatCurrency(remaining)})
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-amber-500 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                      onClick={() => {
+                        setPaymentInterest('0');
+                        setPaymentAmountPaid('');
+                      }}
+                    >
+                      Pagar parcial
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Juros / Multa</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        value={paymentInterest}
+                        onChange={(e) => {
+                          setPaymentInterest(e.target.value);
+                          const newInterest = parseFloat(e.target.value) || 0;
+                          setPaymentAmountPaid(String((remaining + newInterest).toFixed(2)));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label>Valor a pagar agora</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0,00"
+                        value={paymentAmountPaid}
+                        onChange={(e) => setPaymentAmountPaid(e.target.value)}
+                        className="text-lg font-bold"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg border text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Saldo restante</span>
+                      <span>R$ {formatCurrency(remaining)}</span>
+                    </div>
+                    {interest > 0 && (
+                      <div className="flex justify-between text-destructive">
+                        <span>Juros / Multa</span>
+                        <span>+ R$ {formatCurrency(interest)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+                      <span>Total neste pagamento</span>
+                      <span>R$ {formatCurrency(nowPaying)}</span>
+                    </div>
+                    <div className={`flex justify-between text-xs mt-1 ${willBeFullyPaid ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      <span>{willBeFullyPaid ? '✓ Despesa será quitada' : '⚠ Pagamento parcial — despesa continuará pendente'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setPayingExpense(null)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="pink"
+                      disabled={markExpenseAsPaid.isPending || nowPaying <= 0}
+                      onClick={() => {
+                        // FIX 10: validate minimum amount
+                        if (nowPaying <= 0) {
+                          toast.error('Informe um valor a pagar maior que zero');
+                          return;
+                        }
+                        markExpenseAsPaid.mutate(
+                          {
+                            id: payingExpense.id,
+                            interest_amount: interest,
+                            amount_paid: nowPaying,
+                            // FIX 1: pass accumulated values so hook determines partial vs full
+                            current_amount_paid: alreadyPaid,
+                            expense_amount: payingExpense.amount,
+                          },
+                          { onSuccess: () => setPayingExpense(null) }
+                        );
+                      }}
+                    >
+                      {markExpenseAsPaid.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {willBeFullyPaid ? 'Quitar Despesa' : 'Registrar Parcial'}
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <Label>Total Pago</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={paymentAmountPaid}
-                    onChange={(e) => setPaymentAmountPaid(e.target.value)}
-                    className="text-lg font-bold"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Parcela (R$ {formatCurrency(payingExpense.amount)}) + Juros (R$ {formatCurrency(parseFloat(paymentInterest) || 0)})
-                  </p>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setPayingExpense(null)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="pink"
-                    disabled={markExpenseAsPaid.isPending}
-                    onClick={() => {
-                      const interest = parseFloat(paymentInterest) || 0;
-                      const totalPaid = parseFloat(paymentAmountPaid) || payingExpense.amount;
-                      markExpenseAsPaid.mutate(
-                        { id: payingExpense.id, interest_amount: interest, amount_paid: totalPaid },
-                        { onSuccess: () => setPayingExpense(null) }
-                      );
-                    }}
-                  >
-                    {markExpenseAsPaid.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Confirmar Pagamento
-                  </Button>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </DialogContent>
         </Dialog>
+
+        {/* Expense Payment History Dialog */}
+        <ExpensePaymentHistoryDialog
+          open={!!historyExpense}
+          onOpenChange={(open) => { if (!open) setHistoryExpense(null); }}
+          expenseId={historyExpense?.id ?? null}
+          expenseDescription={historyExpense?.description ?? ''}
+          expenseAmount={historyExpense?.amount ?? 0}
+          totalPaid={historyExpense?.amount_paid ?? 0}
+        />
 
         {/* Import Financial Dialog */}
         <ImportFinancialDialog
@@ -1275,6 +1443,11 @@ export default function Financial() {
                 <Button onClick={() => {
                   if (editingReceivable) {
                     const amt = parseFloat(editingReceivable.amount);
+                    // FIX 14: validate amount > 0 before saving
+                    if (!amt || amt <= 0) {
+                      toast.error('Informe um valor maior que zero');
+                      return;
+                    }
                     updateReceivable.mutate({
                       id: editingReceivable.id,
                       data: {

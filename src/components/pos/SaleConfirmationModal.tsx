@@ -2,8 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle2, Printer } from 'lucide-react';
+import { CheckCircle2, Receipt } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface SaleConfirmationModalProps {
   open: boolean;
@@ -18,6 +20,9 @@ interface SaleConfirmationModalProps {
     installments?: number;
     feeAmount?: number;
     customerTotal?: number;
+    // optional historical fields
+    saleNumber?: number | null;
+    createdAt?: string | null;
   } | null;
 }
 
@@ -37,8 +42,21 @@ export function SaleConfirmationModal({ open, onClose, saleData }: SaleConfirmat
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-green-600">
-            <CheckCircle2 className="w-6 h-6" />
-            Venda Finalizada!
+            {saleData.createdAt ? (
+              <Receipt className="w-6 h-6" />
+            ) : (
+              <CheckCircle2 className="w-6 h-6" />
+            )}
+            {saleData.createdAt ? (
+              <span>
+                Comprovante {saleData.saleNumber ? `#${saleData.saleNumber}` : ''}
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  {format(new Date(saleData.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+              </span>
+            ) : (
+              'Venda Finalizada!'
+            )}
           </DialogTitle>
         </DialogHeader>
 

@@ -73,14 +73,45 @@ const isManualReceivable = (description?: string | null) =>
 const isEffectivelyReceived = (receivable: { is_received?: boolean | null; received_date?: string | null }) =>
   Boolean(receivable.received_date || receivable.is_received);
 
-const isEffectivelyPaid = (expense: { status?: string | null; paid_date?: string | null }) =>
-  Boolean(expense.paid_date || expense.status === 'pago');
+// FIX 12: renamed from totalReceivable to totalCaixa throughout summary
+// FIX 7 helpers: correctly determine if an expense is truly fully paid
+
+/** Expense is fully settled only when amount_paid >= amount (or old data with null amount_paid) */
+const isTrulyPaid = (expense: {
+  status?: string | null;
+  amount?: number | null;
+  amount_paid?: number | null;
+}) => {
+  if (expense.status !== 'pago') return false;
+  if (expense.amount_paid === null || expense.amount_paid === undefined) return true; // legacy data
+  return Number(expense.amount_paid) >= Number(expense.amount || 0);
+};
+
+/** How much has actually left the caixa for this expense */
+const getExpenseActualPayment = (expense: {
+  status?: string | null;
+  amount?: number | null;
+  amount_paid?: number | null;
+}) => {
+  if (expense.amount_paid !== null && expense.amount_paid !== undefined && Number(expense.amount_paid) > 0) {
+    return Number(expense.amount_paid);
+  }
+  if (expense.status === 'pago') return Number(expense.amount || 0);
+  return 0;
+};
+
+/** How much is still owed on this expense */
+const getRemainingBalance = (expense: {
+  status?: string | null;
+  amount?: number | null;
+  amount_paid?: number | null;
+}) => {
+  if (isTrulyPaid(expense)) return 0;
+  return Math.max(0, Number(expense.amount || 0) - Number(expense.amount_paid || 0));
+};
 
 const getReceivableNetValue = (receivable: { net_amount?: number | null; amount?: number | null }) =>
   Number(receivable.net_amount ?? receivable.amount ?? 0);
-
-const getExpensePaidValue = (expense: { amount_paid?: number | null; amount?: number | null }) =>
-  Number(expense.amount_paid ?? expense.amount ?? 0);
 
 async function fetchAllRows<T>(
   table: 'receivables' | 'expenses',
@@ -122,11 +153,7 @@ export function useFinancialRealtime() {
       .channel('financial-receivables-realtime')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'receivables'
-        },
+        { event: '*', schema: 'public', table: 'receivables' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['receivables'] });
           queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
@@ -138,11 +165,7 @@ export function useFinancialRealtime() {
       .channel('financial-expenses-realtime')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'expenses'
-        },
+        { event: '*', schema: 'public', table: 'expenses' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['expenses'] });
           queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
@@ -157,10 +180,35 @@ export function useFinancialRealtime() {
   }, [queryClient]);
 }
 
+// FIX 3: Separate mutation for marking overdue — never inside a queryFn
+export function useMarkOverdueExpenses() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('expenses')
+        .update({ status: 'vencido' })
+        .eq('status', 'pendente')
+        .lt('due_date', today);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
+    },
+  });
+}
+
 export function useReceivables(filters?: {
   status?: 'all' | 'pending' | 'received';
   startDate?: Date;
   endDate?: Date;
+  // FIX 13: allow caller to skip DB date filter and apply in JS instead (sale_date mode)
+  skipDateFilter?: boolean;
 }) {
   return useQuery({
     queryKey: ['receivables', filters],
@@ -170,18 +218,21 @@ export function useReceivables(filters?: {
         .select('*, sales(id, sale_number, created_at, total, discount, final_total, net_amount, card_brand, installments, card_fee_percent, card_fee_amount, payment_method, sale_items(id, product_name, size, quantity, unit_price, total))')
         .order('created_at', { ascending: false });
 
+      // FIX 5: filter covers both is_received and received_date
       if (filters?.status === 'pending') {
-        query = query.eq('is_received', false);
+        query = query.is('received_date', null).or('is_received.eq.false,is_received.is.null');
       } else if (filters?.status === 'received') {
-        query = query.eq('is_received', true);
+        query = query.or('is_received.eq.true,received_date.not.is.null');
       }
 
-      if (filters?.startDate) {
-        query = query.gte('due_date', filters.startDate.toISOString().split('T')[0]);
-      }
-
-      if (filters?.endDate) {
-        query = query.lte('due_date', filters.endDate.toISOString().split('T')[0]);
+      // FIX 13: only apply DB date filter in due_date mode
+      if (!filters?.skipDateFilter) {
+        if (filters?.startDate) {
+          query = query.gte('due_date', filters.startDate.toISOString().split('T')[0]);
+        }
+        if (filters?.endDate) {
+          query = query.lte('due_date', filters.endDate.toISOString().split('T')[0]);
+        }
       }
 
       const { data, error } = await query;
@@ -190,7 +241,7 @@ export function useReceivables(filters?: {
       return data as Receivable[];
     },
     staleTime: 0,
-    refetchInterval: 3000,
+    // FIX 8: realtime channel handles updates — no polling needed
   });
 }
 
@@ -202,16 +253,8 @@ export function useExpenses(filters?: {
   return useQuery({
     queryKey: ['expenses', filters],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // First, update any pendente expenses that are now overdue
-      await supabase
-        .from('expenses')
-        .update({ status: 'vencido' })
-        .eq('status', 'pendente')
-        .lt('due_date', today);
+      // FIX 3: UPDATE removed from queryFn — use useMarkOverdueExpenses mutation instead
 
-      // Fetch expenses within the period
       let query = supabase
         .from('expenses')
         .select('*, suppliers(name)')
@@ -232,8 +275,7 @@ export function useExpenses(filters?: {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Also fetch overdue (vencido) expenses from BEFORE the period
-      // so they always appear until paid
+      // Also fetch overdue expenses from before the period so they always appear until settled
       let overdueFromPast: Expense[] = [];
       if (filters?.startDate && (filters?.status === 'all' || filters?.status === 'vencido' || !filters?.status)) {
         const { data: overdueData, error: overdueErr } = await supabase
@@ -246,14 +288,33 @@ export function useExpenses(filters?: {
         overdueFromPast = (overdueData || []) as Expense[];
       }
 
-      // Merge: overdue from past first, then period expenses (avoid duplicates)
+      // FIX 1 (display): fetch partially-paid expenses from before the period so they
+      // continue to appear until fully settled — including historical "pago but partial" cases
+      let partialFromPast: Expense[] = [];
+      if (filters?.startDate && (filters?.status === 'all' || !filters?.status)) {
+        const { data: partialData, error: partialErr } = await supabase
+          .from('expenses')
+          .select('*, suppliers(name)')
+          .not('amount_paid', 'is', null)
+          .gt('amount_paid', 0)
+          .lt('due_date', filters.startDate.toISOString().split('T')[0])
+          .order('due_date', { ascending: true });
+        if (partialErr) throw partialErr;
+        // JS filter: only show expenses that still have a remaining balance
+        // This correctly handles historical data where status='pago' but amount_paid < amount
+        partialFromPast = ((partialData || []) as Expense[]).filter(e => getRemainingBalance(e) > 0);
+      }
+
       const periodIds = new Set((data || []).map((e: Expense) => e.id));
       const uniqueOverdue = overdueFromPast.filter(e => !periodIds.has(e.id));
-      
-      return [...uniqueOverdue, ...(data || [])] as Expense[];
+      const uniquePartial = partialFromPast.filter(
+        e => !periodIds.has(e.id) && !uniqueOverdue.find(o => o.id === e.id)
+      );
+
+      return [...uniqueOverdue, ...uniquePartial, ...(data || [])] as Expense[];
     },
     staleTime: 0,
-    refetchInterval: 30000,
+    // FIX 8: realtime channel handles updates — no polling
   });
 }
 
@@ -272,12 +333,15 @@ export function useCreateExpense() {
       is_recurring?: boolean;
       recurrence_months?: number;
     }) => {
-      const expenses: any[] = [];
       const baseDate = new Date(data.due_date);
 
-      // Create main expense
+      // FIX 9: include (1/N) suffix directly in INSERT — no separate UPDATE needed
+      const firstDescription = data.is_recurring && data.recurrence_months
+        ? `${data.description} (1/${data.recurrence_months})`
+        : data.description;
+
       const mainExpense = {
-        description: data.description,
+        description: firstDescription,
         amount: data.amount,
         category: data.category || null,
         due_date: data.due_date,
@@ -298,27 +362,21 @@ export function useCreateExpense() {
 
       if (mainError) throw mainError;
 
-      // If recurring, create additional expenses for remaining months
       if (data.is_recurring && data.recurrence_months && data.recurrence_months > 1) {
         const recurringExpenses = [];
         const originalDay = baseDate.getDate();
-        
+
         for (let i = 1; i < data.recurrence_months; i++) {
-          // Calculate future date keeping the same day of month
           const futureDate = new Date(baseDate);
           futureDate.setMonth(futureDate.getMonth() + i);
-          
-          // Handle months with fewer days (e.g., Jan 31 -> Feb 28)
-          // If the original day doesn't exist in target month, use last day of month
+
           const targetMonth = futureDate.getMonth();
           futureDate.setDate(originalDay);
-          
-          // If setting the date changed the month, we went past the end of month
-          // So go back to the last day of the intended month
+
           if (futureDate.getMonth() !== targetMonth) {
-            futureDate.setDate(0); // Goes to last day of previous month (which is our target)
+            futureDate.setDate(0);
           }
-          
+
           recurringExpenses.push({
             description: `${data.description} (${i + 1}/${data.recurrence_months})`,
             amount: data.amount,
@@ -342,12 +400,6 @@ export function useCreateExpense() {
 
           if (recurringError) throw recurringError;
         }
-
-        // Update the first expense to show it's part of recurrence
-        await supabase
-          .from('expenses')
-          .update({ description: `${data.description} (1/${data.recurrence_months})` })
-          .eq('id', createdMain.id);
       }
 
       return createdMain;
@@ -357,7 +409,7 @@ export function useCreateExpense() {
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
-      
+
       if (variables.is_recurring && variables.recurrence_months) {
         toast.success(`Despesa recorrente criada! ${variables.recurrence_months} parcelas cadastradas.`);
       } else {
@@ -370,29 +422,88 @@ export function useCreateExpense() {
   });
 }
 
+export interface ExpensePayment {
+  id: string;
+  expense_id: string;
+  amount: number;
+  interest_amount: number;
+  paid_date: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export function useExpensePayments(expenseId: string | null) {
+  return useQuery({
+    queryKey: ['expense-payments', expenseId],
+    queryFn: async () => {
+      if (!expenseId) return [];
+      const { data, error } = await (supabase as any)
+        .from('expense_payments')
+        .select('*')
+        .eq('expense_id', expenseId)
+        .order('paid_date', { ascending: false });
+      if (error) throw error;
+      return (data || []) as ExpensePayment[];
+    },
+    enabled: !!expenseId,
+  });
+}
+
+// FIX 1: useMarkExpenseAsPaid now handles partial payments correctly
 export function useMarkExpenseAsPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { id: string; interest_amount?: number; amount_paid?: number }) => {
+    mutationFn: async (data: {
+      id: string;
+      interest_amount?: number;
+      amount_paid?: number;         // amount being paid NOW (not accumulated)
+      current_amount_paid?: number; // amount already paid before this payment
+      expense_amount?: number;      // original expense amount to decide if fully paid
+    }) => {
+      const nowPaying = data.amount_paid || 0;
+      const newTotal = (data.current_amount_paid || 0) + nowPaying;
+      const isFullPayment = newTotal >= (data.expense_amount || 0);
+      const today = new Date().toISOString().split('T')[0];
+
+      const updateData: Record<string, unknown> = {
+        amount_paid: newTotal,
+        interest_amount: (data.current_amount_paid ? 0 : 0) + (data.interest_amount || 0),
+      };
+
+      if (isFullPayment) {
+        updateData.status = 'pago';
+        updateData.paid_date = today;
+      }
+
       const { error } = await supabase
         .from('expenses')
-        .update({
-          status: 'pago',
-          paid_date: new Date().toISOString().split('T')[0],
-          interest_amount: data.interest_amount || 0,
-          amount_paid: data.amount_paid || null,
-        })
+        .update(updateData)
         .eq('id', data.id);
 
       if (error) throw error;
+
+      // Record in payment history
+      const { error: histErr } = await (supabase as any)
+        .from('expense_payments')
+        .insert({
+          expense_id: data.id,
+          amount: nowPaying,
+          interest_amount: data.interest_amount || 0,
+          paid_date: today,
+        });
+      // Silently ignore if table doesn't exist yet (before migration is run)
+      if (histErr && !histErr.message?.includes('does not exist')) throw histErr;
+
+      return { isFullPayment };
     },
-    onSuccess: () => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['overdue-count'] });
-      toast.success('Despesa marcada como paga!');
+      queryClient.invalidateQueries({ queryKey: ['expense-payments', variables.id] });
+      toast.success(result.isFullPayment ? 'Despesa paga integralmente!' : 'Pagamento parcial registrado!');
     },
     onError: () => {
       toast.error('Erro ao atualizar despesa');
@@ -409,7 +520,6 @@ export function useUpdateExpenseDueDate() {
     { id: string; due_date: string },
     { previous: Array<[readonly unknown[], unknown]> }
   >({
-    // Otimista: troca na tela imediatamente, depois confirma com o banco.
     onMutate: async ({ id, due_date }: { id: string; due_date: string }) => {
       await queryClient.cancelQueries({ queryKey: ['expenses'] });
 
@@ -420,7 +530,6 @@ export function useUpdateExpenseDueDate() {
         queryKey: ['expenses'],
       }) as Array<[readonly unknown[], unknown]>;
 
-      // Atualiza todas as variações de queryKey que começam com ['expenses', ...]
       previous.forEach(([key, data]) => {
         if (!Array.isArray(data)) return;
         queryClient.setQueryData(
@@ -436,13 +545,10 @@ export function useUpdateExpenseDueDate() {
     mutationFn: async ({ id, due_date }: { id: string; due_date: string }) => {
       const today = new Date().toISOString().split('T')[0];
       const newStatus = due_date < today ? 'vencido' : 'pendente';
-      
+
       const { data, error } = await supabase
         .from('expenses')
-        .update({
-          due_date,
-          status: newStatus,
-        })
+        .update({ due_date, status: newStatus })
         .eq('id', id)
         .select()
         .single();
@@ -451,7 +557,6 @@ export function useUpdateExpenseDueDate() {
       return data;
     },
     onSuccess: (updated) => {
-      // Confirma o valor retornado do banco em todas as caches abertas.
       const queries = queryClient.getQueriesData({ queryKey: ['expenses'] });
       queries.forEach(([key, data]) => {
         if (!Array.isArray(data)) return;
@@ -469,11 +574,9 @@ export function useUpdateExpenseDueDate() {
       toast.success('Data de vencimento atualizada!');
     },
     onError: (error, _vars, ctx) => {
-      // Rollback do otimista
       if (ctx?.previous) {
         ctx.previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
       }
-
       console.error('Error updating due date:', error);
       toast.error('Erro ao atualizar vencimento');
     },
@@ -532,20 +635,16 @@ export function useUpdateExpenseDescription() {
 
 export function useCanDeleteRecurringExpense() {
   return async (expense: Expense): Promise<{ canDelete: boolean; reason?: string }> => {
-    // Non-recurring expenses can always be deleted
     if (!expense.is_recurring) {
       return { canDelete: true };
     }
 
-    // Check if this expense is already paid
     if (expense.status === 'pago') {
       return { canDelete: false, reason: 'Esta parcela já foi paga e não pode ser excluída.' };
     }
 
-    // For recurring expenses, check if any installment is paid
-    // Get all related expenses (same parent or same id as parent)
     const parentId = expense.parent_expense_id || expense.id;
-    
+
     const { data: relatedExpenses, error } = await supabase
       .from('expenses')
       .select('id, status')
@@ -557,11 +656,11 @@ export function useCanDeleteRecurringExpense() {
     }
 
     const hasPaidInstallment = relatedExpenses?.some(e => e.status === 'pago');
-    
+
     if (hasPaidInstallment) {
-      return { 
-        canDelete: false, 
-        reason: 'Não é possível excluir: existe pelo menos uma parcela paga neste lançamento recorrente.' 
+      return {
+        canDelete: false,
+        reason: 'Não é possível excluir: existe pelo menos uma parcela paga neste lançamento recorrente.',
       };
     }
 
@@ -686,39 +785,25 @@ export function useFinancialSummary(filters?: {
         description: string | null;
       }>('receivables', 'amount, fee, net_amount, is_received, received_date, due_date, description', (query) => {
         let nextQuery = query;
-
-        if (periodStart) {
-          nextQuery = nextQuery.gte('due_date', periodStart);
-        }
-        if (periodEnd) {
-          nextQuery = nextQuery.lte('due_date', periodEnd);
-        }
-
+        if (periodStart) nextQuery = nextQuery.gte('due_date', periodStart);
+        if (periodEnd) nextQuery = nextQuery.lte('due_date', periodEnd);
         return nextQuery.order('due_date', { ascending: true });
       });
 
       const filteredPeriodReceivables = receivables.filter((receivable) => {
-        if (filters?.receivableStatus === 'received') {
-          return isEffectivelyReceived(receivable);
-        }
-
-        if (filters?.receivableStatus === 'pending') {
-          return !isEffectivelyReceived(receivable);
-        }
-
+        if (filters?.receivableStatus === 'received') return isEffectivelyReceived(receivable);
+        if (filters?.receivableStatus === 'pending') return !isEffectivelyReceived(receivable);
         return true;
       });
 
       const periodSalesReceivables = filteredPeriodReceivables.filter(
         (receivable) => !isManualReceivable(receivable.description)
       );
-
       const periodManualReceivables = filteredPeriodReceivables.filter(
         (receivable) => isManualReceivable(receivable.description)
       );
 
-      // All-time receivables for Valor do Caixa (independent of period)
-      // Uses ALL receivables net_amount — not filtered by is_received
+      // All-time receivables for Valor do Caixa
       const allReceivables = await fetchAllRows<{
         amount: number | null;
         net_amount: number | null;
@@ -727,7 +812,7 @@ export function useFinancialSummary(filters?: {
         received_date: string | null;
       }>('receivables', 'amount, net_amount, description, is_received, received_date');
 
-      // All-time expenses for Valor do Caixa and payables
+      // All-time expenses for caixa calculations
       const allExpenses = await fetchAllRows<{
         amount: number | null;
         amount_paid: number | null;
@@ -736,40 +821,32 @@ export function useFinancialSummary(filters?: {
         due_date: string;
       }>('expenses', 'amount, amount_paid, status, paid_date, due_date');
 
-      // Only expenses with status='pago' count as paid for Caixa
-      // (not isEffectivelyPaid which could include vencido with paid_date)
-      const allPaidExpenses = allExpenses.filter(e => e.status === 'pago');
-
-      // Valor do Caixa uses ALL receivables (not just effectively received)
-      const manualEntries = allReceivables.filter((receivable) =>
-        isManualReceivable(receivable.description)
-      );
-      const salesReceivables = allReceivables.filter((receivable) =>
-        !isManualReceivable(receivable.description)
-      );
-      const totalManualCash = manualEntries.reduce(
+      // FIX 7: totalCaixa deducts what was ACTUALLY paid (including partial payments)
+      const totalAllReceivables = allReceivables.reduce(
         (acc, receivable) => acc + getReceivableNetValue(receivable),
         0
       );
-      const totalSalesNet = salesReceivables.reduce(
-        (acc, receivable) => acc + getReceivableNetValue(receivable),
+      const totalPaidExpenses = allExpenses.reduce(
+        (acc, expense) => acc + getExpenseActualPayment(expense),
         0
       );
+      const totalCaixa = totalAllReceivables - totalPaidExpenses;
 
+      // FIX 7: use getRemainingBalance so partial payments reduce "Contas a Pagar"
       const monthExpenses = allExpenses.filter((expense) => {
-        if (isEffectivelyPaid(expense)) return false;
+        if (getRemainingBalance(expense) <= 0) return false;
         if (periodStart && expense.due_date < periodStart) return false;
         if (periodEnd && expense.due_date > periodEnd) return false;
         return true;
       });
 
       const overdueExpenses = allExpenses.filter((expense) => {
-        if (isEffectivelyPaid(expense)) return false;
+        if (getRemainingBalance(expense) <= 0) return false;
         if (!periodStart) return expense.status === 'vencido';
         return expense.due_date < periodStart;
       });
 
-      // Expenses effectively paid inside the selected period use paid_date, not due_date
+      const allPaidExpenses = allExpenses.filter(e => e.status === 'pago');
       const paidInPeriod = allPaidExpenses.filter((expense) => {
         if (!expense.paid_date) return false;
         if (periodStart && expense.paid_date < periodStart) return false;
@@ -789,28 +866,25 @@ export function useFinancialSummary(filters?: {
         (acc, receivable) => acc + Number(receivable.fee ?? 0),
         0
       );
-      const totalAllReceivables = allReceivables.reduce(
-        (acc, receivable) => acc + getReceivableNetValue(receivable),
-        0
-      );
-      const totalPaidExpenses = (allPaidExpenses || []).reduce(
-        (acc, expense) => acc + getExpensePaidValue(expense),
-        0
-      );
-      const totalCaixa = totalAllReceivables - totalPaidExpenses;
-      const totalMonthPayable = (monthExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
-      const totalOverdue = (overdueExpenses || []).reduce((acc, e) => acc + Number(e.amount), 0);
+      const totalMonthPayable = monthExpenses.reduce((acc, e) => acc + getRemainingBalance(e), 0);
+      const totalOverdue = overdueExpenses.reduce((acc, e) => acc + getRemainingBalance(e), 0);
       const totalPayable = totalMonthPayable + totalOverdue;
-      const totalPaidInPeriod = (paidInPeriod || []).reduce(
-        (acc, expense) => acc + getExpensePaidValue(expense),
+      const totalPaidInPeriod = paidInPeriod.reduce(
+        (acc, expense) => acc + getExpenseActualPayment(expense),
         0
       );
       const totalPeriodEntries = totalGrossReceivable + totalPeriodManualCash;
 
+      const manualEntries = allReceivables.filter((r) => isManualReceivable(r.description));
+      const salesReceivables = allReceivables.filter((r) => !isManualReceivable(r.description));
+      const totalManualCash = manualEntries.reduce((acc, r) => acc + getReceivableNetValue(r), 0);
+      const totalSalesNet = salesReceivables.reduce((acc, r) => acc + getReceivableNetValue(r), 0);
+
       return {
         totalGrossReceivable,
         totalFees,
-        totalReceivable: totalCaixa,
+        // FIX 12: renamed from totalReceivable to totalCaixa
+        totalCaixa,
         totalPayable,
         totalMonthPayable,
         totalOverdue,
@@ -828,6 +902,6 @@ export function useFinancialSummary(filters?: {
       };
     },
     staleTime: 0,
-    refetchInterval: 3000,
+    // FIX 8: realtime channel handles updates — no polling
   });
 }

@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts, Product } from '@/hooks/useProducts';
-import { useCreateSale, SaleItem, PaymentEntry } from '@/hooks/useSales';
+import { useCreateSale, useRecentSales, SaleItem, PaymentEntry } from '@/hooks/useSales';
 import { CARD_BRANDS, getCardFee } from '@/data/cardFees';
 import { CardBrandIcon } from '@/components/pos/CardBrandLogos';
 import { SaleConfirmationModal } from '@/components/pos/SaleConfirmationModal';
@@ -27,7 +28,9 @@ import {
   CreditCard,
   Wallet,
   Info,
-  Keyboard
+  Keyboard,
+  History,
+  Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { type SupportSection } from '@/components/layout/SupportButton';
@@ -116,6 +119,10 @@ export default function POS() {
   const [splitCounter, setSplitCounter] = useState(0);
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<any>(null);
+  const [viewingReceiptSale, setViewingReceiptSale] = useState<any>(null);
+  const [showRecentSales, setShowRecentSales] = useState(false);
+
+  const { data: recentSales = [] } = useRecentSales(10);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -534,12 +541,18 @@ export default function POS() {
                   <Badge variant="pink" className="text-sm px-2">{cartItems.length} {cartItems.length === 1 ? 'item' : 'itens'}</Badge>
                 )}
               </CardTitle>
-              {cartItems.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearCart} className="text-muted-foreground hover:text-destructive">
-                  <X className="w-4 h-4 mr-1" />
-                  Limpar
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowRecentSales(true)} className="gap-1.5 text-muted-foreground">
+                  <History className="w-3.5 h-3.5" />
+                  Últimas vendas
                 </Button>
-              )}
+                {cartItems.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearCart} className="text-muted-foreground hover:text-destructive">
+                    <X className="w-4 h-4 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -1037,14 +1050,95 @@ export default function POS() {
               <span><kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">Esc</kbd> Limpar</span>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Sale Confirmation Modal */}
+      {/* Recent Sales Dialog */}
+      <Dialog open={showRecentSales} onOpenChange={setShowRecentSales}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5 text-muted-foreground" />
+              Últimas Vendas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {recentSales.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma venda registrada.</p>
+            ) : recentSales.map((sale) => {
+              const paymentLabels: Record<string, string> = {
+                dinheiro: 'Dinheiro', pix: 'PIX',
+                cartao_debito: 'Débito', cartao_credito: 'Crédito', crediario: 'Crediário',
+              };
+              const itemCount = sale.sale_items?.reduce((s, i) => s + i.quantity, 0) ?? 0;
+              const dt = new Date(sale.created_at);
+              const label = paymentLabels[sale.payment_method ?? ''] ?? sale.payment_method ?? '';
+              return (
+                <button
+                  key={sale.id}
+                  onClick={() => {
+                    const subtotal = Number(sale.total ?? 0) + Number(sale.discount ?? 0);
+                    setViewingReceiptSale({
+                      items: (sale.sale_items ?? []).map(i => ({
+                        product_name: i.product_name,
+                        size: i.size,
+                        quantity: i.quantity,
+                        total: Number(i.total),
+                      })),
+                      subtotal,
+                      discount: Number(sale.discount ?? 0),
+                      total: Number(sale.total ?? 0),
+                      paymentMethod: sale.payment_method ?? '',
+                      cardBrand: sale.card_brand ?? undefined,
+                      installments: sale.installments ?? undefined,
+                      feeAmount: Number(sale.card_fee_amount ?? 0) || undefined,
+                      customerTotal: Number(sale.final_total ?? sale.total ?? 0),
+                      saleNumber: sale.sale_number,
+                      createdAt: sale.created_at,
+                    });
+                    setShowRecentSales(false);
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-border hover:border-pink-primary/40 hover:bg-pink-glow/30 transition-all duration-200 text-left group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">
+                      {sale.sale_number ? `Venda #${sale.sale_number}` : 'Venda'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {dt.toLocaleDateString('pt-BR')} às {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {' · '}{itemCount} {itemCount === 1 ? 'item' : 'itens'}
+                      {' · '}{label}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <span className="text-sm font-bold text-pink-primary">
+                      R$ {Number(sale.final_total ?? sale.total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted group-hover:bg-pink-glow group-hover:text-pink-primary transition-all text-xs font-medium text-muted-foreground">
+                      <Receipt className="w-3.5 h-3.5" />
+                      Ver
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sale Confirmation Modal — current sale */}
       <SaleConfirmationModal
         open={showSaleConfirmation}
         onClose={() => setShowSaleConfirmation(false)}
         saleData={lastSaleData}
+      />
+
+      {/* Receipt Modal — historical sale */}
+      <SaleConfirmationModal
+        open={!!viewingReceiptSale}
+        onClose={() => setViewingReceiptSale(null)}
+        saleData={viewingReceiptSale}
       />
     </MainLayout>
   );

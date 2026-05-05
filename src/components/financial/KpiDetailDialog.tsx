@@ -12,7 +12,7 @@ interface KpiDetailDialogProps {
   summary: {
     totalGrossReceivable: number;
     totalFees: number;
-    totalReceivable: number;
+    totalCaixa: number;
     totalPayable: number;
     totalMonthPayable: number;
     totalOverdue: number;
@@ -68,7 +68,7 @@ export function KpiDetailDialog({ open, onOpenChange, type, periodLabel, summary
           { label: `Entradas manuais / empréstimos realizados (${summary.manualEntriesCount ?? 0})`, value: summary.totalManualCash },
         ] : []),
         { label: '(-) Despesas pagas (histórico)', value: summary.totalPaidExpenses ?? 0, negative: true },
-        { label: 'Valor do Caixa real atual', value: summary.totalReceivable, highlight: true },
+        { label: 'Valor do Caixa real atual', value: summary.totalCaixa, highlight: true },
       ],
     },
     pagar: {
@@ -85,7 +85,7 @@ export function KpiDetailDialog({ open, onOpenChange, type, periodLabel, summary
       title: `Saldo Previsto${periodSuffix} — Detalhamento`,
       icon: <Wallet className="w-5 h-5 text-pink-500" />,
       items: [
-        { label: 'Valor do Caixa real atual', value: summary.totalReceivable },
+        { label: 'Valor do Caixa real atual', value: summary.totalCaixa },
         { label: '(-) Contas a pagar (mês + vencidas)', value: summary.totalPayable, negative: true },
         { label: 'Saldo previsto', value: summary.balance, highlight: true },
       ],
