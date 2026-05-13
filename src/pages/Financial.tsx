@@ -99,6 +99,7 @@ export default function Financial() {
   const [payingExpense, setPayingExpense] = useState<Expense | null>(null);
   const [paymentInterest, setPaymentInterest] = useState<string>('');
   const [paymentAmountPaid, setPaymentAmountPaid] = useState<string>('');
+  const [paymentDate, setPaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
 
   // KPI detail dialog
   const [kpiDetailType, setKpiDetailType] = useState<'entrada' | 'taxas' | 'caixa' | 'pagar' | 'saldo' | null>(null);
@@ -886,6 +887,7 @@ export default function Financial() {
                         <TableHead>Descrição</TableHead>
                         <TableHead>Categoria</TableHead>
                         <TableHead>Vencimento</TableHead>
+                        <TableHead>Data Pago</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
                         <TableHead className="text-right">Juros</TableHead>
                         <TableHead className="text-right">Total Pago</TableHead>
@@ -1023,6 +1025,17 @@ export default function Financial() {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell>
+                            {item.paid_date ? (
+                              <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                {format(new Date(item.paid_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            ) : Number(item.amount_paid || 0) > 0 ? (
+                              <span className="text-xs text-amber-600 dark:text-amber-400">Ver histórico</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right font-semibold">
                             R$ {formatCurrency(item.amount)}
                           </TableCell>
@@ -1085,6 +1098,7 @@ export default function Financial() {
                                   onClick={() => {
                                     setPayingExpense(item);
                                     setPaymentInterest('0');
+                                    setPaymentDate(new Date().toISOString().split('T')[0]);
                                     const alreadyPaid = Number(item.amount_paid || 0);
                                     const remaining = Math.max(0, item.amount - alreadyPaid);
                                     setPaymentAmountPaid(String(remaining.toFixed(2)));
@@ -1137,7 +1151,7 @@ export default function Financial() {
                     </TableBody>
                     <tfoot>
                       <TableRow className="bg-muted/50 font-semibold">
-                        <TableCell colSpan={3} className="text-right">
+                        <TableCell colSpan={4} className="text-right">
                           Totais ({expenseTotals.count} registros):
                         </TableCell>
                         <TableCell className="text-right">R$ {formatCurrency(expenseTotals.amount)}</TableCell>
@@ -1146,7 +1160,7 @@ export default function Financial() {
                         <TableCell colSpan={2} />
                       </TableRow>
                       <TableRow className="bg-muted/30 text-sm">
-                        <TableCell colSpan={3} className="text-right text-muted-foreground">
+                        <TableCell colSpan={4} className="text-right text-muted-foreground">
                           Resumo por status:
                         </TableCell>
                         <TableCell colSpan={5} className="text-left">
@@ -1246,6 +1260,16 @@ export default function Financial() {
                     </Button>
                   </div>
 
+                  <div>
+                    <Label>Data do Pagamento</Label>
+                    <Input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Juros / Multa</Label>
@@ -1315,9 +1339,9 @@ export default function Financial() {
                             id: payingExpense.id,
                             interest_amount: interest,
                             amount_paid: nowPaying,
-                            // FIX 1: pass accumulated values so hook determines partial vs full
                             current_amount_paid: alreadyPaid,
                             expense_amount: payingExpense.amount,
+                            payment_date: paymentDate,
                           },
                           { onSuccess: () => setPayingExpense(null) }
                         );

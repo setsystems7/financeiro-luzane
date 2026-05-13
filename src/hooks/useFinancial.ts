@@ -460,11 +460,12 @@ export function useMarkExpenseAsPaid() {
       amount_paid?: number;         // amount being paid NOW (not accumulated)
       current_amount_paid?: number; // amount already paid before this payment
       expense_amount?: number;      // original expense amount to decide if fully paid
+      payment_date?: string;        // custom payment date (defaults to today)
     }) => {
       const nowPaying = data.amount_paid || 0;
       const newTotal = (data.current_amount_paid || 0) + nowPaying;
       const isFullPayment = newTotal >= (data.expense_amount || 0);
-      const today = new Date().toISOString().split('T')[0];
+      const paidDate = data.payment_date || new Date().toISOString().split('T')[0];
 
       const updateData: Record<string, unknown> = {
         amount_paid: newTotal,
@@ -473,7 +474,7 @@ export function useMarkExpenseAsPaid() {
 
       if (isFullPayment) {
         updateData.status = 'pago';
-        updateData.paid_date = today;
+        updateData.paid_date = paidDate;
       }
 
       const { error } = await supabase
@@ -490,7 +491,7 @@ export function useMarkExpenseAsPaid() {
           expense_id: data.id,
           amount: nowPaying,
           interest_amount: data.interest_amount || 0,
-          paid_date: today,
+          paid_date: paidDate,
         });
       // Silently ignore if table doesn't exist yet (before migration is run)
       if (histErr && !histErr.message?.includes('does not exist')) throw histErr;
